@@ -1,0 +1,43 @@
+# Flutter
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.metadata
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Android
+android/.gradle/
+android/build/
+android/captures/
+android/local.properties
+android/gradle/wrapper/gradle-wrapper.jar
+*.apk
+*.aab
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/build/
+*.ipa
+
+# Environment / secrets (use placeholders in repo)
+.env
+.env.*
+*.keystore
+
+# Generated
+*.g.dart
+*.freezed.dart
+
+# OS
+.DS_Store
+Thumbs.db
