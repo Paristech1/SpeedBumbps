@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/auth/presentation/providers/auth_state_provider.dart';
+import '../../features/auth/presentation/state/auth_state.dart';
 import '../../features/auth/presentation/screens/auth_screen.dart';
 import '../../features/auth/presentation/screens/profile_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';

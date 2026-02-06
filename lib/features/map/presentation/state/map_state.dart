@@ -6,7 +6,6 @@ part 'map_state.freezed.dart';
 
 @freezed
 class MapState with _$MapState {
-  const MapState._();
   const factory MapState.initial() = _Initial;
   const factory MapState.loading() = _Loading;
   const factory MapState.success(UserLocation location) = _Success;

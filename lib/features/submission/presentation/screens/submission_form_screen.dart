@@ -6,8 +6,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/utils/exif_extractor.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../../../auth/presentation/state/auth_state.dart';
 import '../../../map/presentation/providers/location_provider.dart';
 import '../providers/submission_provider.dart';
+import '../state/submission_state.dart';
 import '../widgets/location_mini_map.dart';
 import '../widgets/severity_selector.dart';
 

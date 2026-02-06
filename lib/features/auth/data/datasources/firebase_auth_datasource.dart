@@ -86,7 +86,7 @@ class FirebaseAuthDatasource {
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } on GoogleSignInException catch (e) {
-      throw Exception('Google sign in aborted or failed: ${e.message}');
+      throw Exception('Google sign in aborted or failed: ${e.description ?? e}');
     } catch (e) {
       throw Exception('Google sign in failed: $e');
     }
