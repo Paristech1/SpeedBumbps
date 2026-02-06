@@ -22,8 +22,19 @@ class ExifExtractor {
 
       if (gpsLatitude == null || gpsLongitude == null) return null;
 
-      double lat = _convertToDecimal(List<Ratio>.from(gpsLatitude.values));
-      double lng = _convertToDecimal(List<Ratio>.from(gpsLongitude.values));
+      final latRatios = gpsLatitude!.values is IfdRatios
+          ? (gpsLatitude!.values as IfdRatios).ratios
+          : null;
+      final lngRatios = gpsLongitude!.values is IfdRatios
+          ? (gpsLongitude!.values as IfdRatios).ratios
+          : null;
+      if (latRatios == null ||
+          lngRatios == null ||
+          latRatios.length < 3 ||
+          lngRatios.length < 3) return null;
+
+      double lat = _convertToDecimal(latRatios);
+      double lng = _convertToDecimal(lngRatios);
 
       if (gpsLatitudeRef?.printable == 'S') lat = -lat;
       if (gpsLongitudeRef?.printable == 'W') lng = -lng;
