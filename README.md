@@ -23,6 +23,11 @@ Interactive map with real-time location and A-to-B routing with speed bump aware
 
 ## Setup
 
+1. Clone the repository.
+2. Run `flutter pub get`.
+3. Run `dart run build_runner build --delete-conflicting-outputs` (generates Freezed/JSON code).
+4. Run `flutter run` (or see SETUP.md for API keys and device-specific steps).
+
 See **[SETUP.md](SETUP.md)** for:
 
 - Google Maps API key (Android + iOS)

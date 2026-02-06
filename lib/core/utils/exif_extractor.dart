@@ -21,12 +21,32 @@ class ExifExtractor {
 
       if (gpsLatitude == null || gpsLongitude == null) return null;
 
+<<<<<<< HEAD
       final latValues = gpsLatitude.values;
       final lngValues = gpsLongitude.values;
       if (latValues is! IfdRatios || lngValues is! IfdRatios) return null;
 
-      double lat = _convertToDecimal(latValues.ratios);
-      double lng = _convertToDecimal(lngValues.ratios);
+      final latRatios = latValues.ratios;
+      final lngRatios = lngValues.ratios;
+      if (latRatios.length < 3 || lngRatios.length < 3) return null;
+
+      double lat = _convertToDecimal(latRatios);
+      double lng = _convertToDecimal(lngRatios);
+=======
+      final latRatios = gpsLatitude!.values is IfdRatios
+          ? (gpsLatitude!.values as IfdRatios).ratios
+          : null;
+      final lngRatios = gpsLongitude!.values is IfdRatios
+          ? (gpsLongitude!.values as IfdRatios).ratios
+          : null;
+      if (latRatios == null ||
+          lngRatios == null ||
+          latRatios.length < 3 ||
+          lngRatios.length < 3) return null;
+
+      double lat = _convertToDecimal(latRatios);
+      double lng = _convertToDecimal(lngRatios);
+>>>>>>> 7ae70b6 (Document setup and iOS target)
 
       if (gpsLatitudeRef?.printable == 'S') lat = -lat;
       if (gpsLongitudeRef?.printable == 'W') lng = -lng;
