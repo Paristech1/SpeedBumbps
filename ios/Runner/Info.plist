@@ -44,5 +44,9 @@
 	<string>We need photo library access to select speed bump photos</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>We'll save captured photos to your library</string>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
 </dict>
 </plist>

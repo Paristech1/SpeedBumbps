@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:exif/exif.dart';
+import 'package:exif/src/exif_types.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// Extracts GPS and timestamp from image EXIF metadata.
@@ -21,8 +22,8 @@ class ExifExtractor {
 
       if (gpsLatitude == null || gpsLongitude == null) return null;
 
-      double lat = _convertToDecimal(gpsLatitude.values.toList());
-      double lng = _convertToDecimal(gpsLongitude.values.toList());
+      double lat = _convertToDecimal(List<Ratio>.from(gpsLatitude.values));
+      double lng = _convertToDecimal(List<Ratio>.from(gpsLongitude.values));
 
       if (gpsLatitudeRef?.printable == 'S') lat = -lat;
       if (gpsLongitudeRef?.printable == 'W') lng = -lng;

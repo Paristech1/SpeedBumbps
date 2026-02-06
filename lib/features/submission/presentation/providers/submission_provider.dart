@@ -5,7 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../data/repositories/firebase_submission_repository.dart';
 import '../../domain/repositories/submission_repository.dart';
-import 'submission_state.dart';
+import '../state/submission_state.dart';
 
 final submissionRepositoryProvider = Provider<SubmissionRepository>((ref) {
   return FirebaseSubmissionRepository();

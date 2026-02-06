@@ -23,11 +23,7 @@ class GeolocatorLocationRepository implements LocationRepository {
       throw LocationPermissionDeniedException();
     }
 
-    final position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-      ),
-    );
+    final position = await Geolocator.getCurrentPosition();
     return _positionToUserLocation(position);
   }
 

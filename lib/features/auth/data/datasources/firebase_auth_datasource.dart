@@ -4,14 +4,13 @@ import 'package:google_sign_in/google_sign_in.dart';
 class FirebaseAuthDatasource {
   final FirebaseAuth _firebaseAuth;
   final GoogleSignIn _googleSignIn;
+  bool _googleSignInInitialized = false;
 
   FirebaseAuthDatasource({
     FirebaseAuth? firebaseAuth,
     GoogleSignIn? googleSignIn,
   })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn(
-              scopes: ['email', 'profile'],
-            );
+        _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
   User? get currentUser => _firebaseAuth.currentUser;
 
@@ -60,18 +59,20 @@ class FirebaseAuthDatasource {
 
   Future<User> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-
-      if (googleUser == null) {
-        throw Exception('Google sign in aborted by user');
+      if (!_googleSignInInitialized) {
+        await _googleSignIn.initialize();
+        _googleSignInInitialized = true;
       }
 
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
+        scopeHint: ['email', 'profile'],
+      );
+
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
+        accessToken: null,
       );
 
       final userCredential =
@@ -84,6 +85,8 @@ class FirebaseAuthDatasource {
       return userCredential.user!;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
+    } on GoogleSignInException catch (e) {
+      throw Exception('Google sign in aborted or failed: ${e.message}');
     } catch (e) {
       throw Exception('Google sign in failed: $e');
     }

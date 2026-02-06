@@ -1,4 +1,4 @@
-import '../../submission/domain/entities/submission.dart';
+import '../../../submission/domain/entities/submission.dart';
 
 /// Admin-only operations: list pending submissions, approve, reject.
 abstract class AdminRepository {
