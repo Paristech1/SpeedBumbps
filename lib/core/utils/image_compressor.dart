@@ -28,8 +28,15 @@ class ImageCompressor {
       if (compressedBytes.length > maxBytes) {
         compressedBytes = img.encodeJpg(image, quality: 70);
       }
+      if (compressedBytes.length > maxBytes) {
+        throw Exception('Image is too large after compression (max 2MB).');
+      }
       return _saveToTempFile(compressedBytes);
     } catch (e) {
+      final size = await imageFile.length();
+      if (size > maxBytes) {
+        throw Exception('Image is too large (max 2MB).');
+      }
       return imageFile;
     }
   }

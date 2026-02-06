@@ -27,6 +27,7 @@ ios/.symlinks/
 ios/Flutter/Flutter.framework
 ios/Flutter/Flutter.podspec
 ios/build/
+ios/Runner/Maps.xcconfig
 *.ipa
 
 # Environment / secrets (use placeholders in repo)

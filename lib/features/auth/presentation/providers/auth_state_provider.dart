@@ -25,6 +25,16 @@ final authStateProvider =
   );
 });
 
+final adminClaimProvider = FutureProvider.autoDispose<bool>((ref) async {
+  final authState = ref.watch(authStateProvider);
+  return authState.when(
+    loading: () => false,
+    unauthenticated: () => false,
+    error: (_) => false,
+    authenticated: (_) => ref.read(firebaseAuthDatasourceProvider).isAdmin(),
+  );
+});
+
 class AuthStateNotifier extends StateNotifier<AuthState> {
   final FirebaseAuthDatasource authDatasource;
   final FirestoreUserDatasource userDatasource;

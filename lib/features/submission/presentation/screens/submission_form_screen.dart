@@ -235,7 +235,10 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
   void _handleSubmit() {
     if (_location == null) return;
     final authState = ref.read(authStateProvider);
-    authState.whenOrNull(
+    authState.when(
+      loading: () => _promptSignIn(),
+      unauthenticated: () => _promptSignIn(),
+      error: (_) => _promptSignIn(),
       authenticated: (user) {
         ref.read(submissionProvider.notifier).submitReport(
               userId: user.id,
@@ -249,5 +252,16 @@ class _SubmissionFormScreenState extends ConsumerState<SubmissionFormScreen> {
             );
       },
     );
+  }
+
+  void _promptSignIn() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please sign in to submit a report.'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    Navigator.of(context).pushNamed('/auth');
   }
 }

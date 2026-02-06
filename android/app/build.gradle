@@ -23,6 +23,11 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+def googleMapsApiKey = localProperties.getProperty('GOOGLE_MAPS_API_KEY')
+if (googleMapsApiKey == null || googleMapsApiKey.trim().isEmpty()) {
+    googleMapsApiKey = System.getenv('GOOGLE_MAPS_API_KEY') ?: ''
+}
+
 android {
     namespace "com.speedbumpapp.speed_bump_app"
     compileSdk 34
@@ -43,6 +48,9 @@ android {
         targetSdk 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        manifestPlaceholders = [
+                GOOGLE_MAPS_API_KEY: googleMapsApiKey
+        ]
     }
 
     buildTypes {

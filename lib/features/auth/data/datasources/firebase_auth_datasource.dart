@@ -16,6 +16,13 @@ class FirebaseAuthDatasource {
 
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
 
+  Future<bool> isAdmin({bool forceRefresh = false}) async {
+    final user = currentUser;
+    if (user == null) return false;
+    final token = await user.getIdTokenResult(forceRefresh);
+    return token.claims?['admin'] == true;
+  }
+
   Future<User> signUpWithEmail({
     required String email,
     required String password,

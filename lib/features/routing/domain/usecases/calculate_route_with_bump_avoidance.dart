@@ -81,13 +81,17 @@ class CalculateRouteWithBumpAvoidance {
       bumps: bumpsOnRoute,
       routePoints: defaultRoute.polylinePoints,
     );
+    final sortedAvoidanceWaypoints = _sortWaypointsByRouteIndex(
+      waypoints: avoidanceWaypoints,
+      routePoints: defaultRoute.polylinePoints,
+    );
 
     AppRoute alternativeRoute;
     try {
       alternativeRoute = await _routingRepo.calculateRoute(
         origin: origin,
         destination: destination,
-        waypoints: avoidanceWaypoints,
+        waypoints: sortedAvoidanceWaypoints,
       );
     } catch (_) {
       return RouteCalculationResult(
@@ -174,6 +178,36 @@ class CalculateRouteWithBumpAvoidance {
       }
     }
     return waypoints;
+  }
+
+  /// Sorts waypoints by their closest index along the route polyline.
+  List<LatLng> _sortWaypointsByRouteIndex({
+    required List<LatLng> waypoints,
+    required List<LatLng> routePoints,
+  }) {
+    if (waypoints.isEmpty || routePoints.isEmpty) {
+      return List<LatLng>.of(waypoints);
+    }
+
+    final indexed = waypoints
+        .map((point) => _IndexedWaypoint(
+              _findClosestPointIndex(target: point, points: routePoints),
+              point,
+            ))
+        .toList()
+      ..sort((a, b) => a.index.compareTo(b.index));
+
+    final sorted = <LatLng>[];
+    LatLng? last;
+    for (final item in indexed) {
+      if (last == null ||
+          last.latitude != item.point.latitude ||
+          last.longitude != item.point.longitude) {
+        sorted.add(item.point);
+        last = item.point;
+      }
+    }
+    return sorted;
   }
 
   /// Perpendicular distance from point to line segment (meters).

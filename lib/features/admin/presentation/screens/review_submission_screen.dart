@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../submission/domain/entities/submission.dart';
 import '../../data/repositories/firebase_admin_repository.dart';
 import '../providers/pending_submissions_provider.dart';
@@ -31,9 +32,13 @@ class _ReviewSubmissionScreenState extends ConsumerState<ReviewSubmissionScreen>
   }
 
   Future<void> _approve() async {
+    final adminId = _currentAdminId();
+    if (adminId == null) {
+      _showAuthRequired();
+      return;
+    }
     setState(() => _isLoading = true);
     try {
-      final adminId = 'admin'; // TODO: get from auth when admin claims exist
       await ref.read(adminRepositoryProvider).approveSubmission(
             submissionId: widget.submission.id,
             adminId: adminId,
@@ -69,9 +74,13 @@ class _ReviewSubmissionScreenState extends ConsumerState<ReviewSubmissionScreen>
       );
       return;
     }
+    final adminId = _currentAdminId();
+    if (adminId == null) {
+      _showAuthRequired();
+      return;
+    }
     setState(() => _isLoading = true);
     try {
-      final adminId = 'admin';
       await ref.read(adminRepositoryProvider).rejectSubmission(
             submissionId: widget.submission.id,
             adminId: adminId,
@@ -184,6 +193,24 @@ class _ReviewSubmissionScreenState extends ConsumerState<ReviewSubmissionScreen>
             isLoading: _isLoading,
           ),
         ],
+      ),
+    );
+  }
+
+  String? _currentAdminId() {
+    final authState = ref.read(authStateProvider);
+    return authState.maybeWhen(
+      authenticated: (user) => user.id,
+      orElse: () => null,
+    );
+  }
+
+  void _showAuthRequired() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please sign in to perform admin actions.'),
+        backgroundColor: Colors.red,
       ),
     );
   }

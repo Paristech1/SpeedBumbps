@@ -28,6 +28,11 @@ Interactive map with real-time location and A-to-B routing with speed bump aware
 3. Run `dart run build_runner build --delete-conflicting-outputs` (generates Freezed/JSON code).
 4. Run `flutter run` (or see SETUP.md for API keys and device-specific steps).
 
+Local Maps SDK keys (for map display):
+- Android: add `GOOGLE_MAPS_API_KEY=...` to `android/local.properties`.
+- iOS: copy `ios/Runner/Maps.xcconfig.example` to `ios/Runner/Maps.xcconfig` and set `GOOGLE_MAPS_API_KEY=...`.
+- These files are gitignored.
+
 See **[SETUP.md](SETUP.md)** for:
 
 - Google Maps API key (Android + iOS)

@@ -173,14 +173,14 @@ void main() {
       expect(waypoints[3], routePoints[15]);
     });
 
-    test('bump at 19m is detected', () async {
+    test('bump at 19.999m is detected', () async {
       final routePoints = [
         const LatLng(0.0, 0.0),
         const LatLng(0.0, 0.01),
       ];
       final bump = SpeedBump(
         id: 'near',
-        location: LatLng(_metersToLat(19.0), 0.005),
+        location: LatLng(_metersToLat(19.999), 0.005),
         severity: 4,
         reportCount: 1,
         lastVerified: DateTime.now(),

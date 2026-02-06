@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
+import '../../features/admin/presentation/screens/admin_gate_screen.dart';
 import '../../features/auth/presentation/providers/auth_state_provider.dart';
 import '../../features/auth/presentation/state/auth_state.dart';
 import '../../features/auth/presentation/screens/auth_screen.dart';
@@ -21,7 +21,7 @@ class AppRouter {
         '/profile': (context) => const ProfileScreen(),
         '/camera': (context) => const CameraScreen(),
         '/submission-history': (context) => const SubmissionHistoryScreen(),
-        '/admin': (context) => const AdminDashboardScreen(),
+        '/admin': (context) => const AdminGateScreen(),
       };
 }
 

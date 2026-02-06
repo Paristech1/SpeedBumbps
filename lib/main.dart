@@ -6,19 +6,36 @@ import 'core/routes/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  Object? initError;
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    initError = e;
+  }
   runApp(
-    const ProviderScope(
-      child: SpeedBumpApp(),
+    ProviderScope(
+      child: SpeedBumpApp(firebaseInitError: initError),
     ),
   );
 }
 
 class SpeedBumpApp extends StatelessWidget {
-  const SpeedBumpApp({super.key});
+  const SpeedBumpApp({super.key, this.firebaseInitError});
+
+  final Object? firebaseInitError;
 
   @override
   Widget build(BuildContext context) {
+    if (firebaseInitError != null) {
+      return MaterialApp(
+        title: 'Speed Bump',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: ThemeMode.system,
+        home: FirebaseInitErrorScreen(error: firebaseInitError.toString()),
+      );
+    }
     return MaterialApp(
       title: 'Speed Bump',
       debugShowCheckedModeBanner: false,
@@ -31,3 +48,42 @@ class SpeedBumpApp extends StatelessWidget {
   }
 }
 
+class FirebaseInitErrorScreen extends StatelessWidget {
+  const FirebaseInitErrorScreen({super.key, required this.error});
+
+  final String error;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text(
+                'Firebase failed to initialize.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                error,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.red.shade700),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Check your Firebase config files and try again.',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

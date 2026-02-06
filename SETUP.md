@@ -20,8 +20,16 @@ Do not commit real `google-services.json` or `GoogleService-Info.plist` with pro
 1. Go to [Google Cloud Console](https://console.cloud.google.com/).
 2. Create a project (e.g. `SpeedBumpApp`) and enable **Maps SDK for Android** and **Maps SDK for iOS**.
 3. Create an API key and restrict it to your app (Android package name and iOS bundle ID).
-4. **Android:** Set the key in `android/app/src/main/AndroidManifest.xml` in the `<meta-data android:name="com.google.android.geo.API_KEY" android:value="..."/>` (replace `YOUR_GOOGLE_MAPS_API_KEY_HERE`).
-5. **iOS:** Set the key in `ios/Runner/AppDelegate.swift` in the call `GMSServices.provideAPIKey("...")` (replace `YOUR_GOOGLE_MAPS_API_KEY_HERE`).
+4. **Android:** Add the key to `android/local.properties`:
+   ```properties
+   GOOGLE_MAPS_API_KEY=your_key_here
+   ```
+   The manifest uses a placeholder (`${GOOGLE_MAPS_API_KEY}`) wired via Gradle. You can also set `GOOGLE_MAPS_API_KEY` as an environment variable.
+5. **iOS:** Copy `ios/Runner/Maps.xcconfig.example` to `ios/Runner/Maps.xcconfig` and set:
+   ```
+   GOOGLE_MAPS_API_KEY=your_key_here
+   ```
+   The key is read from `Info.plist` (`GMSApiKey`) at runtime. Do not commit `Maps.xcconfig`.
 
 Do not commit real API keys to version control. Use environment variables or secure storage in CI/production.
 
