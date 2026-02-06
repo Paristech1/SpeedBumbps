@@ -32,6 +32,7 @@ class CalculateRouteWithBumpAvoidance {
 
   static const double _bumpProximityMeters = 20.0;
   static const int _waypointOffsetPoints = 5;
+  static const double _boundsPaddingMeters = 200.0;
 
   /// Main execution: calculate route and avoid speed bumps when possible.
   Future<RouteCalculationResult> execute({
@@ -47,9 +48,14 @@ class CalculateRouteWithBumpAvoidance {
     // Step 2: Bumps in bounds
     final southwest = _boundsSouthwest(origin, destination);
     final northeast = _boundsNortheast(origin, destination);
-    final allBumps = await _bumpRepo.getBumpsInBounds(
+    final expandedBounds = _expandBounds(
       southwest: southwest,
       northeast: northeast,
+      paddingMeters: _boundsPaddingMeters,
+    );
+    final allBumps = await _bumpRepo.getBumpsInBounds(
+      southwest: expandedBounds.southwest,
+      northeast: expandedBounds.northeast,
     );
     final criticalBumps =
         allBumps.where((b) => b.shouldAvoidInRouting).toList();
@@ -137,7 +143,9 @@ class CalculateRouteWithBumpAvoidance {
     required List<SpeedBump> bumps,
     required List<LatLng> routePoints,
   }) {
-    final waypoints = <LatLng>[];
+    if (routePoints.isEmpty || bumps.isEmpty) return const <LatLng>[];
+
+    final indexed = <_IndexedWaypoint>[];
     for (final bump in bumps) {
       final idx = _findClosestPointIndex(
         target: bump.location,
@@ -145,11 +153,24 @@ class CalculateRouteWithBumpAvoidance {
       );
       final before = idx - _waypointOffsetPoints;
       if (before >= 0 && before < routePoints.length) {
-        waypoints.add(routePoints[before]);
+        indexed.add(_IndexedWaypoint(before, routePoints[before]));
       }
       final after = idx + _waypointOffsetPoints;
       if (after >= 0 && after < routePoints.length) {
-        waypoints.add(routePoints[after]);
+        indexed.add(_IndexedWaypoint(after, routePoints[after]));
+      }
+    }
+
+    indexed.sort((a, b) => a.index.compareTo(b.index));
+
+    final waypoints = <LatLng>[];
+    LatLng? last;
+    for (final item in indexed) {
+      if (last == null ||
+          last.latitude != item.point.latitude ||
+          last.longitude != item.point.longitude) {
+        waypoints.add(item.point);
+        last = item.point;
       }
     }
     return waypoints;
@@ -221,4 +242,37 @@ class CalculateRouteWithBumpAvoidance {
       a.longitude > b.longitude ? a.longitude : b.longitude,
     );
   }
+
+  _Bounds _expandBounds({
+    required LatLng southwest,
+    required LatLng northeast,
+    required double paddingMeters,
+  }) {
+    final midLat = (southwest.latitude + northeast.latitude) / 2;
+    final dLat = paddingMeters / 111320.0;
+    final cosLat = cos(midLat * pi / 180).abs().clamp(0.1, 1.0);
+    final dLng = paddingMeters / (111320.0 * cosLat);
+    return _Bounds(
+      southwest: LatLng(
+        southwest.latitude - dLat,
+        southwest.longitude - dLng,
+      ),
+      northeast: LatLng(
+        northeast.latitude + dLat,
+        northeast.longitude + dLng,
+      ),
+    );
+  }
+}
+
+class _IndexedWaypoint {
+  const _IndexedWaypoint(this.index, this.point);
+  final int index;
+  final LatLng point;
+}
+
+class _Bounds {
+  const _Bounds({required this.southwest, required this.northeast});
+  final LatLng southwest;
+  final LatLng northeast;
 }

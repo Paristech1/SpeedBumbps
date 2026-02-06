@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/route.dart';
 import '../state/routing_state.dart';
 import 'routing_provider.dart';
+import '../state/routing_state.dart';
 
 /// Index of selected route: 0 = primary (fastest), 1 = alternative (bump-free).
 final selectedRouteIndexProvider = StateProvider<int>((ref) => 0);

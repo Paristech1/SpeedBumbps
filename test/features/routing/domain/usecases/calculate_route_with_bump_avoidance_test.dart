@@ -1,3 +1,5 @@
+import 'dart:math' show pi;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -6,6 +8,8 @@ import 'package:speed_bump_app/features/routing/domain/entities/speed_bump.dart'
 import 'package:speed_bump_app/features/routing/domain/repositories/routing_repository.dart';
 import 'package:speed_bump_app/features/routing/domain/repositories/speed_bump_repository.dart';
 import 'package:speed_bump_app/features/routing/domain/usecases/calculate_route_with_bump_avoidance.dart';
+
+double _metersToLat(double meters) => (meters / 6371000.0) * (180 / pi);
 
 void main() {
   group('CalculateRouteWithBumpAvoidance', () {
@@ -127,6 +131,106 @@ void main() {
       expect(result.alternativeRoute, isNull);
     });
 
+    test('avoidance waypoints are ordered along the route', () async {
+      final routePoints = List.generate(
+        20,
+        (i) => LatLng(40.0 + i * 0.0001, -75.0),
+      );
+      final bumpA = SpeedBump(
+        id: 'a',
+        location: routePoints[10],
+        severity: 4,
+        reportCount: 1,
+        lastVerified: DateTime.now(),
+        isVerified: true,
+      );
+      final bumpB = SpeedBump(
+        id: 'b',
+        location: routePoints[5],
+        severity: 4,
+        reportCount: 1,
+        lastVerified: DateTime.now(),
+        isVerified: true,
+      );
+      final routingRepo = _FakeRoutingRepository()..routePoints = routePoints;
+      final bumpRepo = _FakeSpeedBumpRepository()..bumps = [bumpA, bumpB];
+      useCase = CalculateRouteWithBumpAvoidance(
+        routingRepo: routingRepo,
+        bumpRepo: bumpRepo,
+      );
+
+      await useCase.execute(
+        origin: routePoints.first,
+        destination: routePoints.last,
+      );
+
+      final waypoints = routingRepo.lastWaypoints;
+      expect(waypoints, isNotNull);
+      expect(waypoints!.length, 4);
+      expect(waypoints[0], routePoints[0]);
+      expect(waypoints[1], routePoints[5]);
+      expect(waypoints[2], routePoints[10]);
+      expect(waypoints[3], routePoints[15]);
+    });
+
+    test('bump at 19m is detected', () async {
+      final routePoints = [
+        const LatLng(0.0, 0.0),
+        const LatLng(0.0, 0.01),
+      ];
+      final bump = SpeedBump(
+        id: 'near',
+        location: LatLng(_metersToLat(19.0), 0.005),
+        severity: 4,
+        reportCount: 1,
+        lastVerified: DateTime.now(),
+        isVerified: true,
+      );
+      final routingRepo = _FakeRoutingRepository()..routePoints = routePoints;
+      final bumpRepo = _FakeSpeedBumpRepository()..bumps = [bump];
+      useCase = CalculateRouteWithBumpAvoidance(
+        routingRepo: routingRepo,
+        bumpRepo: bumpRepo,
+      );
+
+      final result = await useCase.execute(
+        origin: routePoints.first,
+        destination: routePoints.last,
+      );
+
+      expect(result.primaryRoute.speedBumpCount, 1);
+      expect(result.primaryRoute.isSpeedBumpFree, isFalse);
+    });
+
+    test('bump at 20.0001m is ignored', () async {
+      final routePoints = [
+        const LatLng(0.0, 0.0),
+        const LatLng(0.0, 0.01),
+      ];
+      final bump = SpeedBump(
+        id: 'far',
+        location: LatLng(_metersToLat(20.0001), 0.005),
+        severity: 4,
+        reportCount: 1,
+        lastVerified: DateTime.now(),
+        isVerified: true,
+      );
+      final routingRepo = _FakeRoutingRepository()..routePoints = routePoints;
+      final bumpRepo = _FakeSpeedBumpRepository()..bumps = [bump];
+      useCase = CalculateRouteWithBumpAvoidance(
+        routingRepo: routingRepo,
+        bumpRepo: bumpRepo,
+      );
+
+      final result = await useCase.execute(
+        origin: routePoints.first,
+        destination: routePoints.last,
+      );
+
+      expect(result.primaryRoute.speedBumpCount, 0);
+      expect(result.primaryRoute.isSpeedBumpFree, isTrue);
+    });
+
     test('integration: impossible to avoid - short route with bump in middle', () async {
       // Very short segment (bump directly on path) - both routes may still show bump
       final routePoints = [
@@ -172,6 +276,8 @@ class _FakeRoutingRepository implements RoutingRepository {
     const LatLng(40.009, -75.22),
     const LatLng(40.015, -75.21),
   ];
+  List<LatLng>? lastWaypoints;
+  int callCount = 0;
 
   @override
   Future<AppRoute> calculateRoute({
@@ -179,6 +285,8 @@ class _FakeRoutingRepository implements RoutingRepository {
     required LatLng destination,
     List<LatLng>? waypoints,
   }) async {
+    callCount += 1;
+    lastWaypoints = waypoints;
     return AppRoute(
       id: 'fake-route',
       polylinePoints: List.of(routePoints),
@@ -194,6 +302,11 @@ class _FakeRoutingRepository implements RoutingRepository {
 
 class _FakeSpeedBumpRepository implements SpeedBumpRepository {
   List<SpeedBump> bumps = [];
+
+  @override
+  Future<List<SpeedBump>> getAllBumps() async {
+    return List.of(bumps);
+  }
 
   @override
   Future<List<SpeedBump>> getBumpsInBounds({

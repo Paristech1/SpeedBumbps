@@ -27,6 +27,11 @@ class LocalSpeedBumpRepository implements SpeedBumpRepository {
   final List<SpeedBump> _bumps;
 
   @override
+  Future<List<SpeedBump>> getAllBumps() async {
+    return List.of(_bumps);
+  }
+
+  @override
   Future<List<SpeedBump>> getBumpsInBounds({
     required LatLng southwest,
     required LatLng northeast,

@@ -1,22 +1,30 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:speed_bump_app/features/map/presentation/providers/location_provider.dart';
+import 'package:speed_bump_app/features/map/presentation/screens/map_screen.dart';
+import 'package:speed_bump_app/features/map/presentation/state/map_state.dart';
+import 'package:speed_bump_app/features/routing/presentation/providers/speed_bump_repository_provider.dart';
 
 void main() {
-  testWidgets('smoke test', (WidgetTester tester) async {
+  testWidgets('MapScreen renders permission prompt', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: Center(child: Text('Speed Bump')),
+      ProviderScope(
+        overrides: [
+          locationStreamProvider.overrideWith(
+            (ref) => Stream.value(const MapState.noPermission()),
+          ),
+          speedBumpsProvider.overrideWith((ref) async => []),
+        ],
+        child: const MaterialApp(
+          home: MapScreen(),
         ),
       ),
     );
-    expect(find.text('Speed Bump'), findsOneWidget);
+
+    await tester.pump();
+
+    expect(find.text('Location Permission Required'), findsOneWidget);
+    expect(find.byIcon(Icons.location_off), findsOneWidget);
   });
 }
