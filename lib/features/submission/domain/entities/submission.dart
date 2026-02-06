@@ -7,7 +7,7 @@ import 'submission_status.dart';
 part 'submission.freezed.dart';
 
 @freezed
-class Submission with _$Submission {
+abstract class Submission with _$Submission {
   const factory Submission({
     required String id,
     required String userId,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,6 +28,7 @@ final authStateProvider =
 class AuthStateNotifier extends StateNotifier<AuthState> {
   final FirebaseAuthDatasource authDatasource;
   final FirestoreUserDatasource userDatasource;
+  StreamSubscription<firebase_auth.User?>? _authSub;
 
   AuthStateNotifier({
     required this.authDatasource,
@@ -35,7 +38,7 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
   }
 
   void _initAuthListener() {
-    authDatasource.authStateChanges.listen((firebaseUser) async {
+    _authSub = authDatasource.authStateChanges.listen((firebaseUser) async {
       if (firebaseUser == null) {
         state = const AuthState.unauthenticated();
       } else {
@@ -131,5 +134,11 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       throw Exception(e.toString());
     }
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
   }
 }

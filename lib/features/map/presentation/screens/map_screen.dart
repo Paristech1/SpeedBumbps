@@ -5,14 +5,16 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../../core/constants/map_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/user_location.dart';
+import '../../../routing/domain/entities/speed_bump.dart';
 import '../../../routing/domain/utils/geo_utils.dart';
 import '../../../routing/presentation/providers/destination_provider.dart';
 import '../../../routing/presentation/providers/route_options_provider.dart';
 import '../../../routing/presentation/providers/routing_provider.dart';
+import '../../../routing/presentation/providers/speed_bump_repository_provider.dart';
+import '../../../routing/presentation/state/routing_state.dart';
 import '../../../routing/presentation/widgets/directions_bottom_sheet.dart';
 import '../../../routing/presentation/widgets/route_polyline.dart';
 import '../providers/location_provider.dart';
-import '../providers/map_controller_provider.dart';
 import '../state/map_state.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
@@ -22,12 +24,20 @@ class MapScreen extends ConsumerStatefulWidget {
   ConsumerState<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends ConsumerState<MapScreen> {
+class _MapScreenState extends ConsumerState<MapScreen>
+    with WidgetsBindingObserver {
   bool _hasAnimatedToUser = false;
   bool _destinationMode = false;
   bool _hasFittedRouteBounds = false;
   DateTime? _firstDeviationTime;
   DateTime? _lastRecalcTime;
+  String? _lastRouteId;
+  UserLocation? _lastLocation;
+  Set<Marker> _speedBumpMarkers = const <Marker>{};
+  String? _speedBumpError;
+  GoogleMapController? _mapController;
+  ProviderSubscription<AsyncValue<MapState>>? _locationSub;
+  ProviderSubscription<AsyncValue<List<SpeedBump>>>? _bumpsSub;
   static const double _deviationThresholdMeters = 80.0;
   static const int _deviationDelaySeconds = 5;
   static const int _recalcCooldownSeconds = 30;
@@ -38,46 +48,40 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   );
 
   @override
-  Widget build(BuildContext context) {
-    ref.listen(locationStreamProvider, (prev, next) {
-      final mapState = next.valueOrNull;
-      if (mapState == null) return;
-      mapState.maybeWhen(
-        success: (location) {
-          final route = ref.read(selectedRouteProvider);
-          final dest = ref.read(destinationProvider);
-          if (route == null || dest == null) {
-            _firstDeviationTime = null;
-            return;
-          }
-          final dist = distanceFromPointToPolyline(
-            LatLng(location.latitude, location.longitude),
-            route.polylinePoints,
-          );
-          if (dist > _deviationThresholdMeters) {
-            _firstDeviationTime ??= DateTime.now();
-            final now = DateTime.now();
-            if (_firstDeviationTime != null &&
-                now.difference(_firstDeviationTime!).inSeconds >=
-                    _deviationDelaySeconds &&
-                (_lastRecalcTime == null ||
-                    now.difference(_lastRecalcTime!).inSeconds >=
-                        _recalcCooldownSeconds)) {
-              ref.read(routingProvider.notifier).calculateRoute(
-                    origin: LatLng(location.latitude, location.longitude),
-                    destination: dest,
-                  );
-              _lastRecalcTime = now;
-              _firstDeviationTime = null;
-            }
-          } else {
-            _firstDeviationTime = null;
-          }
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _locationSub = ref.listenManual(locationStreamProvider, _handleLocationUpdate);
+    _bumpsSub = ref.listenManual<AsyncValue<List<SpeedBump>>>(
+        speedBumpsProvider, (prev, next) {
+      next.when(
+        data: (bumps) {
+          if (!mounted) return;
+          setState(() {
+            _speedBumpMarkers = _buildSpeedBumpMarkers(bumps);
+            _speedBumpError = null;
+          });
         },
-        orElse: () {},
+        loading: () {},
+        error: (error, _) {
+          if (!mounted) return;
+          setState(() {
+            _speedBumpError = error.toString();
+          });
+        },
       );
-    });
+    }, fireImmediately: true);
+  }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(locationStreamProvider);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final locationState = ref.watch(locationStreamProvider);
 
     return Scaffold(
@@ -112,6 +116,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Widget _buildMapView(UserLocation location) {
+    _lastLocation = location;
     final selectedRoute = ref.watch(selectedRouteProvider);
     final routingState = ref.watch(routingProvider);
     final hasAlternative = routingState.maybeWhen(
@@ -120,17 +125,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
     final showAlternative = ref.watch(selectedRouteIndexProvider) == 1;
 
-    if (!_hasAnimatedToUser) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_hasAnimatedToUser) {
-          _hasAnimatedToUser = true;
-          ref.read(mapControllerProvider)?.animateCamera(
-                CameraUpdate.newLatLng(
-                  LatLng(location.latitude, location.longitude),
-                ),
-              );
-        }
-      });
+    _tryAnimateToUser(location);
+
+    if (selectedRoute?.id != _lastRouteId) {
+      _hasFittedRouteBounds = false;
+      _lastRouteId = selectedRoute?.id;
     }
 
     if (selectedRoute != null && !_hasFittedRouteBounds) {
@@ -149,7 +148,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             if (p.longitude < minLng) minLng = p.longitude;
             if (p.longitude > maxLng) maxLng = p.longitude;
           }
-          ref.read(mapControllerProvider)?.animateCamera(
+          _mapController?.animateCamera(
                 CameraUpdate.newLatLngBounds(
                   LatLngBounds(
                     southwest: LatLng(minLat, minLng),
@@ -170,7 +169,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         : null;
 
     Set<Polyline> polylines = {};
-    Set<Marker> markers = {};
+    Set<Marker> markers = {..._speedBumpMarkers};
     if (selectedRoute != null) {
       polylines = {RoutePolylineWidget.createPolyline(selectedRoute)};
       if (origin != null) {
@@ -198,7 +197,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         GoogleMap(
           initialCameraPosition: _defaultPosition,
           onMapCreated: (controller) {
-            ref.read(mapControllerProvider.notifier).state = controller;
+            _mapController = controller;
+            final location = _lastLocation;
+            if (location != null) {
+              _tryAnimateToUser(location);
+            }
           },
           onTap: (LatLng position) {
             if (_destinationMode) {
@@ -309,6 +312,32 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
             ),
           ),
+        if (_speedBumpError != null)
+          Positioned(
+            top: 140,
+            left: 16,
+            right: 16,
+            child: Material(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(12),
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: Colors.orange[800]),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Speed bump data failed to load.',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         if (selectedRoute != null) ...[
           Positioned(
             left: 0,
@@ -373,6 +402,71 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ),
       ],
     );
+  }
+
+  void _handleLocationUpdate(AsyncValue<MapState>? prev, AsyncValue<MapState> next) {
+    final mapState = next.valueOrNull;
+    if (mapState == null) return;
+    mapState.maybeWhen(
+      success: (location) {
+        final route = ref.read(selectedRouteProvider);
+        final dest = ref.read(destinationProvider);
+        if (route == null || dest == null) {
+          _firstDeviationTime = null;
+          return;
+        }
+        final dist = distanceFromPointToPolyline(
+          LatLng(location.latitude, location.longitude),
+          route.polylinePoints,
+        );
+        if (dist > _deviationThresholdMeters) {
+          _firstDeviationTime ??= DateTime.now();
+          final now = DateTime.now();
+          if (_firstDeviationTime != null &&
+              now.difference(_firstDeviationTime!).inSeconds >=
+                  _deviationDelaySeconds &&
+              (_lastRecalcTime == null ||
+                  now.difference(_lastRecalcTime!).inSeconds >=
+                      _recalcCooldownSeconds)) {
+            ref.read(routingProvider.notifier).calculateRoute(
+                  origin: LatLng(location.latitude, location.longitude),
+                  destination: dest,
+                );
+            _lastRecalcTime = now;
+            _firstDeviationTime = null;
+          }
+        } else {
+          _firstDeviationTime = null;
+        }
+      },
+      orElse: () {},
+    );
+  }
+
+  void _tryAnimateToUser(UserLocation location) {
+    if (_hasAnimatedToUser) return;
+    final controller = _mapController;
+    if (controller == null) return;
+    _hasAnimatedToUser = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      controller.animateCamera(
+        CameraUpdate.newLatLng(
+          LatLng(location.latitude, location.longitude),
+        ),
+      );
+    });
+  }
+
+  Set<Marker> _buildSpeedBumpMarkers(List<SpeedBump> bumps) {
+    return bumps.map((bump) {
+      return Marker(
+        markerId: MarkerId('bump-${bump.id}'),
+        position: bump.location,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+        infoWindow: const InfoWindow(title: 'Speed bump'),
+      );
+    }).toSet();
   }
 
   Widget _buildLoadingView() {
@@ -517,8 +611,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   void dispose() {
-    ref.read(mapControllerProvider.notifier).state?.dispose();
-    ref.read(mapControllerProvider.notifier).state = null;
+    WidgetsBinding.instance.removeObserver(this);
+    _locationSub?.close();
+    _bumpsSub?.close();
+    _mapController?.dispose();
+    _mapController = null;
     super.dispose();
   }
 }

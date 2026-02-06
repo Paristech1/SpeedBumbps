@@ -8,7 +8,7 @@ final locationRepositoryProvider = Provider<LocationRepository>((ref) {
   return GeolocatorLocationRepository();
 });
 
-final locationStreamProvider = StreamProvider<MapState>((ref) async* {
+final locationStreamProvider = StreamProvider.autoDispose<MapState>((ref) async* {
   final repository = ref.read(locationRepositoryProvider);
 
   final serviceEnabled = await repository.isLocationServiceEnabled();
