@@ -18,6 +18,8 @@ class SpeedBump {
     required this.isVerified,
   });
 
-  /// Only avoid verified bumps in routing.
-  bool get shouldAvoidInRouting => isVerified && severity >= 3;
+  /// Avoid verified bumps at or above [minSeverity].
+  bool shouldAvoidInRouting({int minSeverity = 3}) {
+    return isVerified && severity >= minSeverity;
+  }
 }

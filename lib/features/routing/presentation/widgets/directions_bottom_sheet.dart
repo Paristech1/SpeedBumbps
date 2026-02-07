@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/route.dart';
+import '../../domain/entities/route_preferences.dart';
 import '../../domain/entities/route_step.dart';
+import '../providers/route_options_provider.dart';
 
-class DirectionsBottomSheet extends StatelessWidget {
+class DirectionsBottomSheet extends ConsumerWidget {
   const DirectionsBottomSheet({
     super.key,
     required this.route,
@@ -14,7 +17,8 @@ class DirectionsBottomSheet extends StatelessWidget {
   final VoidCallback? onClose;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final avoidanceProfile = ref.watch(routeAvoidanceProfileProvider);
     return DraggableScrollableSheet(
       initialChildSize: 0.4,
       minChildSize: 0.2,
@@ -126,6 +130,18 @@ class DirectionsBottomSheet extends StatelessWidget {
                   ],
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _PreferencesSection(
+                  avoidanceProfile: avoidanceProfile,
+                  onModeSelected: (mode) => ref
+                      .read(routePreferenceModeProvider.notifier)
+                      .state = mode,
+                  onVehicleSelected: (vehicle) => ref
+                      .read(vehicleProfileProvider.notifier)
+                      .state = vehicle,
+                ),
+              ),
               const Divider(height: 1),
               Expanded(
                 child: ListView.builder(
@@ -164,5 +180,82 @@ class _StepTile extends StatelessWidget {
         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
       ),
     );
+  }
+}
+
+class _PreferencesSection extends StatelessWidget {
+  const _PreferencesSection({
+    required this.avoidanceProfile,
+    required this.onModeSelected,
+    required this.onVehicleSelected,
+  });
+
+  final RouteAvoidanceProfile avoidanceProfile;
+  final ValueChanged<RoutePreferenceMode> onModeSelected;
+  final ValueChanged<VehicleProfile> onVehicleSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Route preferences',
+          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: RoutePreferenceMode.values.map((mode) {
+            return ChoiceChip(
+              label: Text(_modeLabel(mode)),
+              selected: avoidanceProfile.mode == mode,
+              onSelected: (_) => onModeSelected(mode),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Vehicle profile',
+          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: VehicleProfile.values.map((vehicle) {
+            return ChoiceChip(
+              label: Text(_vehicleLabel(vehicle)),
+              selected: avoidanceProfile.vehicle == vehicle,
+              onSelected: (_) => onVehicleSelected(vehicle),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Avoiding bumps rated ${avoidanceProfile.minSeverityToAvoid}+',
+          style: textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  String _modeLabel(RoutePreferenceMode mode) {
+    return switch (mode) {
+      RoutePreferenceMode.smoothRide => 'Smooth',
+      RoutePreferenceMode.cargoConscious => 'Cargo',
+      RoutePreferenceMode.fast => 'Fast',
+    };
+  }
+
+  String _vehicleLabel(VehicleProfile vehicle) {
+    return switch (vehicle) {
+      VehicleProfile.sedan => 'Sedan',
+      VehicleProfile.suv => 'SUV',
+      VehicleProfile.loweredCar => 'Lowered',
+      VehicleProfile.motorcycle => 'Motorcycle',
+      VehicleProfile.bicycle => 'Bicycle',
+    };
   }
 }

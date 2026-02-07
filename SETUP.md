@@ -50,9 +50,15 @@ Do not commit the key. For local development, use a `.env` or shell alias that s
 From the project root (with Flutter installed and on your PATH):
 
 ```bash
-flutter pub get
+./scripts/setup.sh
 flutter run
 ```
+
+The setup helper script stops on the first error. Run it from the project root. It runs:
+
+- `flutter pub get`
+- `dart run build_runner build --delete-conflicting-outputs`
+- `flutter test`
 
 If the project was created manually without `flutter create`, run `flutter create .` once to generate any missing platform files (e.g. iOS Xcode project, Android launcher icons), then replace only the API key placeholders and location permission entries as above.
 

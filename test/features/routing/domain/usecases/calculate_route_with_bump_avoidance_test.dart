@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:speed_bump_app/features/routing/domain/entities/route.dart';
+import 'package:speed_bump_app/features/routing/domain/entities/route_preferences.dart';
 import 'package:speed_bump_app/features/routing/domain/entities/speed_bump.dart';
 import 'package:speed_bump_app/features/routing/domain/repositories/routing_repository.dart';
 import 'package:speed_bump_app/features/routing/domain/repositories/speed_bump_repository.dart';
@@ -229,6 +230,72 @@ void main() {
 
       expect(result.primaryRoute.speedBumpCount, 0);
       expect(result.primaryRoute.isSpeedBumpFree, isTrue);
+    });
+
+    test('fast mode ignores moderate bumps', () async {
+      final routePoints = [
+        const LatLng(40.0093, -75.2193),
+        const LatLng(40.0095, -75.2195),
+      ];
+      final bump = SpeedBump(
+        id: 'mid',
+        location: const LatLng(40.0094, -75.2194),
+        severity: 3,
+        reportCount: 1,
+        lastVerified: DateTime.now(),
+        isVerified: true,
+      );
+      final routingRepo = _FakeRoutingRepository()..routePoints = routePoints;
+      final bumpRepo = _FakeSpeedBumpRepository()..bumps = [bump];
+      useCase = CalculateRouteWithBumpAvoidance(
+        routingRepo: routingRepo,
+        bumpRepo: bumpRepo,
+      );
+
+      final result = await useCase.execute(
+        origin: routePoints.first,
+        destination: routePoints.last,
+        avoidanceProfile: const RouteAvoidanceProfile(
+          mode: RoutePreferenceMode.fast,
+          vehicle: VehicleProfile.sedan,
+        ),
+      );
+
+      expect(result.primaryRoute.speedBumpCount, 0);
+      expect(result.primaryRoute.isSpeedBumpFree, isTrue);
+    });
+
+    test('smooth ride avoids even mild bumps', () async {
+      final routePoints = [
+        const LatLng(40.0093, -75.2193),
+        const LatLng(40.0095, -75.2195),
+      ];
+      final bump = SpeedBump(
+        id: 'mild',
+        location: const LatLng(40.0094, -75.2194),
+        severity: 1,
+        reportCount: 1,
+        lastVerified: DateTime.now(),
+        isVerified: true,
+      );
+      final routingRepo = _FakeRoutingRepository()..routePoints = routePoints;
+      final bumpRepo = _FakeSpeedBumpRepository()..bumps = [bump];
+      useCase = CalculateRouteWithBumpAvoidance(
+        routingRepo: routingRepo,
+        bumpRepo: bumpRepo,
+      );
+
+      final result = await useCase.execute(
+        origin: routePoints.first,
+        destination: routePoints.last,
+        avoidanceProfile: const RouteAvoidanceProfile(
+          mode: RoutePreferenceMode.smoothRide,
+          vehicle: VehicleProfile.loweredCar,
+        ),
+      );
+
+      expect(result.primaryRoute.speedBumpCount, 1);
+      expect(result.primaryRoute.isSpeedBumpFree, isFalse);
     });
 
     test('integration: impossible to avoid - short route with bump in middle', () async {

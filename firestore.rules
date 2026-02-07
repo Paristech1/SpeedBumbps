@@ -2,7 +2,6 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -15,158 +14,178 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isValidLatLng(location) {
+    function isServerTimestamp(field) {
+      return field is timestamp && field == request.time;
+    }
+
+    function inPhiladelphiaBounds(location) {
       return location is map
         && location.latitude is number
         && location.longitude is number
-        && location.latitude >= -90 && location.latitude <= 90
-        && location.longitude >= -180 && location.longitude <= 180;
+        && location.latitude >= 39.8
+        && location.latitude <= 40.2
+        && location.longitude >= -75.3
+        && location.longitude <= -74.9;
     }
 
-    function isValidSeverity(severity) {
-      return severity is int && severity >= 1 && severity <= 5;
+    function validPhotoUrl(url) {
+      return url is string
+        && url.matches('^https://firebasestorage.googleapis.com/.*');
+    }
+
+    function validStatus(status) {
+      return status in ['pending', 'verified', 'rejected'];
+    }
+
+    function userRateLimitPath(userId) {
+      return /databases/$(database)/documents/users/$(userId)/meta/rate_limits;
+    }
+
+    function validSubmissionRateLimitForCreate() {
+      let after = getAfter(userRateLimitPath(request.auth.uid));
+      let hasBefore = exists(userRateLimitPath(request.auth.uid));
+      let before = hasBefore ? get(userRateLimitPath(request.auth.uid)).data : null;
+
+      return after.data.windowStartedAt is timestamp
+        && after.data.windowStartedAt <= request.time
+        && after.data.submissionCount is int
+        && after.data.submissionCount >= 1
+        && after.data.submissionCount <= 10
+        && (
+          !hasBefore
+          ? after.data.submissionCount == 1
+          : (
+            request.time - before.windowStartedAt < duration.value(1, 'h')
+            ? (
+              after.data.windowStartedAt == before.windowStartedAt
+              && after.data.submissionCount == before.submissionCount + 1
+            )
+            : (
+              after.data.windowStartedAt == request.time
+              && after.data.submissionCount == 1
+            )
+          )
+        );
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && request.resource.data.keys().hasOnly([
+          'id', 'userId', 'userEmail', 'photoUrl', 'location', 'severity', 'notes',
+          'status', 'submittedAt', 'updatedAt', 'reviewedAt', 'reviewedBy',
+          'rejectionReason', 'createdSpeedBumpId'
+        ])
+        && request.resource.data.id == submissionId
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.userEmail is string
+        && validPhotoUrl(request.resource.data.photoUrl)
+        && inPhiladelphiaBounds(request.resource.data.location)
+        && request.resource.data.severity is int
+        && request.resource.data.severity >= 1
+        && request.resource.data.severity <= 5
+        && (request.resource.data.notes is string || request.resource.data.notes == null)
+        && request.resource.data.status == 'pending'
+        && isServerTimestamp(request.resource.data.submittedAt)
+        && isServerTimestamp(request.resource.data.updatedAt)
+        && request.resource.data.reviewedAt == null
+        && request.resource.data.reviewedBy == null
+        && request.resource.data.rejectionReason == null
+        && request.resource.data.createdSpeedBumpId == null
+        && validSubmissionRateLimitForCreate();
+
+      allow update: if isOwner(resource.data.userId)
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.reviewedAt == resource.data.reviewedAt
+        && request.resource.data.reviewedBy == resource.data.reviewedBy
+        && request.resource.data.rejectionReason == resource.data.rejectionReason
+        && request.resource.data.createdSpeedBumpId == resource.data.createdSpeedBumpId
+        && validPhotoUrl(request.resource.data.photoUrl)
+        && inPhiladelphiaBounds(request.resource.data.location)
+        && request.resource.data.severity is int
+        && request.resource.data.severity >= 1
+        && request.resource.data.severity <= 5
+        && isServerTimestamp(request.resource.data.updatedAt)
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          'photoUrl', 'location', 'severity', 'notes', 'updatedAt'
+        ]);
+
+      allow delete: if isAdmin();
     }
 
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
+
       allow create: if isOwner(userId)
         && request.resource.data.keys().hasOnly([
-          'id',
-          'email',
-          'displayName',
-          'photoUrl',
-          'reputationScore',
-          'totalReports',
-          'milesDriven',
-          'createdAt',
-          'lastActive'
+          'id', 'email', 'displayName', 'photoUrl', 'isAdmin', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.id == userId
         && request.resource.data.email is string
-        && (request.resource.data.displayName is string
-          || request.resource.data.displayName == null)
-        && (request.resource.data.photoUrl is string
-          || request.resource.data.photoUrl == null)
-        && request.resource.data.reputationScore is int
-        && request.resource.data.totalReports is int
-        && request.resource.data.milesDriven is number
-        && request.resource.data.createdAt is timestamp
-        && request.resource.data.lastActive is timestamp;
-      allow update: if isOwner(userId)
-        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
-          'displayName',
-          'photoUrl',
-          'lastActive',
-          'milesDriven'
-        ])
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.email == resource.data.email
-        && request.resource.data.reputationScore == resource.data.reputationScore
-        && request.resource.data.totalReports == resource.data.totalReports
-        && request.resource.data.createdAt == resource.data.createdAt
-        && (request.resource.data.displayName is string
-          || request.resource.data.displayName == null)
-        && (request.resource.data.photoUrl is string
-          || request.resource.data.photoUrl == null)
-        && request.resource.data.milesDriven is number
-        && request.resource.data.lastActive is timestamp;
-      allow update: if isAdmin()
-        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
-          'reputationScore',
-          'totalReports',
-          'lastActive',
-          'milesDriven'
-        ])
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.email == resource.data.email
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.reputationScore is int
-        && request.resource.data.totalReports is int
-        && request.resource.data.milesDriven is number
-        && request.resource.data.lastActive is timestamp;
-      allow delete: if isOwner(userId) || isAdmin();
-    }
+        && (request.resource.data.displayName is string || request.resource.data.displayName == null)
+        && (request.resource.data.photoUrl is string || request.resource.data.photoUrl == null)
+        && request.resource.data.isAdmin == false
+        && isServerTimestamp(request.resource.data.createdAt)
+        && isServerTimestamp(request.resource.data.updatedAt);
 
-    match /submissions/{submissionId} {
-      allow read: if isAdmin()
-        || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated()
-        && request.resource.data.keys().hasOnly([
-          'id',
-          'userId',
-          'userEmail',
-          'photoUrl',
-          'location',
-          'severity',
-          'notes',
-          'status',
-          'submittedAt',
-          'reviewedAt',
-          'reviewedBy',
-          'rejectionReason',
-          'createdSpeedBumpId'
-        ])
-        && request.resource.data.id == submissionId
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.status == 'pending'
-        && isValidSeverity(request.resource.data.severity)
-        && isValidLatLng(request.resource.data.location)
-        && request.resource.data.photoUrl is string
-        && request.resource.data.userEmail is string
-        && request.resource.data.submittedAt is timestamp
-        && (request.resource.data.notes is string
-          || request.resource.data.notes == null)
-        && request.resource.data.reviewedAt == null
-        && request.resource.data.reviewedBy == null
-        && request.resource.data.rejectionReason == null
-        && request.resource.data.createdSpeedBumpId == null;
-      allow update: if isAdmin()
-        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
-          'status',
-          'reviewedAt',
-          'reviewedBy',
-          'rejectionReason',
-          'createdSpeedBumpId'
-        ])
+      allow update: if (
+          isOwner(userId)
+          && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+            'displayName', 'photoUrl', 'updatedAt'
+          ])
+          && request.resource.data.isAdmin == resource.data.isAdmin
+        ) || (
+          isAdmin()
+          && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+            'isAdmin', 'updatedAt'
+          ])
+        )
         && request.resource.data.id == resource.data.id
-        && request.resource.data.userId == resource.data.userId;
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (request.resource.data.displayName is string || request.resource.data.displayName == null)
+        && (request.resource.data.photoUrl is string || request.resource.data.photoUrl == null)
+        && request.resource.data.isAdmin is bool
+        && isServerTimestamp(request.resource.data.updatedAt);
+
       allow delete: if isAdmin();
+
+      match /meta/{docId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /speed_bumps/{bumpId} {
       allow read: if true;
-      allow create: if isAdmin()
-        && request.resource.data.keys().hasOnly([
-          'id',
-          'location',
-          'severity',
-          'reportCount',
-          'lastVerified',
-          'isVerified'
-        ])
+
+      allow create, update: if isAdmin()
         && request.resource.data.id == bumpId
-        && isValidSeverity(request.resource.data.severity)
-        && isValidLatLng(request.resource.data.location)
-        && request.resource.data.reportCount is int
-        && request.resource.data.reportCount >= 1
-        && request.resource.data.lastVerified is timestamp
-        && request.resource.data.isVerified is bool;
-      allow update: if isAdmin()
-        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
-          'severity',
-          'reportCount',
-          'lastVerified',
-          'isVerified',
-          'location'
-        ])
-        && request.resource.data.id == resource.data.id
-        && isValidSeverity(request.resource.data.severity)
-        && isValidLatLng(request.resource.data.location)
-        && request.resource.data.reportCount is int
-        && request.resource.data.reportCount >= 1
-        && request.resource.data.lastVerified is timestamp
-        && request.resource.data.isVerified is bool;
+        && inPhiladelphiaBounds(request.resource.data.location)
+        && request.resource.data.severity is int
+        && request.resource.data.severity >= 1
+        && request.resource.data.severity <= 5;
+
       allow delete: if isAdmin();
+    }
+
+    match /routes/{routeId} {
+      allow create: if isAuthenticated()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.keys().hasAll(['ownerId', 'createdAt', 'updatedAt'])
+        && isServerTimestamp(request.resource.data.createdAt)
+        && isServerTimestamp(request.resource.data.updatedAt);
+
+      allow get, list: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+
+      allow update: if isAuthenticated()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && isServerTimestamp(request.resource.data.updatedAt);
+
+      allow delete: if (isAuthenticated() && resource.data.ownerId == request.auth.uid) || isAdmin();
     }
   }
 }

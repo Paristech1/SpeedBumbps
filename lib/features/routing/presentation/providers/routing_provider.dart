@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../domain/usecases/calculate_route_with_bump_avoidance.dart';
+import '../../domain/entities/route_preferences.dart';
 import 'routing_repository_provider.dart';
 import 'speed_bump_repository_provider.dart';
 import '../state/routing_state.dart';
@@ -22,16 +23,23 @@ class RoutingNotifier extends StateNotifier<RoutingState> {
   final CalculateRouteWithBumpAvoidance _useCase;
   final Map<String, _CachedResult> _cache = {};
 
-  static String _cacheKey(LatLng origin, LatLng destination) {
+  static String _cacheKey(
+    LatLng origin,
+    LatLng destination,
+    RouteAvoidanceProfile profile,
+  ) {
     return '${origin.latitude},${origin.longitude}-'
-        '${destination.latitude},${destination.longitude}';
+        '${destination.latitude},${destination.longitude}-'
+        '${profile.cacheKey}';
   }
 
   Future<void> calculateRoute({
     required LatLng origin,
     required LatLng destination,
+    RouteAvoidanceProfile? avoidanceProfile,
   }) async {
-    final key = _cacheKey(origin, destination);
+    final profile = avoidanceProfile ?? const RouteAvoidanceProfile();
+    final key = _cacheKey(origin, destination, profile);
     final cached = _cache[key];
     if (cached != null &&
         DateTime.now().difference(cached.timestamp).inMinutes < _cacheTtlMinutes) {
@@ -44,6 +52,7 @@ class RoutingNotifier extends StateNotifier<RoutingState> {
       final result = await _useCase.execute(
         origin: origin,
         destination: destination,
+        avoidanceProfile: profile,
       );
       _cache[key] = _CachedResult(result: result, timestamp: DateTime.now());
       state = RoutingState.success(result);

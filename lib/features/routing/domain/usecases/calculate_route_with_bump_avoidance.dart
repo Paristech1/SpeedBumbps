@@ -3,6 +3,7 @@ import 'dart:math' show cos, sin, sqrt, asin, pi;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../entities/route.dart';
+import '../entities/route_preferences.dart';
 import '../entities/speed_bump.dart';
 import '../repositories/routing_repository.dart';
 import '../repositories/speed_bump_repository.dart';
@@ -38,7 +39,9 @@ class CalculateRouteWithBumpAvoidance {
   Future<RouteCalculationResult> execute({
     required LatLng origin,
     required LatLng destination,
+    RouteAvoidanceProfile? avoidanceProfile,
   }) async {
+    final profile = avoidanceProfile ?? const RouteAvoidanceProfile();
     // Step 1: Default route
     final defaultRoute = await _routingRepo.calculateRoute(
       origin: origin,
@@ -57,8 +60,9 @@ class CalculateRouteWithBumpAvoidance {
       southwest: expandedBounds.southwest,
       northeast: expandedBounds.northeast,
     );
-    final criticalBumps =
-        allBumps.where((b) => b.shouldAvoidInRouting).toList();
+    final criticalBumps = allBumps
+        .where((b) => b.shouldAvoidInRouting(minSeverity: profile.minSeverityToAvoid))
+        .toList();
 
     // Step 3: Detect bumps on route
     final bumpsOnRoute = _detectBumpsOnRoute(

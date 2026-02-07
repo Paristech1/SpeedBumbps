@@ -14,6 +14,7 @@ import '../../../routing/presentation/providers/speed_bump_repository_provider.d
 import '../../../routing/presentation/state/routing_state.dart';
 import '../../../routing/presentation/widgets/directions_bottom_sheet.dart';
 import '../../../routing/presentation/widgets/route_polyline.dart';
+import '../../../routing/domain/entities/route_preferences.dart';
 import '../providers/location_provider.dart';
 import '../state/map_state.dart';
 
@@ -38,6 +39,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
   GoogleMapController? _mapController;
   ProviderSubscription<AsyncValue<MapState>>? _locationSub;
   ProviderSubscription<AsyncValue<List<SpeedBump>>>? _bumpsSub;
+  ProviderSubscription<RouteAvoidanceProfile>? _routePrefsSub;
   static const double _deviationThresholdMeters = 80.0;
   static const int _deviationDelaySeconds = 5;
   static const int _recalcCooldownSeconds = 30;
@@ -71,6 +73,14 @@ class _MapScreenState extends ConsumerState<MapScreen>
         },
       );
     }, fireImmediately: true);
+    _routePrefsSub = ref.listenManual<RouteAvoidanceProfile>(
+      routeAvoidanceProfileProvider,
+      (prev, next) {
+        if (prev == null) return;
+        if (prev.mode == next.mode && prev.vehicle == next.vehicle) return;
+        _recalculateRouteForPreferences(next);
+      },
+    );
   }
 
   @override
@@ -210,6 +220,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
               ref.read(routingProvider.notifier).calculateRoute(
                     origin: LatLng(location.latitude, location.longitude),
                     destination: position,
+                    avoidanceProfile: ref.read(routeAvoidanceProfileProvider),
                   );
             }
           },
@@ -431,6 +442,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
             ref.read(routingProvider.notifier).calculateRoute(
                   origin: LatLng(location.latitude, location.longitude),
                   destination: dest,
+                  avoidanceProfile: ref.read(routeAvoidanceProfileProvider),
                 );
             _lastRecalcTime = now;
             _firstDeviationTime = null;
@@ -456,6 +468,17 @@ class _MapScreenState extends ConsumerState<MapScreen>
         ),
       );
     });
+  }
+
+  void _recalculateRouteForPreferences(RouteAvoidanceProfile profile) {
+    final location = _lastLocation;
+    final dest = ref.read(destinationProvider);
+    if (location == null || dest == null) return;
+    ref.read(routingProvider.notifier).calculateRoute(
+          origin: LatLng(location.latitude, location.longitude),
+          destination: dest,
+          avoidanceProfile: profile,
+        );
   }
 
   Set<Marker> _buildSpeedBumpMarkers(List<SpeedBump> bumps) {
@@ -614,6 +637,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     WidgetsBinding.instance.removeObserver(this);
     _locationSub?.close();
     _bumpsSub?.close();
+    _routePrefsSub?.close();
     _mapController?.dispose();
     _mapController = null;
     super.dispose();

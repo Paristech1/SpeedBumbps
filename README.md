@@ -24,9 +24,13 @@ Interactive map with real-time location and A-to-B routing with speed bump aware
 ## Setup
 
 1. Clone the repository.
-2. Run `flutter pub get`.
-3. Run `dart run build_runner build --delete-conflicting-outputs` (generates Freezed/JSON code).
-4. Run `flutter run` (or see SETUP.md for API keys and device-specific steps).
+2. Run the setup helper script from the project root:
+   ```bash
+   ./scripts/setup.sh
+   ```
+   This runs `flutter clean`, `flutter pub get`, `dart run build_runner build --delete-conflicting-outputs`, and `flutter test`.
+3. (Optional) Run `./scripts/prebuild_check.sh` to validate tooling before build.
+4. Run `flutter run` (or `./scripts/run_ios.sh` for auto iOS device selection).
 
 Local Maps SDK keys (for map display):
 - Android: add `GOOGLE_MAPS_API_KEY=...` to `android/local.properties`.
@@ -37,13 +41,35 @@ See **[SETUP.md](SETUP.md)** for:
 
 - Google Maps API key (Android + iOS)
 - **Google Directions API key** (Phase 2): set via `--dart-define=GOOGLE_DIRECTIONS_API_KEY=...`
-- How to run the app (`flutter pub get`, `flutter run`)
+- How to run the setup helper script (`./scripts/setup.sh`) and app (`flutter run`)
 - Generating platform files with `flutter create .` if needed
+
+
+## iOS build requirements
+
+- **Xcode:** 15.0+ recommended (16.x preferred).
+- **iOS runtimes:** install at least one runtime from iOS 15, 16, and 17 in Xcode > Settings > Platforms.
+- **CocoaPods:** latest stable (`pod --version`).
+
+### iOS launcher helper
+
+Use the helper script to improve build reliability on macOS:
+
+```bash
+./scripts/run_ios.sh
+```
+
+Behavior:
+- Uses a currently booted simulator if present.
+- Otherwise boots the latest available iPhone simulator (for example, iPhone 17 class devices).
+- Uses attached physical iOS device if found.
+- Falls back to `flutter run -d macos` when no iOS target is available.
 
 ## Running tests
 
 ```bash
 flutter test
+flutter test integration_test/critical_flows_test.dart
 ```
 
 ## Manual QA checklist (real devices)
@@ -67,3 +93,32 @@ flutter test
 - **Presentation:** Riverpod (routing state, cache, route options); `MapScreen` with polyline, markers, bottom sheet, deviation-based recalc
 
 Ready for Phase 3 (voice navigation, speed bump reporting UI).
+
+
+## Dependency and reliability checks
+
+```bash
+flutter pub outdated
+dart pub audit
+./scripts/prebuild_check.sh
+```
+
+See [DEPENDENCIES.md](DEPENDENCIES.md) for package rationale, migration notes, and known issues.
+See [PERFORMANCE.md](PERFORMANCE.md) for profiling procedure and benchmark template.
+
+
+## CI
+
+GitHub Actions workflow: `.github/workflows/flutter_ci.yml`
+- `flutter pub get`
+- `build_runner` code generation
+- strict `flutter analyze`
+- `flutter test --coverage`
+- debug APK artifact upload
+
+## Logging and crash reporting
+
+- `lib/core/utils/logger.dart`: debug-only structured logs (`debug/info/warn/error`).
+- `firebase_crashlytics` integrated in `main.dart` for uncaught Flutter and zone errors.
+- Navigation events are logged through a navigator observer for crash breadcrumbs.
+- Manual crash test hook: call `CrashReporting.triggerTestCrash()` in debug builds to validate reporting.
