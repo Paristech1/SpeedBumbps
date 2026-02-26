@@ -9,12 +9,34 @@ class FirebaseAuthDatasource {
   FirebaseAuthDatasource({
     FirebaseAuth? firebaseAuth,
     GoogleSignIn? googleSignIn,
-  })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
+  })  : _firebaseAuth = firebaseAuth ?? _getFirebaseAuthSafely(),
         _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
-  User? get currentUser => _firebaseAuth.currentUser;
+  static FirebaseAuth _getFirebaseAuthSafely() {
+    try {
+      return FirebaseAuth.instance;
+    } catch (e) {
+      // Return a fake instance that will fail gracefully
+      throw Exception('Firebase not initialized');
+    }
+  }
 
-  Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
+  User? get currentUser {
+    try {
+      return _firebaseAuth.currentUser;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Stream<User?> get authStateChanges {
+    try {
+      return _firebaseAuth.authStateChanges();
+    } catch (e) {
+      // Return a stream that immediately emits null (unauthenticated)
+      return Stream.value(null);
+    }
+  }
 
   Future<bool> isAdmin({bool forceRefresh = false}) async {
     final user = currentUser;
