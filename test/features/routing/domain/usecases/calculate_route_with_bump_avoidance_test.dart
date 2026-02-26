@@ -1,7 +1,7 @@
 import 'dart:math' show pi;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 import 'package:speed_bump_app/features/routing/domain/entities/route.dart';
 import 'package:speed_bump_app/features/routing/domain/entities/route_preferences.dart';

@@ -1,6 +1,11 @@
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:speed_bump_app/features/auth/data/datasources/firebase_auth_datasource.dart';
+import 'package:speed_bump_app/features/auth/data/datasources/firestore_user_datasource.dart';
+import 'package:speed_bump_app/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:speed_bump_app/features/map/presentation/providers/location_provider.dart';
 import 'package:speed_bump_app/features/map/presentation/screens/map_screen.dart';
 import 'package:speed_bump_app/features/map/presentation/state/map_state.dart';
@@ -8,10 +13,20 @@ import 'package:speed_bump_app/features/routing/presentation/providers/speed_bum
 
 void main() {
   group('MapScreen', () {
+    final authOverrides = [
+      firebaseAuthDatasourceProvider.overrideWithValue(
+        FirebaseAuthDatasource(firebaseAuth: MockFirebaseAuth(signedIn: false)),
+      ),
+      firestoreUserDatasourceProvider.overrideWithValue(
+        FirestoreUserDatasource(firestore: FakeFirebaseFirestore()),
+      ),
+    ];
+
     testWidgets('Shows permission denied screen when no permission', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...authOverrides,
             locationStreamProvider.overrideWith(
               (ref) => Stream.value(const MapState.noPermission()),
             ),
@@ -33,6 +48,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...authOverrides,
             locationStreamProvider.overrideWith(
               (ref) => Stream.value(const MapState.loading()),
             ),
@@ -54,6 +70,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...authOverrides,
             locationStreamProvider.overrideWith(
               (ref) => Stream.value(const MapState.serviceDisabled()),
             ),
@@ -75,6 +92,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...authOverrides,
             locationStreamProvider.overrideWith(
               (ref) => Stream.value(const MapState.error('Test error')),
             ),

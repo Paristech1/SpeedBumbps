@@ -1,6 +1,5 @@
 import UIKit
 import Flutter
-import GoogleMaps
 import FirebaseCore
 
 @main
@@ -9,12 +8,14 @@ import FirebaseCore
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    FirebaseApp.configure()
-    if let apiKey = Bundle.main.object(forInfoDictionaryKey: "GMSApiKey") as? String,
-       !apiKey.isEmpty {
-      GMSServices.provideAPIKey(apiKey)
+    // Only configure Firebase when we have real config (not placeholder).
+    if let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
+       let dict = NSDictionary(contentsOfFile: path) as? [String: Any],
+       let apiKey = dict["API_KEY"] as? String,
+       !apiKey.contains("REPLACE") {
+      FirebaseApp.configure()
     } else {
-      NSLog("Google Maps API key is missing. Set GMSApiKey in Info.plist.")
+      NSLog("Firebase: Skipping configure (placeholder or missing config).")
     }
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

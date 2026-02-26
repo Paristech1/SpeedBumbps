@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routes/app_router.dart';
+import 'features/map/presentation/screens/map_screen.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/crash_reporting.dart';
 import 'core/utils/logger.dart';
@@ -88,7 +89,7 @@ class SpeedBumpApp extends StatelessWidget {
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
       navigatorObservers: [AnalyticsNavigationObserver()],
-      home: const AuthGate(),
+      home: const MapScreen(),
       routes: AppRouter.routes,
     );
   }

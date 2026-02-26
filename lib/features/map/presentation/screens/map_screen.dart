@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../core/constants/map_constants.dart';
+import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../../../auth/presentation/state/auth_state.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/user_location.dart';
 import '../../../routing/domain/entities/speed_bump.dart';
@@ -34,9 +37,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
   DateTime? _lastRecalcTime;
   String? _lastRouteId;
   UserLocation? _lastLocation;
-  Set<Marker> _speedBumpMarkers = const <Marker>{};
+  List<Marker> _speedBumpMarkers = const [];
   String? _speedBumpError;
-  GoogleMapController? _mapController;
+  MapController? _mapController;
   ProviderSubscription<AsyncValue<MapState>>? _locationSub;
   ProviderSubscription<AsyncValue<List<SpeedBump>>>? _bumpsSub;
   ProviderSubscription<RouteAvoidanceProfile>? _routePrefsSub;
@@ -44,14 +47,13 @@ class _MapScreenState extends ConsumerState<MapScreen>
   static const int _deviationDelaySeconds = 5;
   static const int _recalcCooldownSeconds = 30;
 
-  static final CameraPosition _defaultPosition = CameraPosition(
-    target: LatLng(MapConstants.defaultLat, MapConstants.defaultLng),
-    zoom: MapConstants.defaultZoom,
-  );
+  static final LatLng _defaultCenter =
+      LatLng(MapConstants.defaultLat, MapConstants.defaultLng);
 
   @override
   void initState() {
     super.initState();
+    _mapController = MapController();
     WidgetsBinding.instance.addObserver(this);
     _locationSub = ref.listenManual(locationStreamProvider, _handleLocationUpdate);
     _bumpsSub = ref.listenManual<AsyncValue<List<SpeedBump>>>(
@@ -94,16 +96,54 @@ class _MapScreenState extends ConsumerState<MapScreen>
   Widget build(BuildContext context) {
     final locationState = ref.watch(locationStreamProvider);
 
+    final authState = ref.watch(authStateProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Speed Bump'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () => Navigator.of(context).pushNamed('/profile'),
-            tooltip: 'Profile',
-          ),
-        ],
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+              ),
+              child: Text(
+                'Speed Bump',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.login),
+              title: const Text('Log in'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/auth');
+              },
+            ),
+            authState.maybeWhen(
+              authenticated: (_) => ListTile(
+                leading: const Icon(Icons.person),
+                title: const Text('Profile'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/profile');
+                },
+              ),
+              orElse: () => const SizedBox.shrink(),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Report bump'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/camera');
+              },
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.of(context).pushNamed('/camera'),
@@ -158,15 +198,15 @@ class _MapScreenState extends ConsumerState<MapScreen>
             if (p.longitude < minLng) minLng = p.longitude;
             if (p.longitude > maxLng) maxLng = p.longitude;
           }
-          _mapController?.animateCamera(
-                CameraUpdate.newLatLngBounds(
-                  LatLngBounds(
-                    southwest: LatLng(minLat, minLng),
-                    northeast: LatLng(maxLat, maxLng),
-                  ),
-                  100,
-                ),
-              );
+          _mapController?.fitCamera(
+            CameraFit.bounds(
+              bounds: LatLngBounds(
+                LatLng(minLat, minLng),
+                LatLng(maxLat, maxLng),
+              ),
+              padding: const EdgeInsets.all(100),
+            ),
+          );
         }
       });
     }
@@ -178,66 +218,67 @@ class _MapScreenState extends ConsumerState<MapScreen>
         ? selectedRoute.polylinePoints.last
         : null;
 
-    Set<Polyline> polylines = {};
-    Set<Marker> markers = {..._speedBumpMarkers};
-    if (selectedRoute != null) {
-      polylines = {RoutePolylineWidget.createPolyline(selectedRoute)};
-      if (origin != null) {
-        markers.add(
-          Marker(
-            markerId: const MarkerId('origin'),
-            position: origin,
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-          ),
-        );
-      }
-      if (destination != null) {
-        markers.add(
-          Marker(
-            markerId: const MarkerId('destination'),
-            position: destination,
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          ),
-        );
-      }
+    final markers = <Marker>[..._speedBumpMarkers];
+    if (origin != null) {
+      markers.add(
+        Marker(
+          point: origin,
+          width: 32,
+          height: 32,
+          child: const Icon(Icons.trip_origin, color: Colors.green, size: 32),
+        ),
+      );
     }
+    if (destination != null) {
+      markers.add(
+        Marker(
+          point: destination,
+          width: 32,
+          height: 32,
+          child: const Icon(Icons.location_on, color: Colors.red, size: 32),
+        ),
+      );
+    }
+    markers.add(
+      Marker(
+        point: LatLng(location.latitude, location.longitude),
+        width: 24,
+        height: 24,
+        child: const Icon(Icons.my_location, color: Colors.blue, size: 24),
+      ),
+    );
+
+    final polylines = selectedRoute != null
+        ? [RoutePolylineWidget.createPolyline(selectedRoute!)]
+        : <Polyline>[];
 
     return Stack(
       children: [
-        GoogleMap(
-          initialCameraPosition: _defaultPosition,
-          onMapCreated: (controller) {
-            _mapController = controller;
-            final location = _lastLocation;
-            if (location != null) {
-              _tryAnimateToUser(location);
-            }
-          },
-          onTap: (LatLng position) {
-            if (_destinationMode) {
-              setState(() => _destinationMode = false);
-              ref.read(destinationProvider.notifier).state = position;
-              ref.read(routingProvider.notifier).calculateRoute(
-                    origin: LatLng(location.latitude, location.longitude),
-                    destination: position,
-                    avoidanceProfile: ref.read(routeAvoidanceProfileProvider),
-                  );
-            }
-          },
-          myLocationEnabled: true,
-          myLocationButtonEnabled: true,
-          mapType: MapType.normal,
-          zoomControlsEnabled: false,
-          compassEnabled: true,
-          rotateGesturesEnabled: true,
-          scrollGesturesEnabled: true,
-          tiltGesturesEnabled: true,
-          zoomGesturesEnabled: true,
-          trafficEnabled: false,
-          buildingsEnabled: true,
-          mapToolbarEnabled: false,
-          polylines: polylines,
-          markers: markers,
+        FlutterMap(
+          options: MapOptions(
+            initialCenter: _defaultCenter,
+            initialZoom: MapConstants.defaultZoom,
+            onTap: (_, position) {
+              if (_destinationMode) {
+                setState(() => _destinationMode = false);
+                ref.read(destinationProvider.notifier).state = position;
+                ref.read(routingProvider.notifier).calculateRoute(
+                      origin: LatLng(location.latitude, location.longitude),
+                      destination: position,
+                      avoidanceProfile: ref.read(routeAvoidanceProfileProvider),
+                    );
+              }
+            },
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.speedbumpapp.speed_bump_app',
+            ),
+            PolylineLayer(polylines: polylines),
+            MarkerLayer(markers: markers),
+          ],
+          mapController: _mapController,
         ),
         if (!location.isHighAccuracy) _buildAccuracyWarning(location.accuracy),
         if (_destinationMode)
@@ -389,6 +430,24 @@ class _MapScreenState extends ConsumerState<MapScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              Material(
+                elevation: 2,
+                borderRadius: BorderRadius.circular(8),
+                child: IconButton(
+                  icon: const Icon(Icons.my_location),
+                  onPressed: () {
+                    final loc = _lastLocation;
+                    if (loc != null) {
+                      _mapController?.move(
+                        LatLng(loc.latitude, loc.longitude),
+                        MapConstants.userLocationZoom,
+                      );
+                    }
+                  },
+                  tooltip: 'Center on my location',
+                ),
+              ),
+              const SizedBox(height: 8),
               if (selectedRoute == null)
                 FloatingActionButton.extended(
                   onPressed: () => setState(() => _destinationMode = true),
@@ -462,10 +521,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
     _hasAnimatedToUser = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      controller.animateCamera(
-        CameraUpdate.newLatLng(
-          LatLng(location.latitude, location.longitude),
-        ),
+      controller.move(
+        LatLng(location.latitude, location.longitude),
+        MapConstants.userLocationZoom,
       );
     });
   }
@@ -481,15 +539,15 @@ class _MapScreenState extends ConsumerState<MapScreen>
         );
   }
 
-  Set<Marker> _buildSpeedBumpMarkers(List<SpeedBump> bumps) {
+  List<Marker> _buildSpeedBumpMarkers(List<SpeedBump> bumps) {
     return bumps.map((bump) {
       return Marker(
-        markerId: MarkerId('bump-${bump.id}'),
-        position: bump.location,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-        infoWindow: const InfoWindow(title: 'Speed bump'),
+        point: bump.location,
+        width: 24,
+        height: 24,
+        child: const Icon(Icons.speed, color: Colors.orange, size: 24),
       );
-    }).toSet();
+    }).toList();
   }
 
   Widget _buildLoadingView() {

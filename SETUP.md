@@ -15,35 +15,10 @@
 
 Do not commit real `google-services.json` or `GoogleService-Info.plist` with production keys; use placeholders or CI secrets.
 
-## Google Maps API key (map display)
+## Maps and routing (no API keys required)
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a project (e.g. `SpeedBumpApp`) and enable **Maps SDK for Android** and **Maps SDK for iOS**.
-3. Create an API key and restrict it to your app (Android package name and iOS bundle ID).
-4. **Android:** Add the key to `android/local.properties`:
-   ```properties
-   GOOGLE_MAPS_API_KEY=your_key_here
-   ```
-   The manifest uses a placeholder (`${GOOGLE_MAPS_API_KEY}`) wired via Gradle. You can also set `GOOGLE_MAPS_API_KEY` as an environment variable.
-5. **iOS:** Copy `ios/Runner/Maps.xcconfig.example` to `ios/Runner/Maps.xcconfig` and set:
-   ```
-   GOOGLE_MAPS_API_KEY=your_key_here
-   ```
-   The key is read from `Info.plist` (`GMSApiKey`) at runtime. Do not commit `Maps.xcconfig`.
-
-Do not commit real API keys to version control. Use environment variables or secure storage in CI/production.
-
-## Google Directions API key (Phase 2 routing)
-
-Route calculation uses the **Directions API**. Use the same project in Google Cloud Console:
-
-1. Enable **Directions API** (and optionally **Routes API**) for your project.
-2. The app reads the key from the `GOOGLE_DIRECTIONS_API_KEY` environment variable at build time. Pass it when running or building:
-   - **Run:** `flutter run --dart-define=GOOGLE_DIRECTIONS_API_KEY=your_key_here`
-   - **Build:** Add `--dart-define=GOOGLE_DIRECTIONS_API_KEY=your_key_here` to your build command.
-3. You can reuse the same API key as the Maps SDK key if it has both APIs enabled; restrict it to your app as above.
-
-Do not commit the key. For local development, use a `.env` or shell alias that sets the define.
+- **Map display:** Uses OpenStreetMap via `flutter_map` — no API key needed.
+- **Routing:** Uses OSRM (Open Source Routing Machine) public demo — no API key needed.
 
 ## Running the app
 
@@ -62,9 +37,7 @@ The setup helper script stops on the first error. Run it from the project root. 
 
 If the project was created manually without `flutter create`, run `flutter create .` once to generate any missing platform files (e.g. iOS Xcode project, Android launcher icons), then replace only the API key placeholders and location permission entries as above.
 
-## Restricting the API key (recommended)
+## App behavior
 
-In Google Cloud Console, restrict the key to:
-
-- **Android:** Application restriction → Android apps → add package name `com.speedbumpapp.speed_bump_app` and your SHA-1.
-- **iOS:** Application restriction → iOS apps → add bundle ID `com.speedbumpapp.speed_bump_app`.
+- **Login:** Optional — the app opens directly to the map. Use the menu (drawer) to log in.
+- **Firebase:** Optional for running — if `GoogleService-Info.plist` has placeholder values, Firebase is skipped and the app runs without auth/storage.

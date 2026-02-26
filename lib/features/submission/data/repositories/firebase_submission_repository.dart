@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/utils/image_compressor.dart';

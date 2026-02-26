@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../../../auth/presentation/state/auth_state.dart';
 import 'admin_dashboard_screen.dart';
 
 class AdminGateScreen extends ConsumerWidget {

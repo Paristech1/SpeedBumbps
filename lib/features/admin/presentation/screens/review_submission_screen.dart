@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+import '../../../auth/presentation/state/auth_state.dart';
+import 'package:flutter_map/flutter_map.dart';
 
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../submission/domain/entities/submission.dart';
@@ -153,19 +155,30 @@ class _ReviewSubmissionScreenState extends ConsumerState<ReviewSubmissionScreen>
                     height: 160,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: s.location,
-                          zoom: 17,
+                      child: FlutterMap(
+                        options: MapOptions(
+                          initialCenter: s.location,
+                          initialZoom: 17,
                         ),
-                        markers: {
-                          Marker(
-                            markerId: const MarkerId('submission'),
-                            position: s.location,
+                        children: [
+                          TileLayer(
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName:
+                                'com.speedbumpapp.speed_bump_app',
                           ),
-                        },
-                        liteModeEnabled: true,
-                        zoomControlsEnabled: false,
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: s.location,
+                                width: 24,
+                                height: 24,
+                                child: const Icon(Icons.location_on,
+                                    color: Colors.red, size: 24),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),

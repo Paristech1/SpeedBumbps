@@ -10,7 +10,7 @@ void main() {
       (tester) async {
         // Placeholder for CI-hosted iOS/Android simulator integration test.
       },
-      skip: 'Requires configured Maps/Firebase keys and simulator runtime.',
+      skip: true, // Requires configured Maps/Firebase keys and simulator runtime.
     );
 
     testWidgets(
@@ -18,7 +18,7 @@ void main() {
       (tester) async {
         // Placeholder for camera/gallery + Firestore submission flow.
       },
-      skip: 'Requires camera/photo permissions and backend test project.',
+      skip: true, // Requires camera/photo permissions and backend test project.
     );
 
     testWidgets(
@@ -26,7 +26,7 @@ void main() {
       (tester) async {
         // Placeholder for A->B route validation.
       },
-      skip: 'Requires Google Directions API key + deterministic fixture route.',
+      skip: true, // Requires routing API + deterministic fixture route.
     );
   });
 }

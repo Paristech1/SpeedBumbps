@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:exif/exif.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 /// Extracts GPS and timestamp from image EXIF metadata.
 class ExifExtractor {
@@ -21,7 +21,6 @@ class ExifExtractor {
 
       if (gpsLatitude == null || gpsLongitude == null) return null;
 
-<<<<<<< HEAD
       final latValues = gpsLatitude.values;
       final lngValues = gpsLongitude.values;
       if (latValues is! IfdRatios || lngValues is! IfdRatios) return null;
@@ -32,21 +31,6 @@ class ExifExtractor {
 
       double lat = _convertToDecimal(latRatios);
       double lng = _convertToDecimal(lngRatios);
-=======
-      final latRatios = gpsLatitude!.values is IfdRatios
-          ? (gpsLatitude!.values as IfdRatios).ratios
-          : null;
-      final lngRatios = gpsLongitude!.values is IfdRatios
-          ? (gpsLongitude!.values as IfdRatios).ratios
-          : null;
-      if (latRatios == null ||
-          lngRatios == null ||
-          latRatios.length < 3 ||
-          lngRatios.length < 3) return null;
-
-      double lat = _convertToDecimal(latRatios);
-      double lng = _convertToDecimal(lngRatios);
->>>>>>> 7ae70b6 (Document setup and iOS target)
 
       if (gpsLatitudeRef?.printable == 'S') lat = -lat;
       if (gpsLongitudeRef?.printable == 'W') lng = -lng;

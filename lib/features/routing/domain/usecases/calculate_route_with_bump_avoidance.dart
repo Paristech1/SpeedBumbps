@@ -1,6 +1,6 @@
 import 'dart:math' show cos, sin, sqrt, asin, pi;
 
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../entities/route.dart';
 import '../entities/route_preferences.dart';

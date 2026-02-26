@@ -1,6 +1,6 @@
 import 'dart:math' show cos, sin, sqrt, asin, pi;
 
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 /// Minimum distance in meters from [point] to any segment of the polyline.
 double distanceFromPointToPolyline(LatLng point, List<LatLng> polylinePoints) {

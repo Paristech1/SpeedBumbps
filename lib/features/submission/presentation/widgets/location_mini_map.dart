@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class LocationMiniMap extends StatelessWidget {
   const LocationMiniMap({
@@ -18,22 +19,27 @@ class LocationMiniMap extends StatelessWidget {
       child: SizedBox(
         height: height,
         width: double.infinity,
-        child: GoogleMap(
-          initialCameraPosition: CameraPosition(
-            target: location,
-            zoom: 16,
+        child: FlutterMap(
+          options: MapOptions(
+            initialCenter: location,
+            initialZoom: 16,
           ),
-          markers: {
-            Marker(
-              markerId: const MarkerId('submission'),
-              position: location,
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.speedbumpapp.speed_bump_app',
             ),
-          },
-          liteModeEnabled: true,
-          zoomControlsEnabled: false,
-          scrollGesturesEnabled: false,
-          zoomGesturesEnabled: false,
-          myLocationButtonEnabled: false,
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: location,
+                  width: 24,
+                  height: 24,
+                  child: const Icon(Icons.location_on, color: Colors.red, size: 24),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
