@@ -4,14 +4,39 @@ import '../../../../core/constants/firebase_constants.dart';
 import '../models/user_model.dart';
 
 class FirestoreUserDatasource {
-  final FirebaseFirestore _firestore;
+  final FirebaseFirestore? _firestore;
+  final bool _isFirestoreInitialized;
 
   FirestoreUserDatasource({
     FirebaseFirestore? firestore,
-  }) : _firestore = firestore ?? FirebaseFirestore.instance;
+  })  : _firestore = firestore ?? _getFirestoreSafely(),
+        _isFirestoreInitialized = firestore != null || _checkFirestoreInitialized();
 
-  CollectionReference<Map<String, dynamic>> get _usersCollection =>
-      _firestore.collection(FirebaseConstants.usersCollection);
+  static FirebaseFirestore? _getFirestoreSafely() {
+    try {
+      return FirebaseFirestore.instance;
+    } catch (e) {
+      // Firebase not initialized
+      return null;
+    }
+  }
+
+  static bool _checkFirestoreInitialized() {
+    try {
+      // Try to access Firestore instance
+      FirebaseFirestore.instance;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  CollectionReference<Map<String, dynamic>> get _usersCollection {
+    if (!_isFirestoreInitialized || _firestore == null) {
+      throw Exception('Firestore not initialized');
+    }
+    return _firestore!.collection(FirebaseConstants.usersCollection);
+  }
 
   Future<void> createUserProfile(UserModel user) async {
     try {
