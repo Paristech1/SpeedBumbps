@@ -135,21 +135,14 @@ class _MapScreenState extends ConsumerState<MapScreen>
               orElse: () => const SizedBox.shrink(),
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Report bump'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/camera');
-              },
+              leading: const Icon(Icons.map),
+              title: const Text('Philly Speed Bumps'),
+              onTap: () => Navigator.pop(context),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).pushNamed('/camera'),
-        icon: const Icon(Icons.camera_alt),
-        label: const Text('Report bump'),
-      ),
+      floatingActionButton: null,
       body: locationState.when(
         data: (mapState) => mapState.when(
           initial: () => _buildLoadingView(),
