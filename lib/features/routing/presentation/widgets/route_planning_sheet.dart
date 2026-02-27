@@ -224,7 +224,7 @@ class _RoutePlanningSheetState extends State<RoutePlanningSheet> {
               Text(
                 'Avoid speed bumps in Philadelphia',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
+                  color: Colors.grey[400],
                 ),
               ),
               const SizedBox(height: 20),
@@ -235,6 +235,7 @@ class _RoutePlanningSheetState extends State<RoutePlanningSheet> {
               TextField(
                 controller: _fromController,
                 onChanged: _onFromChanged,
+                style: const TextStyle(color: Colors.white),
                 onTap: () {
                   if (_useMyLocation) {
                     _fromController.clear();
@@ -243,12 +244,7 @@ class _RoutePlanningSheetState extends State<RoutePlanningSheet> {
                 },
                 decoration: InputDecoration(
                   hintText: 'Enter starting address or place',
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
+                  hintStyle: TextStyle(color: Colors.grey[500]),
                   prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: !_useMyLocation
                       ? IconButton(
@@ -273,14 +269,10 @@ class _RoutePlanningSheetState extends State<RoutePlanningSheet> {
                 focusNode: _toFocusNode,
                 onChanged: _onToChanged,
                 autofocus: true,
+                style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'Enter destination address or place',
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
+                  hintStyle: TextStyle(color: Colors.grey[500]),
                   prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: _toController.text.isNotEmpty
                       ? IconButton(
@@ -424,10 +416,11 @@ class _RoutePlanningSheetState extends State<RoutePlanningSheet> {
     return Container(
       margin: const EdgeInsets.only(top: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF1F2937),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10),
         boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
+          BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -435,13 +428,14 @@ class _RoutePlanningSheetState extends State<RoutePlanningSheet> {
         children: suggestions.map((r) {
           return ListTile(
             dense: true,
-            leading: const Icon(Icons.place, size: 20),
-            title: Text(r.shortName, style: const TextStyle(fontSize: 14)),
+            leading: const Icon(Icons.place, size: 20, color: Colors.greenAccent),
+            title: Text(r.shortName,
+                style: const TextStyle(fontSize: 14, color: Colors.white)),
             subtitle: Text(
               r.displayName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+              style: TextStyle(fontSize: 11, color: Colors.grey[400]),
             ),
             onTap: () => onSelect(r),
           );

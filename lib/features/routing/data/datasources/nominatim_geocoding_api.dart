@@ -16,7 +16,7 @@ class GeocodingResult {
 
 class NominatimGeocodingApi {
   static const String _baseUrl = 'https://nominatim.openstreetmap.org';
-  static const _phillyBounds = '39.87,-75.28,40.14,-74.96';
+  static const _phillyBounds = '-75.28,40.14,-74.96,39.87';
 
   Future<List<GeocodingResult>> search(String query) async {
     if (query.trim().length < 2) return const [];
