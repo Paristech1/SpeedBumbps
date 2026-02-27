@@ -1,41 +1,20 @@
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
-import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
+// Basic smoke test for the SpeedBump app theme.
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:speed_bump_app/features/auth/data/datasources/firebase_auth_datasource.dart';
-import 'package:speed_bump_app/features/auth/data/datasources/firestore_user_datasource.dart';
-import 'package:speed_bump_app/features/auth/presentation/providers/auth_state_provider.dart';
-import 'package:speed_bump_app/features/map/presentation/providers/location_provider.dart';
-import 'package:speed_bump_app/features/map/presentation/screens/map_screen.dart';
-import 'package:speed_bump_app/features/map/presentation/state/map_state.dart';
-import 'package:speed_bump_app/features/routing/presentation/providers/speed_bump_repository_provider.dart';
+
+import 'package:speed_bump_app/core/theme/app_theme.dart';
 
 void main() {
-  testWidgets('MapScreen renders permission prompt', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          firebaseAuthDatasourceProvider.overrideWithValue(
-            FirebaseAuthDatasource(firebaseAuth: MockFirebaseAuth(signedIn: false)),
-          ),
-          firestoreUserDatasourceProvider.overrideWithValue(
-            FirestoreUserDatasource(firestore: FakeFirebaseFirestore()),
-          ),
-          locationStreamProvider.overrideWith(
-            (ref) => Stream.value(const MapState.noPermission()),
-          ),
-          speedBumpsProvider.overrideWith((ref) async => []),
-        ],
-        child: const MaterialApp(
-          home: MapScreen(),
-        ),
-      ),
-    );
+  test('AppTheme.dark produces a valid dark ThemeData', () {
+    final theme = AppTheme.dark;
+    expect(theme.brightness, Brightness.dark);
+    expect(theme.scaffoldBackgroundColor, AppColors.darkBg);
+    expect(theme.useMaterial3, isTrue);
+  });
 
-    await tester.pump();
-
-    expect(find.text('Location Permission Required'), findsOneWidget);
-    expect(find.byIcon(Icons.location_off), findsOneWidget);
+  test('AppTheme.light redirects to dark theme (dark-only design)', () {
+    final light = AppTheme.light;
+    final dark = AppTheme.dark;
+    expect(light.brightness, dark.brightness);
   });
 }

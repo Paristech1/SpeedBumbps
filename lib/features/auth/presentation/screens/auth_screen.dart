@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../providers/auth_state_provider.dart';
 import '../state/auth_state.dart';
 
@@ -55,7 +56,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(message),
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.hazardRed,
               ),
             );
           }
@@ -64,6 +65,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     });
 
     return Scaffold(
+      backgroundColor: AppColors.darkBg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -71,38 +73,72 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 40),
-              Icon(
-                Icons.speed,
-                size: 80,
-                color: Theme.of(context).colorScheme.primary,
+              // Logo with glow
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.neonGreen.withOpacity(0.25),
+                        blurRadius: 40,
+                        spreadRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.speed,
+                    size: 80,
+                    color: AppColors.neonGreen,
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Speed Bump',
+              const SizedBox(height: 20),
+              const Text(
+                'SpeedBump',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
               ),
               Text(
                 'Drive Smoother, Together',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.grey[600],
+                  color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 40),
-              TabBar(
-                controller: _tabController,
-                tabs: const [
-                  Tab(text: 'Login'),
-                  Tab(text: 'Sign Up'),
-                ],
+              // Tab bar
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.darkSurface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicator: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.neonGreen.withOpacity(0.12),
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelColor: AppColors.neonGreen,
+                  unselectedLabelColor: AppColors.textSecondary,
+                  dividerColor: Colors.transparent,
+                  tabs: const [
+                    Tab(text: 'Login'),
+                    Tab(text: 'Sign Up'),
+                  ],
+                ),
               ),
               const SizedBox(height: 24),
               SizedBox(
-                height: 400,
+                height: 420,
                 child: TabBarView(
                   controller: _tabController,
                   children: [
@@ -114,15 +150,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               const SizedBox(height: 24),
               Row(
                 children: [
-                  const Expanded(child: Divider()),
+                  Expanded(child: Divider(color: Colors.white.withOpacity(0.08))),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       'OR',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: AppColors.textSecondary),
                     ),
                   ),
-                  const Expanded(child: Divider()),
+                  Expanded(child: Divider(color: Colors.white.withOpacity(0.08))),
                 ],
               ),
               const SizedBox(height: 24),
@@ -144,12 +180,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            style: const TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
               labelText: 'Email',
-              prefixIcon: const Icon(Icons.email),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              prefixIcon: Icon(Icons.email, color: AppColors.textSecondary),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) return 'Please enter your email';
@@ -161,19 +195,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           TextFormField(
             controller: _passwordController,
             obscureText: !_isPasswordVisible,
+            style: const TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
               labelText: 'Password',
-              prefixIcon: const Icon(Icons.lock),
+              prefixIcon: Icon(Icons.lock, color: AppColors.textSecondary),
               suffixIcon: IconButton(
                 icon: Icon(
                   _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
+                  color: AppColors.textSecondary,
                 ),
                 onPressed: () {
                   setState(() => _isPasswordVisible = !_isPasswordVisible);
                 },
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
               ),
             ),
             validator: (value) {
@@ -186,24 +219,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: isLoading ? null : _handleForgotPassword,
-              child: const Text('Forgot Password?'),
+              child: const Text(
+                'Forgot Password?',
+                style: TextStyle(color: AppColors.cyan),
+              ),
             ),
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: isLoading ? null : _handleLogin,
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Login', style: TextStyle(fontSize: 16)),
-            ),
+          GradientButton(
+            onPressed: isLoading ? null : _handleLogin,
+            child: isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    'Login',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ],
       ),
@@ -220,12 +261,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            style: const TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
               labelText: 'Email',
-              prefixIcon: const Icon(Icons.email),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              prefixIcon: Icon(Icons.email, color: AppColors.textSecondary),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) return 'Please enter your email';
@@ -237,19 +276,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           TextFormField(
             controller: _passwordController,
             obscureText: !_isPasswordVisible,
+            style: const TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
               labelText: 'Password',
-              prefixIcon: const Icon(Icons.lock),
+              prefixIcon: Icon(Icons.lock, color: AppColors.textSecondary),
               suffixIcon: IconButton(
                 icon: Icon(
                   _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
+                  color: AppColors.textSecondary,
                 ),
                 onPressed: () {
                   setState(() => _isPasswordVisible = !_isPasswordVisible);
                 },
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
               ),
             ),
             validator: (value) {
@@ -262,12 +300,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           TextFormField(
             controller: _confirmPasswordController,
             obscureText: !_isPasswordVisible,
+            style: const TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
               labelText: 'Confirm Password',
-              prefixIcon: const Icon(Icons.lock_outline),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              prefixIcon: Icon(Icons.lock_outline, color: AppColors.textSecondary),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) return 'Please confirm your password';
@@ -276,20 +312,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             },
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: isLoading ? null : _handleSignup,
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Sign Up', style: TextStyle(fontSize: 16)),
-            ),
+          GradientButton(
+            onPressed: isLoading ? null : _handleSignup,
+            child: isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    'Sign Up',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ],
       ),
@@ -299,14 +340,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   Widget _buildGoogleSignInButton(AuthState authState) {
     final isLoading = authState is AuthStateLoading;
 
-    return OutlinedButton.icon(
-      onPressed: isLoading ? null : _handleGoogleSignIn,
-      icon: Icon(Icons.g_mobiledata, size: 24, color: Colors.grey[700]),
-      label: const Text('Continue with Google'),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.15)),
+        color: AppColors.darkSurface,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isLoading ? null : _handleGoogleSignIn,
           borderRadius: BorderRadius.circular(12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.g_mobiledata, size: 28, color: AppColors.textSecondary),
+              const SizedBox(width: 8),
+              Text(
+                'Continue with Google',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -350,9 +409,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       await ref.read(authStateProvider.notifier).resetPassword(email);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password reset email sent! Check your inbox.'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('Password reset email sent! Check your inbox.'),
+            backgroundColor: AppColors.neonGreen,
           ),
         );
       }
@@ -361,7 +420,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString()),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.hazardRed,
           ),
         );
       }

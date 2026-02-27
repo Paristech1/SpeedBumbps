@@ -1,8 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/app_user.dart';
 import '../providers/auth_state_provider.dart';
 import '../state/auth_state.dart';
@@ -16,20 +15,44 @@ class ProfileScreen extends ConsumerWidget {
 
     return authState.when(
       authenticated: (user) => _buildProfileView(context, ref, user),
-      unauthenticated: () => const Center(child: Text('Please log in')),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (message) => Center(child: Text('Error: $message')),
+      unauthenticated: () => const Scaffold(
+        backgroundColor: AppColors.darkBg,
+        body: Center(
+          child: Text('Please log in', style: TextStyle(color: AppColors.textSecondary)),
+        ),
+      ),
+      loading: () => Scaffold(
+        backgroundColor: AppColors.darkBg,
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.neonGreen),
+        ),
+      ),
+      error: (message) => Scaffold(
+        backgroundColor: AppColors.darkBg,
+        body: Center(
+          child: Text('Error: $message', style: TextStyle(color: AppColors.hazardRed)),
+        ),
+      ),
     );
   }
 
   Widget _buildProfileView(BuildContext context, WidgetRef ref, AppUser user) {
     return Scaffold(
+      backgroundColor: AppColors.darkBg,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         title: const Text('Profile'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _handleLogout(context, ref),
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: AppColors.darkSurface.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.logout, color: AppColors.textPrimary),
+              onPressed: () => _handleLogout(context, ref),
+            ),
           ),
         ],
       ),
@@ -37,47 +60,66 @@ class ProfileScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            CircleAvatar(
-              radius: 60,
-              backgroundImage:
-                  user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
-              child: user.photoUrl == null
-                  ? const Icon(Icons.person, size: 60)
-                  : null,
+            // Avatar with glow
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.cyan.withOpacity(0.25),
+                    blurRadius: 20,
+                    spreadRadius: 4,
+                  ),
+                ],
+              ),
+              child: CircleAvatar(
+                radius: 60,
+                backgroundColor: AppColors.darkSurfaceLight,
+                backgroundImage:
+                    user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
+                child: user.photoUrl == null
+                    ? const Icon(Icons.person, size: 60, color: AppColors.textSecondary)
+                    : null,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               user.displayName ?? 'Anonymous Driver',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
+            const SizedBox(height: 4),
             Text(
               user.email,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey[600],
+                color: AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
+            // Rank badge
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.1),
+                color: AppColors.neonGreen.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppColors.neonGreen.withOpacity(0.3),
+                ),
               ),
               child: Text(
                 user.rank,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
+                style: const TextStyle(
+                  color: AppColors.neonGreen,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
             const SizedBox(height: 32),
+            // Stats row
             Row(
               children: [
                 Expanded(
@@ -85,7 +127,7 @@ class ProfileScreen extends ConsumerWidget {
                     icon: Icons.stars,
                     label: 'Reputation',
                     value: user.reputationScore.toString(),
-                    color: Colors.orange,
+                    color: AppColors.warningAmber,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -94,7 +136,7 @@ class ProfileScreen extends ConsumerWidget {
                     icon: Icons.flag,
                     label: 'Reports',
                     value: user.totalReports.toString(),
-                    color: Colors.blue,
+                    color: AppColors.cyan,
                   ),
                 ),
               ],
@@ -104,42 +146,34 @@ class ProfileScreen extends ConsumerWidget {
               icon: Icons.directions_car,
               label: 'Miles Driven',
               value: user.milesDriven.toStringAsFixed(1),
-              color: Colors.green,
+              color: AppColors.neonGreen,
             ),
             const SizedBox(height: 32),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('My Submissions'),
-              subtitle: const Text('View report history and status'),
-              trailing: const Icon(Icons.chevron_right),
+            // Menu items
+            _buildMenuItem(
+              context,
+              icon: Icons.photo_library,
+              title: 'My Submissions',
+              subtitle: 'View report history and status',
               onTap: () => Navigator.of(context).pushNamed('/submission-history'),
             ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('Edit Profile'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                // TODO: Navigate to edit profile screen
-              },
+            _buildMenuItem(
+              context,
+              icon: Icons.edit,
+              title: 'Edit Profile',
+              onTap: () {},
             ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.security),
-              title: const Text('Change Password'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                // TODO: Navigate to change password screen
-              },
+            _buildMenuItem(
+              context,
+              icon: Icons.security,
+              title: 'Change Password',
+              onTap: () {},
             ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.delete_forever, color: Colors.red),
-              title: const Text(
-                'Delete Account',
-                style: TextStyle(color: Colors.red),
-              ),
-              trailing: const Icon(Icons.chevron_right),
+            _buildMenuItem(
+              context,
+              icon: Icons.delete_forever,
+              title: 'Delete Account',
+              isDestructive: true,
               onTap: () => _handleDeleteAccount(context, ref),
             ),
           ],
@@ -154,30 +188,73 @@ class ProfileScreen extends ConsumerWidget {
     required String value,
     required Color color,
   }) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: GlassmorphismDecoration.card(
+        borderColor: color.withOpacity(0.2),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
             ),
-          ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    bool isDestructive = false,
+    required VoidCallback onTap,
+  }) {
+    final color = isDestructive ? AppColors.hazardRed : AppColors.neonGreen;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: AppColors.darkSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: color),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isDestructive ? AppColors.hazardRed : AppColors.textPrimary,
+          ),
         ),
+        subtitle: subtitle != null
+            ? Text(subtitle, style: TextStyle(color: AppColors.textSecondary, fontSize: 12))
+            : null,
+        trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -186,16 +263,20 @@ class ProfileScreen extends ConsumerWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        backgroundColor: AppColors.darkSurface,
+        title: const Text('Logout', style: TextStyle(color: AppColors.textPrimary)),
+        content: const Text(
+          'Are you sure you want to logout?',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Logout'),
+            child: Text('Logout', style: TextStyle(color: AppColors.hazardRed)),
           ),
         ],
       ),
@@ -204,7 +285,7 @@ class ProfileScreen extends ConsumerWidget {
     if (confirm == true && context.mounted) {
       await ref.read(authStateProvider.notifier).signOut();
       if (context.mounted) {
-        unawaited(Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false));
+        Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false);
       }
     }
   }
@@ -213,19 +294,21 @@ class ProfileScreen extends ConsumerWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Account'),
+        backgroundColor: AppColors.darkSurface,
+        title: const Text('Delete Account', style: TextStyle(color: AppColors.hazardRed)),
         content: const Text(
           'This will permanently delete your account and all data. '
           'This action cannot be undone.',
+          style: TextStyle(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: AppColors.hazardRed),
             child: const Text('Delete'),
           ),
         ],
@@ -236,14 +319,14 @@ class ProfileScreen extends ConsumerWidget {
       try {
         await ref.read(authStateProvider.notifier).deleteAccount();
         if (context.mounted) {
-          unawaited(Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false));
+          Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false);
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(e.toString()),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.hazardRed,
             ),
           );
         }
