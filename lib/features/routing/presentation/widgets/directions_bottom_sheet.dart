@@ -28,11 +28,11 @@ class DirectionsBottomSheet extends ConsumerWidget {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
                 color: Colors.black26,
                 blurRadius: 10,
-                offset: const Offset(0, -2),
+                offset: Offset(0, -2),
               ),
             ],
           ),

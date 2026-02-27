@@ -28,94 +28,6 @@ service cloud.firestore {
         && location.longitude <= -74.9;
     }
 
-    function validPhotoUrl(url) {
-      return url is string
-        && url.matches('^https://firebasestorage.googleapis.com/.*');
-    }
-
-    function validStatus(status) {
-      return status in ['pending', 'verified', 'rejected'];
-    }
-
-    function userRateLimitPath(userId) {
-      return /databases/$(database)/documents/users/$(userId)/meta/rate_limits;
-    }
-
-    function validSubmissionRateLimitForCreate() {
-      let after = getAfter(userRateLimitPath(request.auth.uid));
-      let hasBefore = exists(userRateLimitPath(request.auth.uid));
-      let before = hasBefore ? get(userRateLimitPath(request.auth.uid)).data : null;
-
-      return after.data.windowStartedAt is timestamp
-        && after.data.windowStartedAt <= request.time
-        && after.data.submissionCount is int
-        && after.data.submissionCount >= 1
-        && after.data.submissionCount <= 10
-        && (
-          !hasBefore
-          ? after.data.submissionCount == 1
-          : (
-            request.time - before.windowStartedAt < duration.value(1, 'h')
-            ? (
-              after.data.windowStartedAt == before.windowStartedAt
-              && after.data.submissionCount == before.submissionCount + 1
-            )
-            : (
-              after.data.windowStartedAt == request.time
-              && after.data.submissionCount == 1
-            )
-          )
-        );
-    }
-
-    match /submissions/{submissionId} {
-      allow read: if isAuthenticated();
-
-      allow create: if isAuthenticated()
-        && request.resource.data.keys().hasOnly([
-          'id', 'userId', 'userEmail', 'photoUrl', 'location', 'severity', 'notes',
-          'status', 'submittedAt', 'updatedAt', 'reviewedAt', 'reviewedBy',
-          'rejectionReason', 'createdSpeedBumpId'
-        ])
-        && request.resource.data.id == submissionId
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.userEmail is string
-        && validPhotoUrl(request.resource.data.photoUrl)
-        && inPhiladelphiaBounds(request.resource.data.location)
-        && request.resource.data.severity is int
-        && request.resource.data.severity >= 1
-        && request.resource.data.severity <= 5
-        && (request.resource.data.notes is string || request.resource.data.notes == null)
-        && request.resource.data.status == 'pending'
-        && isServerTimestamp(request.resource.data.submittedAt)
-        && isServerTimestamp(request.resource.data.updatedAt)
-        && request.resource.data.reviewedAt == null
-        && request.resource.data.reviewedBy == null
-        && request.resource.data.rejectionReason == null
-        && request.resource.data.createdSpeedBumpId == null
-        && validSubmissionRateLimitForCreate();
-
-      allow update: if isOwner(resource.data.userId)
-        && request.resource.data.userId == resource.data.userId
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.status == resource.data.status
-        && request.resource.data.reviewedAt == resource.data.reviewedAt
-        && request.resource.data.reviewedBy == resource.data.reviewedBy
-        && request.resource.data.rejectionReason == resource.data.rejectionReason
-        && request.resource.data.createdSpeedBumpId == resource.data.createdSpeedBumpId
-        && validPhotoUrl(request.resource.data.photoUrl)
-        && inPhiladelphiaBounds(request.resource.data.location)
-        && request.resource.data.severity is int
-        && request.resource.data.severity >= 1
-        && request.resource.data.severity <= 5
-        && isServerTimestamp(request.resource.data.updatedAt)
-        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
-          'photoUrl', 'location', 'severity', 'notes', 'updatedAt'
-        ]);
-
-      allow delete: if isAdmin();
-    }
-
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
 
@@ -152,10 +64,6 @@ service cloud.firestore {
         && isServerTimestamp(request.resource.data.updatedAt);
 
       allow delete: if isAdmin();
-
-      match /meta/{docId} {
-        allow read, write: if isOwner(userId);
-      }
     }
 
     match /speed_bumps/{bumpId} {

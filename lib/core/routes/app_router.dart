@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/admin/presentation/screens/admin_gate_screen.dart';
 import '../../features/auth/presentation/providers/auth_state_provider.dart';
 import '../../features/auth/presentation/state/auth_state.dart';
 import '../../features/auth/presentation/screens/auth_screen.dart';
 import '../../features/auth/presentation/screens/profile_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/map/presentation/screens/map_screen.dart';
-import '../../features/submission/presentation/screens/camera_screen.dart';
-import '../../features/submission/presentation/screens/submission_history_screen.dart';
 
 /// Named route builders.
 class AppRouter {
@@ -19,9 +16,6 @@ class AppRouter {
         '/home': (context) => const MapScreen(),
         '/auth': (context) => const AuthScreen(),
         '/profile': (context) => const ProfileScreen(),
-        '/camera': (context) => const CameraScreen(),
-        '/submission-history': (context) => const SubmissionHistoryScreen(),
-        '/admin': (context) => const AdminGateScreen(),
       };
 }
 

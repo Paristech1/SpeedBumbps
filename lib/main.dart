@@ -72,23 +72,14 @@ class SpeedBumpApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (firebaseInitError != null) {
-      return MaterialApp(
-        title: 'Speed Bump',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        themeMode: ThemeMode.system,
-        home: FirebaseInitErrorScreen(error: firebaseInitError.toString()),
-      );
-    }
+    // Allow app to run without Firebase for development
     return MaterialApp(
       title: 'Speed Bump',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
-      navigatorObservers: [AnalyticsNavigationObserver()],
+      navigatorObservers: firebaseInitError == null ? [AnalyticsNavigationObserver()] : [],
       home: const MapScreen(),
       routes: AppRouter.routes,
     );

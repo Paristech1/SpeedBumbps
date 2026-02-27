@@ -47,7 +47,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
   static const int _deviationDelaySeconds = 5;
   static const int _recalcCooldownSeconds = 30;
 
-  static final LatLng _defaultCenter =
+  static const LatLng _defaultCenter =
       LatLng(MapConstants.defaultLat, MapConstants.defaultLng);
 
   @override
@@ -135,21 +135,14 @@ class _MapScreenState extends ConsumerState<MapScreen>
               orElse: () => const SizedBox.shrink(),
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Report bump'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/camera');
-              },
+              leading: const Icon(Icons.map),
+              title: const Text('Philly Speed Bumps'),
+              onTap: () => Navigator.pop(context),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).pushNamed('/camera'),
-        icon: const Icon(Icons.camera_alt),
-        label: const Text('Report bump'),
-      ),
+      floatingActionButton: null,
       body: locationState.when(
         data: (mapState) => mapState.when(
           initial: () => _buildLoadingView(),
@@ -249,7 +242,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     );
 
     final polylines = selectedRoute != null
-        ? [RoutePolylineWidget.createPolyline(selectedRoute!)]
+        ? [RoutePolylineWidget.createPolyline(selectedRoute)]
         : <Polyline>[];
 
     return Stack(
@@ -262,14 +255,18 @@ class _MapScreenState extends ConsumerState<MapScreen>
               if (_destinationMode) {
                 setState(() => _destinationMode = false);
                 ref.read(destinationProvider.notifier).state = position;
+                final origin = _isInPhiladelphiaArea(location.latitude, location.longitude)
+                    ? LatLng(location.latitude, location.longitude)
+                    : _defaultCenter;
                 ref.read(routingProvider.notifier).calculateRoute(
-                      origin: LatLng(location.latitude, location.longitude),
+                      origin: origin,
                       destination: position,
                       avoidanceProfile: ref.read(routeAvoidanceProfileProvider),
                     );
               }
             },
           ),
+          mapController: _mapController,
           children: [
             TileLayer(
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -278,7 +275,6 @@ class _MapScreenState extends ConsumerState<MapScreen>
             PolylineLayer(polylines: polylines),
             MarkerLayer(markers: markers),
           ],
-          mapController: _mapController,
         ),
         if (!location.isHighAccuracy) _buildAccuracyWarning(location.accuracy),
         if (_destinationMode)
@@ -391,10 +387,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
             ),
           ),
         if (selectedRoute != null) ...[
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
+          Positioned.fill(
             child: DirectionsBottomSheet(route: selectedRoute),
           ),
           if (hasAlternative)
@@ -514,6 +507,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
     );
   }
 
+  static bool _isInPhiladelphiaArea(double lat, double lng) {
+    return lat >= 39.8 && lat <= 40.2 && lng >= -75.4 && lng <= -74.9;
+  }
+
   void _tryAnimateToUser(UserLocation location) {
     if (_hasAnimatedToUser) return;
     final controller = _mapController;
@@ -521,10 +518,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
     _hasAnimatedToUser = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      controller.move(
-        LatLng(location.latitude, location.longitude),
-        MapConstants.userLocationZoom,
-      );
+      if (_isInPhiladelphiaArea(location.latitude, location.longitude)) {
+        controller.move(
+          LatLng(location.latitude, location.longitude),
+          MapConstants.userLocationZoom,
+        );
+      }
     });
   }
 
@@ -573,7 +572,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.location_off, size: 64, color: AppColors.error),
+            const Icon(Icons.location_off, size: 64, color: AppColors.error),
             const SizedBox(height: 16),
             Text(
               'Location Permission Required',
@@ -606,7 +605,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.gps_off, size: 64, color: AppColors.accuracyWarning),
+            const Icon(Icons.gps_off, size: 64, color: AppColors.accuracyWarning),
             const SizedBox(height: 16),
             Text(
               'GPS is Turned Off',
@@ -632,7 +631,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: AppColors.error),
+            const Icon(Icons.error_outline, size: 64, color: AppColors.error),
             const SizedBox(height: 16),
             Text(
               'Something went wrong',

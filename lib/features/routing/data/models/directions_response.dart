@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 /// Parsed Google Directions API (JSON) response.
 /// Structure matches https://developers.google.com/maps/documentation/directions
 class DirectionsResponse {

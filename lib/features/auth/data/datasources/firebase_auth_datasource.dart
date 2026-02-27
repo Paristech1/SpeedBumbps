@@ -2,33 +2,80 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class FirebaseAuthDatasource {
-  final FirebaseAuth _firebaseAuth;
+  final FirebaseAuth? _firebaseAuth;
   final GoogleSignIn _googleSignIn;
   bool _googleSignInInitialized = false;
+  final bool _isFirebaseInitialized;
 
   FirebaseAuthDatasource({
     FirebaseAuth? firebaseAuth,
     GoogleSignIn? googleSignIn,
-  })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
+  })  : _firebaseAuth = firebaseAuth ?? _getFirebaseAuthSafely(),
+        _googleSignIn = googleSignIn ?? GoogleSignIn.instance,
+        _isFirebaseInitialized = firebaseAuth != null || _checkFirebaseInitialized();
 
-  User? get currentUser => _firebaseAuth.currentUser;
+  static FirebaseAuth? _getFirebaseAuthSafely() {
+    try {
+      return FirebaseAuth.instance;
+    } catch (e) {
+      // Firebase not initialized
+      return null;
+    }
+  }
 
-  Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
+  static bool _checkFirebaseInitialized() {
+    try {
+      // Try to access Firebase instance
+      FirebaseAuth.instance;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  User? get currentUser {
+    if (!_isFirebaseInitialized || _firebaseAuth == null) return null;
+    try {
+      return _firebaseAuth!.currentUser;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Stream<User?> get authStateChanges {
+    if (!_isFirebaseInitialized || _firebaseAuth == null) {
+      // Return a stream that immediately emits null (unauthenticated)
+      return Stream.value(null);
+    }
+    try {
+      return _firebaseAuth!.authStateChanges();
+    } catch (e) {
+      // Return a stream that immediately emits null (unauthenticated)
+      return Stream.value(null);
+    }
+  }
 
   Future<bool> isAdmin({bool forceRefresh = false}) async {
+    if (!_isFirebaseInitialized || _firebaseAuth == null) return false;
     final user = currentUser;
     if (user == null) return false;
-    final token = await user.getIdTokenResult(forceRefresh);
-    return token.claims?['admin'] == true;
+    try {
+      final token = await user.getIdTokenResult(forceRefresh);
+      return token.claims?['admin'] == true;
+    } catch (e) {
+      return false;
+    }
   }
 
   Future<User> signUpWithEmail({
     required String email,
     required String password,
   }) async {
+    if (!_isFirebaseInitialized || _firebaseAuth == null) {
+      throw Exception('Firebase not initialized - authentication unavailable');
+    }
     try {
-      final credential = await _firebaseAuth.createUserWithEmailAndPassword(
+      final credential = await _firebaseAuth!.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -48,8 +95,11 @@ class FirebaseAuthDatasource {
     required String email,
     required String password,
   }) async {
+    if (!_isFirebaseInitialized || _firebaseAuth == null) {
+      throw Exception('Firebase not initialized - authentication unavailable');
+    }
     try {
-      final credential = await _firebaseAuth.signInWithEmailAndPassword(
+      final credential = await _firebaseAuth!.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -65,6 +115,9 @@ class FirebaseAuthDatasource {
   }
 
   Future<User> signInWithGoogle() async {
+    if (!_isFirebaseInitialized || _firebaseAuth == null) {
+      throw Exception('Firebase not initialized - authentication unavailable');
+    }
     try {
       if (!_googleSignInInitialized) {
         await _googleSignIn.initialize();
@@ -83,7 +136,7 @@ class FirebaseAuthDatasource {
       );
 
       final userCredential =
-          await _firebaseAuth.signInWithCredential(credential);
+          await _firebaseAuth!.signInWithCredential(credential);
 
       if (userCredential.user == null) {
         throw Exception('Failed to sign in with Google');
@@ -100,21 +153,30 @@ class FirebaseAuthDatasource {
   }
 
   Future<void> signOut() async {
+    if (!_isFirebaseInitialized || _firebaseAuth == null) {
+      return; // Nothing to sign out from
+    }
     await Future.wait([
-      _firebaseAuth.signOut(),
+      _firebaseAuth!.signOut(),
       _googleSignIn.signOut(),
     ]);
   }
 
   Future<void> resetPassword(String email) async {
+    if (!_isFirebaseInitialized || _firebaseAuth == null) {
+      throw Exception('Firebase not initialized - authentication unavailable');
+    }
     try {
-      await _firebaseAuth.sendPasswordResetEmail(email: email);
+      await _firebaseAuth!.sendPasswordResetEmail(email: email);
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     }
   }
 
   Future<void> deleteAccount() async {
+    if (!_isFirebaseInitialized || _firebaseAuth == null) {
+      throw Exception('Firebase not initialized - authentication unavailable');
+    }
     final user = currentUser;
     if (user == null) {
       throw Exception('No user signed in');
