@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/datasources/firebase_auth_datasource.dart';
 import '../../data/datasources/firestore_user_datasource.dart';
 import '../../data/models/user_model.dart';
-import '../../domain/entities/app_user.dart';
 import '../state/auth_state.dart';
 
 final firebaseAuthDatasourceProvider = Provider<FirebaseAuthDatasource>((ref) {

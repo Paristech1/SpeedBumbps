@@ -47,7 +47,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
   static const int _deviationDelaySeconds = 5;
   static const int _recalcCooldownSeconds = 30;
 
-  static final LatLng _defaultCenter =
+  static const LatLng _defaultCenter =
       LatLng(MapConstants.defaultLat, MapConstants.defaultLng);
 
   @override
@@ -242,7 +242,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     );
 
     final polylines = selectedRoute != null
-        ? [RoutePolylineWidget.createPolyline(selectedRoute!)]
+        ? [RoutePolylineWidget.createPolyline(selectedRoute)]
         : <Polyline>[];
 
     return Stack(
@@ -266,6 +266,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
               }
             },
           ),
+          mapController: _mapController,
           children: [
             TileLayer(
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -274,7 +275,6 @@ class _MapScreenState extends ConsumerState<MapScreen>
             PolylineLayer(polylines: polylines),
             MarkerLayer(markers: markers),
           ],
-          mapController: _mapController,
         ),
         if (!location.isHighAccuracy) _buildAccuracyWarning(location.accuracy),
         if (_destinationMode)
@@ -572,7 +572,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.location_off, size: 64, color: AppColors.error),
+            const Icon(Icons.location_off, size: 64, color: AppColors.error),
             const SizedBox(height: 16),
             Text(
               'Location Permission Required',
@@ -605,7 +605,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.gps_off, size: 64, color: AppColors.accuracyWarning),
+            const Icon(Icons.gps_off, size: 64, color: AppColors.accuracyWarning),
             const SizedBox(height: 16),
             Text(
               'GPS is Turned Off',
@@ -631,7 +631,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: AppColors.error),
+            const Icon(Icons.error_outline, size: 64, color: AppColors.error),
             const SizedBox(height: 16),
             Text(
               'Something went wrong',

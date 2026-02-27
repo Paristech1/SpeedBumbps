@@ -24,7 +24,7 @@ class AssetSpeedBumpRepository implements SpeedBumpRepository {
     final raw = await _bundle.loadString(_assetPath);
     final decoded = json.decode(raw);
     if (decoded is! List) {
-      throw FormatException('Unexpected speed bump asset format');
+      throw const FormatException('Unexpected speed bump asset format');
     }
 
     _cache = decoded.map<SpeedBump>((entry) {

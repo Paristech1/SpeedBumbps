@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -64,7 +66,7 @@ class ProfileScreen extends ConsumerWidget {
                 color: Theme.of(context)
                     .colorScheme
                     .primary
-                    .withOpacity(0.1),
+                    .withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -202,7 +204,7 @@ class ProfileScreen extends ConsumerWidget {
     if (confirm == true && context.mounted) {
       await ref.read(authStateProvider.notifier).signOut();
       if (context.mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false);
+        unawaited(Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false));
       }
     }
   }
@@ -234,7 +236,7 @@ class ProfileScreen extends ConsumerWidget {
       try {
         await ref.read(authStateProvider.notifier).deleteAccount();
         if (context.mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false);
+          unawaited(Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false));
         }
       } catch (e) {
         if (context.mounted) {
