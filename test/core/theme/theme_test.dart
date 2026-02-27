@@ -52,7 +52,7 @@ void main() {
 
     test('darkOverlay fades from opaque dark to transparent ', () {
       expect(AppGradients.darkOverlay.colors.length, 2);
-      expect(AppGradients.darkOverlay.colors[1].opacity, 0.0);
+      expect(AppGradients.darkOverlay.colors[1].a, 0.0);
     });
   });
 
@@ -63,7 +63,7 @@ void main() {
       expect(dec.borderRadius, BorderRadius.circular(20));
       expect(dec.color, isNotNull);
       // Color should be semi-transparent (opacity < 1)
-      expect(dec.color!.opacity, lessThan(1.0));
+      expect(dec.color!.a, lessThan(1.0));
     });
 
     test('card() respects custom borderRadius', () {
@@ -191,11 +191,11 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.dark,
-          home: Scaffold(
+          home: const Scaffold(
             body: Center(
               child: GradientButton(
                 onPressed: null,
-                child: const Text('Disabled'),
+                child: Text('Disabled'),
               ),
             ),
           ),

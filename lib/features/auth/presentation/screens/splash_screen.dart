@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../../core/theme/app_theme.dart';
 
 class SplashScreen extends StatelessWidget {
@@ -7,64 +6,31 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: AppColors.darkBg,
       body: SafeArea(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Neon-green glowing icon
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.neonGreen.withOpacity(0.3),
-                      blurRadius: 40,
-                      spreadRadius: 10,
-                    ),
-                    BoxShadow(
-                      color: AppColors.neonGreen.withOpacity(0.15),
-                      blurRadius: 80,
-                      spreadRadius: 20,
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.speed,
-                  size: 80,
-                  color: AppColors.neonGreen,
-                ),
-              ),
-              const SizedBox(height: 32),
-              const Text(
+              Icon(Icons.speed, size: 80, color: AppColors.neonGreen),
+              SizedBox(height: 24),
+              Text(
                 'SpeedBump',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 32,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
                   letterSpacing: 1,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(
                 'Drive Smoother, Together',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
-              const SizedBox(height: 56),
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  color: AppColors.neonGreen,
-                ),
-              ),
+              SizedBox(height: 48),
+              CircularProgressIndicator(),
             ],
           ),
         ),

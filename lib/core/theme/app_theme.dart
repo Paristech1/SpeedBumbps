@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 /// ─── SpeedBump Dark-Premium Color Palette ───────────────────────────────────
@@ -73,15 +73,15 @@ class GlassmorphismDecoration {
     double opacity = 0.12,
   }) {
     return BoxDecoration(
-      color: AppColors.darkSurface.withOpacity(0.7),
+      color: AppColors.darkSurface.withValues(alpha: 0.7),
       borderRadius: BorderRadius.circular(borderRadius),
       border: Border.all(
-        color: borderColor ?? Colors.white.withOpacity(opacity),
+        color: borderColor ?? Colors.white.withValues(alpha: opacity),
         width: 1,
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.25),
+          color: Colors.black.withValues(alpha: 0.25),
           blurRadius: 20,
           offset: const Offset(0, 4),
         ),
@@ -138,7 +138,7 @@ class GradientButton extends StatelessWidget {
         boxShadow: onPressed != null
             ? [
                 BoxShadow(
-                  color: AppColors.gradientStart.withOpacity(0.3),
+                  color: AppColors.gradientStart.withValues(alpha: 0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -167,7 +167,7 @@ class AppTheme {
         useMaterial3: true,
         brightness: Brightness.dark,
         scaffoldBackgroundColor: AppColors.darkBg,
-        colorScheme: ColorScheme.dark(
+        colorScheme: const ColorScheme.dark(
           primary: AppColors.neonGreen,
           secondary: AppColors.cyan,
           surface: AppColors.darkSurface,
@@ -192,12 +192,12 @@ class AppTheme {
           iconTheme: IconThemeData(color: AppColors.textPrimary),
         ),
         // Card
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: AppColors.darkSurface,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.white.withOpacity(0.08)),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
           ),
         ),
         // Elevated Button
@@ -219,7 +219,7 @@ class AppTheme {
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.textPrimary,
-            side: BorderSide(color: Colors.white.withOpacity(0.2)),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -246,14 +246,14 @@ class AppTheme {
           filled: true,
           fillColor: AppColors.darkSurfaceLight,
           labelStyle: const TextStyle(color: AppColors.textSecondary),
-          hintStyle: TextStyle(color: AppColors.textSecondary.withOpacity(0.6)),
+          hintStyle: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.6)),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -265,12 +265,12 @@ class AppTheme {
           ),
         ),
         // Tab Bar
-        tabBarTheme: TabBarTheme(
+        tabBarTheme: TabBarThemeData(
           labelColor: AppColors.neonGreen,
           unselectedLabelColor: AppColors.textSecondary,
           indicatorColor: AppColors.neonGreen,
           indicatorSize: TabBarIndicatorSize.label,
-          dividerColor: Colors.white.withOpacity(0.05),
+          dividerColor: Colors.white.withValues(alpha: 0.05),
         ),
         // Bottom Sheet
         bottomSheetTheme: const BottomSheetThemeData(
@@ -280,11 +280,11 @@ class AppTheme {
         ),
         // Divider
         dividerTheme: DividerThemeData(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withValues(alpha: 0.08),
           thickness: 1,
         ),
         // Dialog
-        dialogTheme: DialogTheme(
+        dialogTheme: DialogThemeData(
           backgroundColor: AppColors.darkSurface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
