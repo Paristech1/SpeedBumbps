@@ -255,8 +255,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
               if (_destinationMode) {
                 setState(() => _destinationMode = false);
                 ref.read(destinationProvider.notifier).state = position;
+                final origin = _isInPhiladelphiaArea(location.latitude, location.longitude)
+                    ? LatLng(location.latitude, location.longitude)
+                    : _defaultCenter;
                 ref.read(routingProvider.notifier).calculateRoute(
-                      origin: LatLng(location.latitude, location.longitude),
+                      origin: origin,
                       destination: position,
                       avoidanceProfile: ref.read(routeAvoidanceProfileProvider),
                     );
@@ -384,10 +387,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
             ),
           ),
         if (selectedRoute != null) ...[
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
+          Positioned.fill(
             child: DirectionsBottomSheet(route: selectedRoute),
           ),
           if (hasAlternative)
@@ -507,6 +507,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
     );
   }
 
+  static bool _isInPhiladelphiaArea(double lat, double lng) {
+    return lat >= 39.8 && lat <= 40.2 && lng >= -75.4 && lng <= -74.9;
+  }
+
   void _tryAnimateToUser(UserLocation location) {
     if (_hasAnimatedToUser) return;
     final controller = _mapController;
@@ -514,10 +518,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
     _hasAnimatedToUser = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      controller.move(
-        LatLng(location.latitude, location.longitude),
-        MapConstants.userLocationZoom,
-      );
+      if (_isInPhiladelphiaArea(location.latitude, location.longitude)) {
+        controller.move(
+          LatLng(location.latitude, location.longitude),
+          MapConstants.userLocationZoom,
+        );
+      }
     });
   }
 
