@@ -40,12 +40,6 @@
 	<string>We need your location to show speed bumps on your route</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Background location helps detect speed bumps automatically</string>
-	<key>NSCameraUsageDescription</key>
-	<string>We need camera access to capture photos of speed bumps for reporting</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>We need photo library access to select speed bump photos</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>We'll save captured photos to your library</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

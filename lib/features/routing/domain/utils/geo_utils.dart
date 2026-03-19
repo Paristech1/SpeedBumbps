@@ -1,4 +1,4 @@
-import 'dart:math' show cos, sin, sqrt, asin;
+import 'dart:math' show asin, cos, sin, sqrt;
 
 import 'package:latlong2/latlong.dart';
 
@@ -45,4 +45,33 @@ double _distanceToSegment(LatLng point, LatLng lineStart, LatLng lineEnd) {
     lineStart.longitude + t * dx,
   );
   return _haversine(point, closest);
+}
+
+/// Geographic point at ~half the path length along [points] (for map labels).
+LatLng? midpointAlongPolyline(List<LatLng> points) {
+  if (points.isEmpty) return null;
+  if (points.length == 1) return points.first;
+  var total = 0.0;
+  final segLens = <double>[];
+  for (var i = 0; i < points.length - 1; i++) {
+    final d = _haversine(points[i], points[i + 1]);
+    segLens.add(d);
+    total += d;
+  }
+  if (total <= 0) return points[points.length ~/ 2];
+  var target = total / 2;
+  for (var i = 0; i < segLens.length; i++) {
+    final len = segLens[i];
+    if (target <= len) {
+      final t = len == 0 ? 0.0 : target / len;
+      final a = points[i];
+      final b = points[i + 1];
+      return LatLng(
+        a.latitude + t * (b.latitude - a.latitude),
+        a.longitude + t * (b.longitude - a.longitude),
+      );
+    }
+    target -= len;
+  }
+  return points.last;
 }

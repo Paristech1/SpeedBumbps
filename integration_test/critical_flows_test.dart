@@ -14,14 +14,6 @@ void main() {
     );
 
     testWidgets(
-      'User submission flow end-to-end',
-      (tester) async {
-        // Placeholder for camera/gallery + Firestore submission flow.
-      },
-      skip: true, // Requires camera/photo permissions and backend test project.
-    );
-
-    testWidgets(
       'Routing calculation',
       (tester) async {
         // Placeholder for A->B route validation.

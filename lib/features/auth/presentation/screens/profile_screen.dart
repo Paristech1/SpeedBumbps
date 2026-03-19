@@ -108,14 +108,6 @@ class ProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 32),
             ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('My Submissions'),
-              subtitle: const Text('View report history and status'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).pushNamed('/submission-history'),
-            ),
-            const Divider(),
-            ListTile(
               leading: const Icon(Icons.edit),
               title: const Text('Edit Profile'),
               trailing: const Icon(Icons.chevron_right),

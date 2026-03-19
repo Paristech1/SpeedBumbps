@@ -43,4 +43,24 @@ void main() {
       expect(d, lessThan(100));
     });
   });
+
+  group('midpointAlongPolyline', () {
+    test('returns null for empty list', () {
+      expect(midpointAlongPolyline([]), isNull);
+    });
+
+    test('returns the only point for single-element list', () {
+      const p = LatLng(40.0, -75.0);
+      expect(midpointAlongPolyline([p]), p);
+    });
+
+    test('interpolates near middle of two-point segment', () {
+      const a = LatLng(40.0, -75.0);
+      const b = LatLng(40.02, -75.0);
+      final mid = midpointAlongPolyline([a, b]);
+      expect(mid, isNotNull);
+      expect(mid!.latitude, greaterThan(a.latitude));
+      expect(mid.latitude, lessThan(b.latitude));
+    });
+  });
 }

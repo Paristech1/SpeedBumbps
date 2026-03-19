@@ -20,6 +20,7 @@ import '../../../routing/presentation/state/routing_state.dart';
 import '../../../routing/presentation/widgets/route_polyline.dart';
 import '../../../routing/domain/entities/route_preferences.dart';
 import '../../../routing/domain/entities/route.dart';
+import '../../../routing/domain/usecases/calculate_route_with_bump_avoidance.dart';
 import '../../../routing/presentation/widgets/route_planning_sheet.dart';
 import '../providers/location_provider.dart';
 import '../state/map_state.dart';
@@ -37,7 +38,8 @@ class _MapScreenState extends ConsumerState<MapScreen>
   bool _hasFittedRouteBounds = false;
   DateTime? _firstDeviationTime;
   DateTime? _lastRecalcTime;
-  String? _lastRouteId;
+  String? _lastFitBoundsKey;
+  final LayerHitNotifier<int> _polylineHitNotifier = ValueNotifier(null);
   UserLocation? _lastLocation;
   List<Marker> _speedBumpMarkers = const [];
   String? _speedBumpError;
@@ -157,20 +159,31 @@ class _MapScreenState extends ConsumerState<MapScreen>
   Widget _buildMapView(UserLocation location) {
     _lastLocation = location;
     final selectedRoute = ref.watch(selectedRouteProvider);
+    final routeResult = ref.watch(routeCalculationResultProvider);
+    final selectedRouteIndex = ref.watch(selectedRouteIndexProvider);
     final routingState = ref.watch(routingProvider);
     final hasAlternative = routingState.maybeWhen(
       success: (r) => r.alternativeRoute != null,
       orElse: () => false,
     );
-    final showAlternative = ref.watch(selectedRouteIndexProvider) == 1;
+    final showAlternative = selectedRouteIndex == 1;
 
     _tryAnimateToUser(location);
-    _tryFitRouteBounds(selectedRoute);
+    _tryFitRouteBounds(routeResult);
 
-    final markers = _buildMarkers(location, selectedRoute);
-    final polylines = selectedRoute != null
-        ? [RoutePolylineWidget.createPolyline(selectedRoute)]
-        : <Polyline>[];
+    final markers = _buildMarkers(
+      context,
+      location,
+      selectedRoute,
+      routeResult,
+      selectedRouteIndex,
+    );
+    final polylines = routeResult == null
+        ? <Polyline<int>>[]
+        : RoutePolylineWidget.buildMultiRoutePolylines(
+            result: routeResult,
+            selectedIndex: selectedRouteIndex,
+          );
 
     return Stack(
       children: [
@@ -186,7 +199,19 @@ class _MapScreenState extends ConsumerState<MapScreen>
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.speedbumpapp.speed_bump_app',
             ),
-            PolylineLayer(polylines: polylines),
+            GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () {
+                final hit = _polylineHitNotifier.value;
+                if (hit == null || hit.hitValues.isEmpty) return;
+                final idx = hit.hitValues.first;
+                ref.read(selectedRouteIndexProvider.notifier).state = idx;
+              },
+              child: PolylineLayer<int>(
+                hitNotifier: _polylineHitNotifier,
+                polylines: polylines,
+              ),
+            ),
             MarkerLayer(markers: markers),
           ],
         ),
@@ -684,6 +709,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     ref.read(routingProvider.notifier).clear();
     setState(() {
       _hasFittedRouteBounds = false;
+      _lastFitBoundsKey = null;
       _originLabel = null;
       _destinationLabel = null;
       ref.read(selectedRouteIndexProvider.notifier).state = 0;
@@ -692,16 +718,21 @@ class _MapScreenState extends ConsumerState<MapScreen>
 
   // ---------- Helpers ----------
 
-  void _tryFitRouteBounds(AppRoute? selectedRoute) {
-    if (selectedRoute == null) return;
-    if (selectedRoute.id != _lastRouteId) {
+  void _tryFitRouteBounds(RouteCalculationResult? result) {
+    if (result == null) return;
+    final key =
+        '${result.primaryRoute.id}_${result.alternativeRoute?.id ?? "none"}';
+    if (key != _lastFitBoundsKey) {
       _hasFittedRouteBounds = false;
-      _lastRouteId = selectedRoute.id;
+      _lastFitBoundsKey = key;
     }
     if (!_hasFittedRouteBounds) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_hasFittedRouteBounds || !mounted) return;
-        final points = selectedRoute.polylinePoints;
+        final points = <LatLng>[
+          ...result.primaryRoute.polylinePoints,
+          ...?result.alternativeRoute?.polylinePoints,
+        ];
         if (points.length < 2) return;
         _hasFittedRouteBounds = true;
         double minLat = points.first.latitude,
@@ -714,6 +745,15 @@ class _MapScreenState extends ConsumerState<MapScreen>
           if (p.longitude < minLng) minLng = p.longitude;
           if (p.longitude > maxLng) maxLng = p.longitude;
         }
+        // Ensure SW != NE so LatLngBounds assertion doesn't fire
+        if ((maxLat - minLat).abs() < 0.001) {
+          minLat -= 0.002;
+          maxLat += 0.002;
+        }
+        if ((maxLng - minLng).abs() < 0.001) {
+          minLng -= 0.002;
+          maxLng += 0.002;
+        }
         _mapController?.fitCamera(CameraFit.bounds(
           bounds: LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng)),
           padding: const EdgeInsets.fromLTRB(60, 120, 60, 220),
@@ -722,8 +762,102 @@ class _MapScreenState extends ConsumerState<MapScreen>
     }
   }
 
-  List<Marker> _buildMarkers(UserLocation location, AppRoute? selectedRoute) {
+  List<Marker> _routeSummaryMarkers(
+    BuildContext context,
+    RouteCalculationResult result,
+    int selectedRouteIndex,
+  ) {
+    final markers = <Marker>[];
+    void addChip(AppRoute route, int index) {
+      if (route.polylinePoints.length < 2) return;
+      final mid = route.polylineMidpoint;
+      if (mid == null) return;
+      final selected = index == selectedRouteIndex;
+      final subtitle = index == 0 ? 'Fastest' : 'Bump-free';
+      markers.add(
+        Marker(
+          point: mid,
+          width: 148,
+          height: 56,
+          alignment: Alignment.bottomCenter,
+          child: Material(
+            elevation: selected ? 8 : 3,
+            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context).colorScheme.surface.withValues(
+                  alpha: selected ? 1 : 0.94,
+                ),
+            child: InkWell(
+              onTap: () {
+                ref.read(selectedRouteIndexProvider.notifier).state = index;
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.directions_car,
+                          size: 14,
+                          color: route.polylineColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            '${route.durationFormatted} · ${route.distanceFormatted}',
+                            style: TextStyle(
+                              fontWeight:
+                                  selected ? FontWeight.w800 : FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[700],
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    addChip(result.primaryRoute, 0);
+    if (result.alternativeRoute != null) {
+      addChip(result.alternativeRoute!, 1);
+    }
+    return markers;
+  }
+
+  List<Marker> _buildMarkers(
+    BuildContext context,
+    UserLocation location,
+    AppRoute? selectedRoute,
+    RouteCalculationResult? routeResult,
+    int selectedRouteIndex,
+  ) {
     final markers = <Marker>[..._speedBumpMarkers];
+    if (routeResult != null) {
+      markers.addAll(
+        _routeSummaryMarkers(context, routeResult, selectedRouteIndex),
+      );
+    }
     if (selectedRoute != null && selectedRoute.polylinePoints.isNotEmpty) {
       markers.add(Marker(
         point: selectedRoute.polylinePoints.first,
@@ -937,6 +1071,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     WidgetsBinding.instance.removeObserver(this);
     _locationSub?.close();
     _bumpsSub?.close();
+    _polylineHitNotifier.dispose();
     _mapController?.dispose();
     _mapController = null;
     super.dispose();

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/route.dart';
 import '../../domain/entities/route_preferences.dart';
+import '../../domain/usecases/calculate_route_with_bump_avoidance.dart';
 import 'routing_provider.dart';
 import '../state/routing_state.dart';
 
@@ -21,6 +22,15 @@ final routeAvoidanceProfileProvider = Provider<RouteAvoidanceProfile>((ref) {
   final mode = ref.watch(routePreferenceModeProvider);
   final vehicle = ref.watch(vehicleProfileProvider);
   return RouteAvoidanceProfile(mode: mode, vehicle: vehicle);
+});
+
+/// Full routing result (primary + optional alternative) when calculation succeeded.
+final routeCalculationResultProvider = Provider<RouteCalculationResult?>((ref) {
+  final routingState = ref.watch(routingProvider);
+  return routingState.maybeWhen(
+    success: (result) => result,
+    orElse: () => null,
+  );
 });
 
 /// The currently selected route to display (primary or alternative).

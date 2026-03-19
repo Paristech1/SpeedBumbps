@@ -21,17 +21,17 @@ class RouteStep {
 
   /// Icon for the maneuver.
   IconData get maneuverIcon {
-    switch (maneuver) {
-      case 'turn-left':
-        return Icons.turn_left;
-      case 'turn-right':
-        return Icons.turn_right;
-      case 'turn-slight-left':
-        return Icons.turn_slight_left;
-      case 'turn-slight-right':
-        return Icons.turn_slight_right;
-      default:
-        return Icons.straight;
-    }
+    return switch (maneuver) {
+      'turn-left' => Icons.turn_left,
+      'turn-right' => Icons.turn_right,
+      'turn-slight-left' => Icons.turn_slight_left,
+      'turn-slight-right' => Icons.turn_slight_right,
+      'u-turn' => Icons.u_turn_left,
+      'roundabout' => Icons.roundabout_left,
+      'merge' => Icons.merge,
+      'depart' => Icons.trip_origin,
+      'arrive' => Icons.location_on,
+      _ => Icons.straight,
+    };
   }
 }

@@ -14,6 +14,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Object? firebaseInitError;
   var crashReportingEnabled = false;
+  final rootZone = Zone.current;
 
   await runZonedGuarded(() async {
     try {
@@ -43,11 +44,13 @@ Future<void> main() async {
       }
     }
 
-    runApp(
-      ProviderScope(
-        child: SpeedBumpApp(firebaseInitError: firebaseInitError),
-      ),
-    );
+    rootZone.run(() {
+      runApp(
+        ProviderScope(
+          child: SpeedBumpApp(firebaseInitError: firebaseInitError),
+        ),
+      );
+    });
   }, (error, stackTrace) async {
     AppLogger.error(
       'Uncaught zone exception',

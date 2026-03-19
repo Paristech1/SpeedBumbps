@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../utils/geo_utils.dart';
 import 'route_step.dart';
 
 /// Represents a complete navigation route.
@@ -36,6 +37,9 @@ class AppRoute {
     final minutes = (durationSeconds / 60).round();
     return '$minutes min';
   }
+
+  /// Point along the polyline at ~half travel distance (for summary chips).
+  LatLng? get polylineMidpoint => midpointAlongPolyline(polylinePoints);
 
   /// Color for polyline display.
   Color get polylineColor {

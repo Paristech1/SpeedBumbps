@@ -33,12 +33,12 @@ class OsrmRoutingRepository implements RoutingRepository {
               ? result.polylinePoints.last
               : s.location;
       return RouteStep(
-        instruction: _stripHtml(s.instruction),
+        instruction: _buildInstruction(s),
         distanceMeters: s.distanceMeters,
         durationSeconds: s.durationSeconds,
         startLocation: s.location,
         endLocation: nextLoc,
-        maneuver: 'straight',
+        maneuver: _osrmToManeuver(s.maneuverType, s.maneuverModifier),
       );
     }).toList();
 
@@ -65,11 +65,31 @@ class OsrmRoutingRepository implements RoutingRepository {
     );
   }
 
-  String _stripHtml(String text) {
-    return text
-        .replaceAll(RegExp(r'<[^>]*>'), '')
-        .replaceAll('&nbsp;', ' ')
-        .replaceAll(RegExp(r'&\w+;'), '')
-        .trim();
+  String _buildInstruction(OsrmStep s) {
+    final raw = s.instruction.trim();
+    if (s.name.isNotEmpty && !raw.contains(s.name)) {
+      return '$raw onto ${s.name}';
+    }
+    return raw;
+  }
+
+  String _osrmToManeuver(String type, String modifier) {
+    if (type == 'turn' || type == 'end of road' || type == 'fork') {
+      return switch (modifier) {
+        'left' => 'turn-left',
+        'right' => 'turn-right',
+        'slight left' => 'turn-slight-left',
+        'slight right' => 'turn-slight-right',
+        'sharp left' => 'turn-left',
+        'sharp right' => 'turn-right',
+        'uturn' => 'u-turn',
+        _ => 'straight',
+      };
+    }
+    if (type == 'roundabout' || type == 'rotary') return 'roundabout';
+    if (type == 'merge') return 'merge';
+    if (type == 'depart') return 'depart';
+    if (type == 'arrive') return 'arrive';
+    return 'straight';
   }
 }

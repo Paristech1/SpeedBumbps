@@ -61,7 +61,10 @@ class OsrmDirectionsAPI {
       for (final s in legSteps) {
         final stepMap = s as Map<String, dynamic>;
         final maneuver = stepMap['maneuver'] as Map<String, dynamic>? ?? {};
+        final maneuverType = maneuver['type'] as String? ?? '';
+        final maneuverModifier = maneuver['modifier'] as String? ?? '';
         final instruction = maneuver['instruction'] as String? ?? 'Continue';
+        final stepName = stepMap['name'] as String? ?? '';
         final stepDistance = (stepMap['distance'] as num?)?.toDouble() ?? 0.0;
         final stepDuration = (stepMap['duration'] as num?)?.toDouble() ?? 0.0;
         final loc = stepMap['location'] as List<dynamic>?;
@@ -72,6 +75,9 @@ class OsrmDirectionsAPI {
           distanceMeters: stepDistance,
           durationSeconds: stepDuration.toInt(),
           location: LatLng(lat.toDouble(), lon.toDouble()),
+          maneuverType: maneuverType,
+          maneuverModifier: maneuverModifier,
+          name: stepName,
         ));
       }
     }
@@ -149,12 +155,18 @@ class OsrmStep {
   final double distanceMeters;
   final int durationSeconds;
   final LatLng location;
+  final String maneuverType;
+  final String maneuverModifier;
+  final String name;
 
   OsrmStep({
     required this.instruction,
     required this.distanceMeters,
     required this.durationSeconds,
     required this.location,
+    this.maneuverType = '',
+    this.maneuverModifier = '',
+    this.name = '',
   });
 }
 
