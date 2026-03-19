@@ -10,7 +10,7 @@ class RoutePolylineWidget {
   /// Converts [route] to a [Polyline] for flutter_map.
   static Polyline<int> createPolyline(AppRoute route) {
     return Polyline(
-      points: route.polylinePoints,
+      points: route.previewPolylinePoints,
       color: route.polylineColor,
       strokeWidth: 6,
       hitValue: 0,
@@ -25,11 +25,12 @@ class RoutePolylineWidget {
   }) {
     final polylines = <Polyline<int>>[];
     void addRoute(AppRoute route, int index, {required bool selected}) {
-      if (route.polylinePoints.length < 2) return;
+      final previewPoints = route.previewPolylinePoints;
+      if (previewPoints.length < 2) return;
       final baseColor = route.polylineColor;
       polylines.add(
         Polyline(
-          points: route.polylinePoints,
+          points: previewPoints,
           color: selected
               ? baseColor
               : baseColor.withValues(alpha: 0.38),

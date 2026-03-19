@@ -26,7 +26,12 @@ import '../providers/location_provider.dart';
 import '../state/map_state.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
-  const MapScreen({super.key});
+  const MapScreen({
+    super.key,
+    this.showBaseMap = true,
+  });
+
+  final bool showBaseMap;
 
   @override
   ConsumerState<MapScreen> createState() => _MapScreenState();
@@ -195,10 +200,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
           ),
           mapController: _mapController,
           children: [
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.speedbumpapp.speed_bump_app',
-            ),
+            if (widget.showBaseMap)
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.speedbumpapp.speed_bump_app',
+              ),
             GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: () {
@@ -730,8 +736,8 @@ class _MapScreenState extends ConsumerState<MapScreen>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_hasFittedRouteBounds || !mounted) return;
         final points = <LatLng>[
-          ...result.primaryRoute.polylinePoints,
-          ...?result.alternativeRoute?.polylinePoints,
+          ...result.primaryRoute.previewPolylinePoints,
+          ...?result.alternativeRoute?.previewPolylinePoints,
         ];
         if (points.length < 2) return;
         _hasFittedRouteBounds = true;
@@ -769,7 +775,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
   ) {
     final markers = <Marker>[];
     void addChip(AppRoute route, int index) {
-      if (route.polylinePoints.length < 2) return;
+      if (route.previewPolylinePoints.length < 2) return;
       final mid = route.polylineMidpoint;
       if (mid == null) return;
       final selected = index == selectedRouteIndex;
@@ -858,16 +864,16 @@ class _MapScreenState extends ConsumerState<MapScreen>
         _routeSummaryMarkers(context, routeResult, selectedRouteIndex),
       );
     }
-    if (selectedRoute != null && selectedRoute.polylinePoints.isNotEmpty) {
+    if (selectedRoute != null && selectedRoute.previewPolylinePoints.isNotEmpty) {
       markers.add(Marker(
-        point: selectedRoute.polylinePoints.first,
+        point: selectedRoute.previewPolylinePoints.first,
         width: 32, height: 32,
         child: const Icon(Icons.trip_origin, color: Colors.green, size: 32),
       ));
     }
-    if (selectedRoute != null && selectedRoute.polylinePoints.length >= 2) {
+    if (selectedRoute != null && selectedRoute.previewPolylinePoints.length >= 2) {
       markers.add(Marker(
-        point: selectedRoute.polylinePoints.last,
+        point: selectedRoute.previewPolylinePoints.last,
         width: 32, height: 32,
         child: const Icon(Icons.location_on, color: Colors.red, size: 32),
       ));
@@ -894,7 +900,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
         }
         final dist = distanceFromPointToPolyline(
           LatLng(location.latitude, location.longitude),
-          route.polylinePoints,
+          route.previewPolylinePoints,
         );
         if (dist > _deviationThresholdMeters) {
           _firstDeviationTime ??= DateTime.now();

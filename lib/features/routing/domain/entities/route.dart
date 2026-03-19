@@ -39,7 +39,41 @@ class AppRoute {
   }
 
   /// Point along the polyline at ~half travel distance (for summary chips).
-  LatLng? get polylineMidpoint => midpointAlongPolyline(polylinePoints);
+  LatLng? get polylineMidpoint => midpointAlongPolyline(previewPolylinePoints);
+
+  /// Points to use when rendering a visual route preview.
+  ///
+  /// OSRM normally provides `polylinePoints`, but we still want a visible route
+  /// preview when the overview geometry is missing or incomplete. In that case,
+  /// we fall back to the step start/end coordinates and deduplicate adjacent
+  /// points so the map still has a valid polyline to draw.
+  List<LatLng> get previewPolylinePoints {
+    if (polylinePoints.length >= 2) {
+      return polylinePoints;
+    }
+
+    final previewPoints = <LatLng>[];
+
+    void addPoint(LatLng point) {
+      if (previewPoints.isEmpty) {
+        previewPoints.add(point);
+        return;
+      }
+
+      final last = previewPoints.last;
+      if (last.latitude == point.latitude && last.longitude == point.longitude) {
+        return;
+      }
+      previewPoints.add(point);
+    }
+
+    for (final step in steps) {
+      addPoint(step.startLocation);
+      addPoint(step.endLocation);
+    }
+
+    return previewPoints;
+  }
 
   /// Color for polyline display.
   Color get polylineColor {

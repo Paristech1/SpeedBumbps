@@ -67,7 +67,9 @@ class OsrmDirectionsAPI {
         final stepName = stepMap['name'] as String? ?? '';
         final stepDistance = (stepMap['distance'] as num?)?.toDouble() ?? 0.0;
         final stepDuration = (stepMap['duration'] as num?)?.toDouble() ?? 0.0;
-        final loc = stepMap['location'] as List<dynamic>?;
+        final loc =
+            (maneuver['location'] as List<dynamic>?) ??
+            (stepMap['location'] as List<dynamic>?);
         final lon = (loc?.isNotEmpty == true ? loc![0] : 0.0) as num;
         final lat = (loc != null && loc.length > 1 ? loc[1] : 0.0) as num;
         steps.add(OsrmStep(
