@@ -10,12 +10,14 @@ import '../state/routing_state.dart';
 final selectedRouteIndexProvider = StateProvider<int>((ref) => 0);
 
 /// Route preference mode (Smooth Ride, Cargo-Conscious, Fast).
-final routePreferenceModeProvider =
-    StateProvider<RoutePreferenceMode>((ref) => RoutePreferenceMode.cargoConscious);
+final routePreferenceModeProvider = StateProvider<RoutePreferenceMode>(
+  (ref) => RoutePreferenceMode.cargoConscious,
+);
 
 /// Vehicle profile selection.
-final vehicleProfileProvider =
-    StateProvider<VehicleProfile>((ref) => VehicleProfile.sedan);
+final vehicleProfileProvider = StateProvider<VehicleProfile>(
+  (ref) => VehicleProfile.sedan,
+);
 
 /// Combined avoidance profile derived from preference + vehicle.
 final routeAvoidanceProfileProvider = Provider<RouteAvoidanceProfile>((ref) {
@@ -24,27 +26,27 @@ final routeAvoidanceProfileProvider = Provider<RouteAvoidanceProfile>((ref) {
   return RouteAvoidanceProfile(mode: mode, vehicle: vehicle);
 });
 
-/// Full routing result (primary + optional alternative) when calculation succeeded.
+/// Full routing result to use for preview/display.
+///
+/// Once a route has been confirmed, keep the most recent successful result
+/// available so the map can continue rendering the polyline preview while a
+/// follow-up recalculation is loading.
 final routeCalculationResultProvider = Provider<RouteCalculationResult?>((ref) {
   final routingState = ref.watch(routingProvider);
   return routingState.maybeWhen(
     success: (result) => result,
-    orElse: () => null,
+    orElse: () => ref.read(routingProvider.notifier).lastSuccessfulResult,
   );
 });
 
-/// The currently selected route to display (primary or alternative).
-/// Only valid when [routingProvider] is success; otherwise null.
+/// The currently selected route preview to display (primary or alternative).
 final selectedRouteProvider = Provider<AppRoute?>((ref) {
-  final routingState = ref.watch(routingProvider);
-  return routingState.maybeWhen(
-    success: (result) {
-      final index = ref.watch(selectedRouteIndexProvider);
-      if (index == 1 && result.alternativeRoute != null) {
-        return result.alternativeRoute;
-      }
-      return result.primaryRoute;
-    },
-    orElse: () => null,
-  );
+  final result = ref.watch(routeCalculationResultProvider);
+  if (result == null) return null;
+
+  final index = ref.watch(selectedRouteIndexProvider);
+  if (index == 1 && result.alternativeRoute != null) {
+    return result.alternativeRoute;
+  }
+  return result.primaryRoute;
 });

@@ -9,11 +9,11 @@ import '../state/routing_state.dart';
 
 final calculateRouteWithBumpAvoidanceProvider =
     Provider<CalculateRouteWithBumpAvoidance>((ref) {
-  return CalculateRouteWithBumpAvoidance(
-    routingRepo: ref.watch(routingRepositoryProvider),
-    bumpRepo: ref.watch(speedBumpRepositoryProvider),
-  );
-});
+      return CalculateRouteWithBumpAvoidance(
+        routingRepo: ref.watch(routingRepositoryProvider),
+        bumpRepo: ref.watch(speedBumpRepositoryProvider),
+      );
+    });
 
 const _cacheTtlMinutes = 15;
 
@@ -22,6 +22,9 @@ class RoutingNotifier extends StateNotifier<RoutingState> {
 
   final CalculateRouteWithBumpAvoidance _useCase;
   final Map<String, _CachedResult> _cache = {};
+  RouteCalculationResult? _lastSuccessfulResult;
+
+  RouteCalculationResult? get lastSuccessfulResult => _lastSuccessfulResult;
 
   static String _cacheKey(
     LatLng origin,
@@ -42,7 +45,9 @@ class RoutingNotifier extends StateNotifier<RoutingState> {
     final key = _cacheKey(origin, destination, profile);
     final cached = _cache[key];
     if (cached != null &&
-        DateTime.now().difference(cached.timestamp).inMinutes < _cacheTtlMinutes) {
+        DateTime.now().difference(cached.timestamp).inMinutes <
+            _cacheTtlMinutes) {
+      _lastSuccessfulResult = cached.result;
       state = RoutingState.success(cached.result);
       return;
     }
@@ -55,6 +60,7 @@ class RoutingNotifier extends StateNotifier<RoutingState> {
         avoidanceProfile: profile,
       );
       _cache[key] = _CachedResult(result: result, timestamp: DateTime.now());
+      _lastSuccessfulResult = result;
       state = RoutingState.success(result);
     } catch (e, _) {
       state = RoutingState.error(e.toString());
@@ -62,6 +68,7 @@ class RoutingNotifier extends StateNotifier<RoutingState> {
   }
 
   void clear() {
+    _lastSuccessfulResult = null;
     state = const RoutingState.initial();
   }
 }
@@ -72,7 +79,8 @@ class _CachedResult {
   final DateTime timestamp;
 }
 
-final routingProvider =
-    StateNotifierProvider<RoutingNotifier, RoutingState>((ref) {
+final routingProvider = StateNotifierProvider<RoutingNotifier, RoutingState>((
+  ref,
+) {
   return RoutingNotifier(ref.watch(calculateRouteWithBumpAvoidanceProvider));
 });

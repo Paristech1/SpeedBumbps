@@ -22,7 +22,8 @@ void main() {
       ),
     ];
 
-    testWidgets('Shows permission denied screen when no permission', (tester) async {
+    testWidgets('Shows permission denied screen when no permission',
+        (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
