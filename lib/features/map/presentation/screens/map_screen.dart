@@ -26,7 +26,9 @@ import '../providers/location_provider.dart';
 import '../state/map_state.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
-  const MapScreen({super.key});
+  const MapScreen({super.key, this.tileLayerBuilder});
+
+  final Widget Function()? tileLayerBuilder;
 
   @override
   ConsumerState<MapScreen> createState() => _MapScreenState();
@@ -52,33 +54,40 @@ class _MapScreenState extends ConsumerState<MapScreen>
   static const int _deviationDelaySeconds = 5;
   static const int _recalcCooldownSeconds = 30;
 
-  static const LatLng _defaultCenter =
-      LatLng(MapConstants.defaultLat, MapConstants.defaultLng);
+  static const LatLng _defaultCenter = LatLng(
+    MapConstants.defaultLat,
+    MapConstants.defaultLng,
+  );
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
     WidgetsBinding.instance.addObserver(this);
-    _locationSub =
-        ref.listenManual(locationStreamProvider, _handleLocationUpdate);
+    _locationSub = ref.listenManual(
+      locationStreamProvider,
+      _handleLocationUpdate,
+    );
     _bumpsSub = ref.listenManual<AsyncValue<List<SpeedBump>>>(
-        speedBumpsProvider, (prev, next) {
-      next.when(
-        data: (bumps) {
-          if (!mounted) return;
-          setState(() {
-            _speedBumpMarkers = _buildSpeedBumpMarkers(bumps);
-            _speedBumpError = null;
-          });
-        },
-        loading: () {},
-        error: (error, _) {
-          if (!mounted) return;
-          setState(() => _speedBumpError = error.toString());
-        },
-      );
-    }, fireImmediately: true);
+      speedBumpsProvider,
+      (prev, next) {
+        next.when(
+          data: (bumps) {
+            if (!mounted) return;
+            setState(() {
+              _speedBumpMarkers = _buildSpeedBumpMarkers(bumps);
+              _speedBumpError = null;
+            });
+          },
+          loading: () {},
+          error: (error, _) {
+            if (!mounted) return;
+            setState(() => _speedBumpError = error.toString());
+          },
+        );
+      },
+      fireImmediately: true,
+    );
   }
 
   @override
@@ -124,10 +133,14 @@ class _MapScreenState extends ConsumerState<MapScreen>
               children: [
                 const Icon(Icons.speed, size: 36),
                 const SizedBox(height: 8),
-                Text('Speed Bump',
-                    style: Theme.of(context).textTheme.headlineSmall),
-                Text('Navigate Philly bump-free',
-                    style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  'Speed Bump',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                Text(
+                  'Navigate Philly bump-free',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
           ),
@@ -161,11 +174,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final selectedRoute = ref.watch(selectedRouteProvider);
     final routeResult = ref.watch(routeCalculationResultProvider);
     final selectedRouteIndex = ref.watch(selectedRouteIndexProvider);
+    final pendingPreviewPoints = ref.watch(pendingRoutePreviewProvider);
     final routingState = ref.watch(routingProvider);
-    final hasAlternative = routingState.maybeWhen(
-      success: (r) => r.alternativeRoute != null,
-      orElse: () => false,
-    );
+    final hasAlternative = routeResult?.alternativeRoute != null;
     final showAlternative = selectedRouteIndex == 1;
 
     _tryAnimateToUser(location);
@@ -178,12 +189,17 @@ class _MapScreenState extends ConsumerState<MapScreen>
       routeResult,
       selectedRouteIndex,
     );
-    final polylines = routeResult == null
-        ? <Polyline<int>>[]
-        : RoutePolylineWidget.buildMultiRoutePolylines(
+    final previewPolyline = RoutePolylineWidget.createPreviewPolyline(
+      pendingPreviewPoints,
+    );
+    final polylines = routeResult != null
+        ? RoutePolylineWidget.buildMultiRoutePolylines(
             result: routeResult,
             selectedIndex: selectedRouteIndex,
-          );
+          )
+        : previewPolyline == null
+            ? <Polyline<int>>[]
+            : <Polyline<int>>[previewPolyline];
 
     return Stack(
       children: [
@@ -195,10 +211,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
           ),
           mapController: _mapController,
           children: [
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.speedbumpapp.speed_bump_app',
-            ),
+            widget.tileLayerBuilder?.call() ??
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.speedbumpapp.speed_bump_app',
+                ),
             GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: () {
@@ -246,7 +263,8 @@ class _MapScreenState extends ConsumerState<MapScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(
-                        width: 20, height: 20,
+                        width: 20,
+                        height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                       SizedBox(width: 12),
@@ -308,8 +326,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
                   children: [
                     Icon(Icons.warning_amber_rounded, color: Colors.orange),
                     SizedBox(width: 8),
-                    Text('Speed bump data failed to load.',
-                        style: TextStyle(fontSize: 13)),
+                    Text(
+                      'Speed bump data failed to load.',
+                      style: TextStyle(fontSize: 13),
+                    ),
                   ],
                 ),
               ),
@@ -363,7 +383,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
   // ---------- Search bar ----------
 
   Widget _buildSearchBar(
-      BuildContext context, UserLocation location, AppRoute? currentRoute) {
+    BuildContext context,
+    UserLocation location,
+    AppRoute? currentRoute,
+  ) {
     return Material(
       elevation: 4,
       borderRadius: BorderRadius.circular(28),
@@ -390,10 +413,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                     ? _buildRouteLabels()
                     : Text(
                         'Where to in Philly?',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                       ),
               ),
               if (currentRoute != null)
@@ -449,7 +469,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
         color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2)),
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            offset: Offset(0, -2),
+          ),
         ],
       ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -459,7 +483,8 @@ class _MapScreenState extends ConsumerState<MapScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                 color: Colors.grey[300],
                 borderRadius: BorderRadius.circular(2),
@@ -576,9 +601,13 @@ class _MapScreenState extends ConsumerState<MapScreen>
           children: [
             Icon(Icons.check_circle, size: 16, color: Colors.green[800]),
             const SizedBox(width: 4),
-            Text('Bump-free',
-                style: TextStyle(
-                    color: Colors.green[800], fontWeight: FontWeight.bold)),
+            Text(
+              'Bump-free',
+              style: TextStyle(
+                color: Colors.green[800],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       );
@@ -593,11 +622,19 @@ class _MapScreenState extends ConsumerState<MapScreen>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange[800]),
+            Icon(
+              Icons.warning_amber_rounded,
+              size: 16,
+              color: Colors.orange[800],
+            ),
             const SizedBox(width: 4),
-            Text('${route.speedBumpCount} bumps',
-                style: TextStyle(
-                    color: Colors.orange[800], fontWeight: FontWeight.bold)),
+            Text(
+              '${route.speedBumpCount} bumps',
+              style: TextStyle(
+                color: Colors.orange[800],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       );
@@ -621,7 +658,8 @@ class _MapScreenState extends ConsumerState<MapScreen>
           children: [
             Container(
               margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                 color: Colors.grey[300],
                 borderRadius: BorderRadius.circular(2),
@@ -631,11 +669,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  Text('Directions',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Directions',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
                   const Spacer(),
                   Text(
                     '${route.durationFormatted} · ${route.distanceFormatted}',
@@ -654,10 +693,14 @@ class _MapScreenState extends ConsumerState<MapScreen>
                   final miles = step.distanceMeters * 0.000621371;
                   return ListTile(
                     leading: Icon(step.maneuverIcon, color: Colors.blue),
-                    title: Text(step.instruction,
-                        style: const TextStyle(fontSize: 14)),
-                    subtitle: Text('${miles.toStringAsFixed(1)} mi',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    title: Text(
+                      step.instruction,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      '${miles.toStringAsFixed(1)} mi',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
                   );
                 },
               ),
@@ -671,9 +714,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
   // ---------- Actions ----------
 
   void _openRoutePlanning(BuildContext context, UserLocation location) async {
-    final currentLoc = _isInPhiladelphiaArea(location.latitude, location.longitude)
-        ? LatLng(location.latitude, location.longitude)
-        : _defaultCenter;
+    final currentLoc =
+        _isInPhiladelphiaArea(location.latitude, location.longitude)
+            ? LatLng(location.latitude, location.longitude)
+            : _defaultCenter;
     final profile = ref.read(routeAvoidanceProfileProvider);
 
     final result = await showModalBottomSheet<RoutePlanningResult>(
@@ -692,20 +736,33 @@ class _MapScreenState extends ConsumerState<MapScreen>
     ref.read(routePreferenceModeProvider.notifier).state = result.mode;
     ref.read(vehicleProfileProvider.notifier).state = result.vehicle;
     ref.read(destinationProvider.notifier).state = result.destination;
+    ref.read(pendingRoutePreviewProvider.notifier).state = [
+      result.origin,
+      result.destination,
+    ];
     setState(() {
       _originLabel = result.originLabel;
       _destinationLabel = result.destinationLabel;
     });
-    unawaited(ref.read(routingProvider.notifier).calculateRoute(
+    unawaited(_calculateConfirmedRoute(result));
+  }
+
+  Future<void> _calculateConfirmedRoute(RoutePlanningResult result) async {
+    await ref.read(routingProvider.notifier).calculateRoute(
           origin: result.origin,
           destination: result.destination,
-          avoidanceProfile:
-              RouteAvoidanceProfile(mode: result.mode, vehicle: result.vehicle),
-        ));
+          avoidanceProfile: RouteAvoidanceProfile(
+            mode: result.mode,
+            vehicle: result.vehicle,
+          ),
+        );
+    if (!mounted) return;
+    ref.read(pendingRoutePreviewProvider.notifier).state = null;
   }
 
   void _clearRoute() {
     ref.read(destinationProvider.notifier).state = null;
+    ref.read(pendingRoutePreviewProvider.notifier).state = null;
     ref.read(routingProvider.notifier).clear();
     setState(() {
       _hasFittedRouteBounds = false;
@@ -754,10 +811,15 @@ class _MapScreenState extends ConsumerState<MapScreen>
           minLng -= 0.002;
           maxLng += 0.002;
         }
-        _mapController?.fitCamera(CameraFit.bounds(
-          bounds: LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng)),
-          padding: const EdgeInsets.fromLTRB(60, 120, 60, 220),
-        ));
+        _mapController?.fitCamera(
+          CameraFit.bounds(
+            bounds: LatLngBounds(
+              LatLng(minLat, minLng),
+              LatLng(maxLat, maxLng),
+            ),
+            padding: const EdgeInsets.fromLTRB(60, 120, 60, 220),
+          ),
+        );
       });
     }
   }
@@ -783,17 +845,19 @@ class _MapScreenState extends ConsumerState<MapScreen>
           child: Material(
             elevation: selected ? 8 : 3,
             borderRadius: BorderRadius.circular(12),
-            color: Theme.of(context).colorScheme.surface.withValues(
-                  alpha: selected ? 1 : 0.94,
-                ),
+            color: Theme.of(
+              context,
+            ).colorScheme.surface.withValues(alpha: selected ? 1 : 0.94),
             child: InkWell(
               onTap: () {
                 ref.read(selectedRouteIndexProvider.notifier).state = index;
               },
               borderRadius: BorderRadius.circular(12),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -859,29 +923,40 @@ class _MapScreenState extends ConsumerState<MapScreen>
       );
     }
     if (selectedRoute != null && selectedRoute.polylinePoints.isNotEmpty) {
-      markers.add(Marker(
-        point: selectedRoute.polylinePoints.first,
-        width: 32, height: 32,
-        child: const Icon(Icons.trip_origin, color: Colors.green, size: 32),
-      ));
+      markers.add(
+        Marker(
+          point: selectedRoute.polylinePoints.first,
+          width: 32,
+          height: 32,
+          child: const Icon(Icons.trip_origin, color: Colors.green, size: 32),
+        ),
+      );
     }
     if (selectedRoute != null && selectedRoute.polylinePoints.length >= 2) {
-      markers.add(Marker(
-        point: selectedRoute.polylinePoints.last,
-        width: 32, height: 32,
-        child: const Icon(Icons.location_on, color: Colors.red, size: 32),
-      ));
+      markers.add(
+        Marker(
+          point: selectedRoute.polylinePoints.last,
+          width: 32,
+          height: 32,
+          child: const Icon(Icons.location_on, color: Colors.red, size: 32),
+        ),
+      );
     }
-    markers.add(Marker(
-      point: LatLng(location.latitude, location.longitude),
-      width: 24, height: 24,
-      child: const Icon(Icons.my_location, color: Colors.blue, size: 24),
-    ));
+    markers.add(
+      Marker(
+        point: LatLng(location.latitude, location.longitude),
+        width: 24,
+        height: 24,
+        child: const Icon(Icons.my_location, color: Colors.blue, size: 24),
+      ),
+    );
     return markers;
   }
 
   void _handleLocationUpdate(
-      AsyncValue<MapState>? prev, AsyncValue<MapState> next) {
+    AsyncValue<MapState>? prev,
+    AsyncValue<MapState> next,
+  ) {
     final mapState = next.valueOrNull;
     if (mapState == null) return;
     mapState.maybeWhen(
@@ -942,12 +1017,14 @@ class _MapScreenState extends ConsumerState<MapScreen>
 
   List<Marker> _buildSpeedBumpMarkers(List<SpeedBump> bumps) {
     return bumps
-        .map((bump) => Marker(
-              point: bump.location,
-              width: 24, height: 24,
-              child:
-                  const Icon(Icons.speed, color: Colors.orange, size: 24),
-            ))
+        .map(
+          (bump) => Marker(
+            point: bump.location,
+            width: 24,
+            height: 24,
+            child: const Icon(Icons.speed, color: Colors.orange, size: 24),
+          ),
+        )
         .toList();
   }
 
@@ -963,11 +1040,14 @@ class _MapScreenState extends ConsumerState<MapScreen>
         children: [
           const Icon(Icons.warning, size: 14, color: Colors.white),
           const SizedBox(width: 4),
-          Text('GPS: ${accuracy.toInt()}m',
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12)),
+          Text(
+            'GPS: ${accuracy.toInt()}m',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );
@@ -982,8 +1062,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
         children: [
           const CircularProgressIndicator(),
           const SizedBox(height: 16),
-          Text('Finding your location...',
-              style: Theme.of(context).textTheme.bodyLarge),
+          Text(
+            'Finding your location...',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
         ],
       ),
     );
@@ -998,13 +1080,17 @@ class _MapScreenState extends ConsumerState<MapScreen>
           children: [
             const Icon(Icons.location_off, size: 64, color: AppColors.error),
             const SizedBox(height: 16),
-            Text('Location Permission Required',
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center),
+            Text(
+              'Location Permission Required',
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
-            Text('Please enable location access in Settings to use this app.',
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center),
+            Text(
+              'Please enable location access in Settings to use this app.',
+              style: Theme.of(context).textTheme.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => ref.invalidate(locationStreamProvider),
@@ -1023,16 +1109,23 @@ class _MapScreenState extends ConsumerState<MapScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.gps_off,
-                size: 64, color: AppColors.accuracyWarning),
+            const Icon(
+              Icons.gps_off,
+              size: 64,
+              color: AppColors.accuracyWarning,
+            ),
             const SizedBox(height: 16),
-            Text('GPS is Turned Off',
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center),
+            Text(
+              'GPS is Turned Off',
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
-            Text('Please enable GPS in your device settings.',
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center),
+            Text(
+              'Please enable GPS in your device settings.',
+              style: Theme.of(context).textTheme.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -1048,13 +1141,17 @@ class _MapScreenState extends ConsumerState<MapScreen>
           children: [
             const Icon(Icons.error_outline, size: 64, color: AppColors.error),
             const SizedBox(height: 16),
-            Text('Something went wrong',
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center),
+            Text(
+              'Something went wrong',
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
-            Text(message,
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => ref.invalidate(locationStreamProvider),
@@ -1105,11 +1202,13 @@ class _ToggleButton extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon,
-                  size: 18,
-                  color: selected
-                      ? colorScheme.onPrimaryContainer
-                      : Colors.grey[600]),
+              Icon(
+                icon,
+                size: 18,
+                color: selected
+                    ? colorScheme.onPrimaryContainer
+                    : Colors.grey[600],
+              ),
               const SizedBox(width: 6),
               Text(
                 label,

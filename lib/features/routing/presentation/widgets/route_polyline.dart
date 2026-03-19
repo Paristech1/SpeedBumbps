@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../domain/entities/route.dart';
 import '../../domain/usecases/calculate_route_with_bump_avoidance.dart';
@@ -17,6 +19,19 @@ class RoutePolylineWidget {
     );
   }
 
+  /// Straight-line preview shown while a confirmed route request is loading.
+  static Polyline<int>? createPreviewPolyline(List<LatLng>? previewPoints) {
+    if (previewPoints == null || previewPoints.length < 2) return null;
+    return Polyline(
+      points: previewPoints,
+      color: Colors.blue.withValues(alpha: 0.75),
+      strokeWidth: 5,
+      borderColor: Colors.white.withValues(alpha: 0.7),
+      borderStrokeWidth: 2,
+      hitValue: -1,
+    );
+  }
+
   /// Primary and optional alternative routes: unselected drawn first (behind),
   /// selected on top. [hitValue] is route index (0 = primary, 1 = alternative).
   static List<Polyline<int>> buildMultiRoutePolylines({
@@ -30,9 +45,7 @@ class RoutePolylineWidget {
       polylines.add(
         Polyline(
           points: route.polylinePoints,
-          color: selected
-              ? baseColor
-              : baseColor.withValues(alpha: 0.38),
+          color: selected ? baseColor : baseColor.withValues(alpha: 0.38),
           strokeWidth: selected ? 6 : 4,
           hitValue: index,
         ),
