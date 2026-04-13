@@ -27,6 +27,7 @@ interface RoutingState {
   destinationLabel?: string;
   selectedRouteIndex: 0 | 1; // 0=primary, 1=alternative
   avoidanceProfile: RouteAvoidanceProfile;
+  isNavigating: boolean;
 }
 
 interface RoutingContextValue extends RoutingState {
@@ -40,6 +41,8 @@ interface RoutingContextValue extends RoutingState {
   clearRoute: () => void;
   toggleRoute: () => void;
   setAvoidanceProfile: (profile: RouteAvoidanceProfile) => void;
+  startNavigation: () => void;
+  stopNavigation: () => void;
 }
 
 const RoutingContext = createContext<RoutingContextValue | null>(null);
@@ -60,6 +63,7 @@ export function RoutingProvider({ children }: { children: React.ReactNode }) {
     status: 'idle',
     selectedRouteIndex: 0,
     avoidanceProfile: DEFAULT_AVOIDANCE_PROFILE,
+    isNavigating: false,
   });
   const cache = useRef<Map<string, CacheEntry>>(new Map());
 
@@ -124,6 +128,7 @@ export function RoutingProvider({ children }: { children: React.ReactNode }) {
       status: 'idle',
       selectedRouteIndex: 0,
       avoidanceProfile: DEFAULT_AVOIDANCE_PROFILE,
+      isNavigating: false,
     });
   }, []);
 
@@ -138,9 +143,17 @@ export function RoutingProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({ ...prev, avoidanceProfile: profile }));
   }, []);
 
+  const startNavigation = useCallback(() => {
+    setState((prev) => ({ ...prev, isNavigating: true }));
+  }, []);
+
+  const stopNavigation = useCallback(() => {
+    setState((prev) => ({ ...prev, isNavigating: false }));
+  }, []);
+
   return (
     <RoutingContext.Provider
-      value={{ ...state, calculateRoute, clearRoute, toggleRoute, setAvoidanceProfile }}
+      value={{ ...state, calculateRoute, clearRoute, toggleRoute, setAvoidanceProfile, startNavigation, stopNavigation }}
     >
       {children}
     </RoutingContext.Provider>

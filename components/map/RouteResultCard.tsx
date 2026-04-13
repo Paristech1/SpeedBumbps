@@ -19,6 +19,7 @@ interface RouteResultCardProps {
   selectedRouteIndex: 0 | 1;
   onToggleRoute: () => void;
   onClearRoute: () => void;
+  onStartNavigation: () => void;
 }
 
 export function RouteResultCard({
@@ -26,6 +27,7 @@ export function RouteResultCard({
   selectedRouteIndex,
   onToggleRoute,
   onClearRoute,
+  onStartNavigation,
 }: RouteResultCardProps) {
   const [stepsOpen, setStepsOpen] = useState(false);
 
@@ -98,11 +100,17 @@ export function RouteResultCard({
           </button>
           <button
             onClick={() => setStepsOpen(true)}
-            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+            Directions
+          </button>
+          <button
+            onClick={onStartNavigation}
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors"
           >
             <Navigation className="w-4 h-4" />
-            View Path
-            <ChevronRight className="w-4 h-4" />
+            Start
           </button>
         </div>
       </div>

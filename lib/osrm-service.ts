@@ -5,7 +5,7 @@
 
 import type { LatLng, RouteStep, AppRoute } from '@/types/speedbumps';
 
-const OSRM_BASE_URL = 'https://router.project-osrm.org/route/v1/driving';
+const OSRM_PROXY_URL = '/api/route';
 
 /**
  * Build a human-readable instruction from OSRM maneuver fields.
@@ -121,17 +121,17 @@ export async function getOsrmRoute(
   destination: LatLng,
   waypoints?: LatLng[]
 ): Promise<OsrmRouteResult> {
-  const coords: string[] = [];
-  coords.push(`${origin.lng},${origin.lat}`);
+  const coordParts: string[] = [];
+  coordParts.push(`${origin.lng},${origin.lat}`);
   if (waypoints && waypoints.length > 0) {
     for (const wp of waypoints) {
-      coords.push(`${wp.lng},${wp.lat}`);
+      coordParts.push(`${wp.lng},${wp.lat}`);
     }
   }
-  coords.push(`${destination.lng},${destination.lat}`);
+  coordParts.push(`${destination.lng},${destination.lat}`);
 
-  const path = coords.join(';');
-  const url = new URL(`${OSRM_BASE_URL}/${path}`);
+  const url = new URL(OSRM_PROXY_URL, typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+  url.searchParams.set('coords', coordParts.join(';'));
   url.searchParams.set('overview', 'full');
   url.searchParams.set('geometries', 'polyline');
   url.searchParams.set('steps', 'true');

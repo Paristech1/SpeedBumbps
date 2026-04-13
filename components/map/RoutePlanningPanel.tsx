@@ -21,6 +21,8 @@ interface RoutePlanningPanelProps {
     destinationLabel: string,
     profile: RouteAvoidanceProfile
   ) => void;
+  /** Pre-fill the destination label when re-opening after a route is active */
+  initialDestLabel?: string;
 }
 
 const VEHICLE_OPTIONS: { id: VehicleProfile; label: string; emoji: string }[] = [
@@ -42,6 +44,7 @@ export function RoutePlanningPanel({
   onClose,
   userLocation,
   onPlanRoute,
+  initialDestLabel,
 }: RoutePlanningPanelProps) {
   const [useMyLocation, setUseMyLocation] = useState(true);
   const [originQuery, setOriginQuery] = useState('');
@@ -55,20 +58,27 @@ export function RoutePlanningPanel({
   const [vehicle, setVehicle] = useState<VehicleProfile>('sedan');
   const [mode, setMode] = useState<RoutePreferenceMode>('balanced');
   const destInputRef = useRef<HTMLInputElement>(null);
+  // Tracks whether the current destQuery is the pre-filled hint (no autocomplete until user edits)
+  const destIsPrefillRef = useRef(false);
 
-  // Reset on open
+  // Reset on open — snapshot initialDestLabel at open time only (not on every re-render)
+  const initialDestLabelRef = useRef(initialDestLabel);
   useEffect(() => {
     if (isOpen) {
+      initialDestLabelRef.current = initialDestLabel;
       setUseMyLocation(true);
       setOriginQuery('');
-      setDestQuery('');
       setSelectedOrigin(null);
-      setSelectedDest(null);
       setOriginResults([]);
       setDestResults([]);
+      setSelectedDest(null);
+      const prefill = initialDestLabelRef.current ?? '';
+      destIsPrefillRef.current = prefill !== '';
+      setDestQuery(prefill);
       setTimeout(() => destInputRef.current?.focus(), 200);
     }
-  }, [isOpen]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]); // intentionally omit initialDestLabel — snapshot on open only
 
   // Debounced origin search
   useEffect(() => {
@@ -90,9 +100,9 @@ export function RoutePlanningPanel({
     return () => clearTimeout(timer);
   }, [originQuery, useMyLocation]);
 
-  // Debounced destination search
+  // Debounced destination search — suppressed while destQuery is the pre-filled hint
   useEffect(() => {
-    if (!destQuery.trim()) {
+    if (!destQuery.trim() || destIsPrefillRef.current) {
       setDestResults([]);
       return;
     }
@@ -213,6 +223,7 @@ export function RoutePlanningPanel({
                 value={selectedDest ? selectedDest.shortName : destQuery}
                 onChange={(e) => {
                   setSelectedDest(null);
+                  destIsPrefillRef.current = false; // user is typing — enable autocomplete
                   setDestQuery(e.target.value);
                 }}
                 placeholder="Where to in Philly?"

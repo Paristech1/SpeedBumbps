@@ -10,6 +10,7 @@ import { MapContextMenu } from "./MapContextMenu";
 import { MapPOIPanel } from "./MapPOIPanel";
 import { RoutePlanningPanel } from "./RoutePlanningPanel";
 import { RouteResultCard } from "./RouteResultCard";
+import { NavigationBar } from "./NavigationBar";
 import { useMapTileProvider } from "@/hooks/useMapTileProvider";
 import { useMapContextMenu } from "@/hooks/useMapContextMenu";
 import { useMapMarkers } from "@/hooks/useMapMarkers";
@@ -113,6 +114,7 @@ function MapMainInner() {
   const [isRoutePlanningOpen, setIsRoutePlanningOpen] = useState(false);
 
   const routing = useRouting();
+  const selectedRoute = useSelectedRoute();
   const { location, isTracking } = useLocationTracking();
 
   const { tileProvider, currentProviderId, setProviderId } = useMapTileProvider();
@@ -208,57 +210,74 @@ function MapMainInner() {
         <SpeedBumpsMap location={location} />
       </LeafletMap>
 
-      {/* Search / Route bar */}
-      <div className="absolute left-0 right-0 sm:left-4 sm:right-auto top-3 z-[1001] px-4 sm:px-0">
-        <div className="flex items-center gap-2 bg-white dark:bg-gray-700/90 backdrop-blur px-4 py-3 shadow-lg rounded-full w-full sm:w-[360px]">
-          {hasRoute ? (
-            <>
-              <Navigation className="w-5 h-5 text-blue-500 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
-                  {routing.originLabel} → {routing.destinationLabel}
-                </div>
-              </div>
-              <button
-                onClick={() => { routing.clearRoute(); setIsRoutePlanningOpen(false); }}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full"
-                aria-label="Clear route"
-              >
-                <X className="w-4 h-4 text-gray-500" />
-              </button>
-            </>
-          ) : routing.status === "loading" ? (
-            <>
-              <Loader2 className="w-5 h-5 text-blue-500 animate-spin shrink-0" />
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-300 flex-1">Calculating route...</span>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setIsRoutePlanningOpen(true)}
-                className="flex items-center gap-2 flex-1 text-left"
-                aria-label="Plan route"
-              >
-                <MapPin className="w-5 h-5 text-gray-400 shrink-0" />
-                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Where to in Philly?
-                </span>
-              </button>
-              <button
-                onClick={() => setIsRoutePlanningOpen(true)}
-                className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 shrink-0 ml-2"
-              >
-                Routes
-              </button>
-            </>
+      {/* Active navigation bar — replaces top bar when navigating */}
+      {routing.isNavigating && selectedRoute && (
+        <NavigationBar
+          steps={selectedRoute.steps}
+          currentLocation={location?.position ?? null}
+          onEndNavigation={routing.stopNavigation}
+        />
+      )}
+
+      {/* Search / Route bar — hidden during active navigation */}
+      {!routing.isNavigating && (
+        <div className="absolute left-0 right-0 sm:left-4 sm:right-auto top-3 z-[1001] px-4 sm:px-0">
+          <div className="flex items-center gap-2 bg-white dark:bg-gray-700/90 backdrop-blur px-4 py-3 shadow-lg rounded-full w-full sm:w-[360px]">
+            {hasRoute ? (
+              <>
+                <button
+                  onClick={() => setIsRoutePlanningOpen(true)}
+                  className="flex items-center gap-2 flex-1 text-left min-w-0"
+                  aria-label="Edit route"
+                >
+                  <Navigation className="w-5 h-5 text-blue-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
+                      {routing.originLabel} → {routing.destinationLabel}
+                    </div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => { routing.clearRoute(); setIsRoutePlanningOpen(false); }}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full shrink-0"
+                  aria-label="Clear route"
+                >
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </>
+            ) : routing.status === "loading" ? (
+              <>
+                <Loader2 className="w-5 h-5 text-blue-500 animate-spin shrink-0" />
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-300 flex-1">Calculating route...</span>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setIsRoutePlanningOpen(true)}
+                  className="flex items-center gap-2 flex-1 text-left"
+                  aria-label="Plan route"
+                >
+                  <MapPin className="w-5 h-5 text-gray-400 shrink-0" />
+                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    Where to in Philly?
+                  </span>
+                </button>
+                <button
+                  onClick={() => setIsRoutePlanningOpen(true)}
+                  className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 shrink-0 ml-2"
+                >
+                  Routes
+                </button>
+              </>
+            )}
+          </div>
+          {routing.status === "error" && routing.error && (
+            <div className="mt-2 px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm rounded-xl shadow">
+              {routing.error}
+            </div>
           )}
         </div>
-        {routing.status === "error" && routing.error && (
-          <div className="mt-2 px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm rounded-xl shadow">
-            {routing.error}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Location tracking badge */}
       {!isTracking && (
@@ -321,15 +340,17 @@ function MapMainInner() {
         onClose={() => setIsRoutePlanningOpen(false)}
         userLocation={location?.position}
         onPlanRoute={handlePlanRoute}
+        initialDestLabel={routing.destinationLabel}
       />
 
-      {/* Route Result Card */}
-      {hasRoute && routing.result && (
+      {/* Route Result Card — hidden during active navigation */}
+      {hasRoute && routing.result && !routing.isNavigating && (
         <RouteResultCard
           result={routing.result}
           selectedRouteIndex={routing.selectedRouteIndex}
           onToggleRoute={routing.toggleRoute}
           onClearRoute={() => { routing.clearRoute(); }}
+          onStartNavigation={routing.startNavigation}
         />
       )}
     </div>
