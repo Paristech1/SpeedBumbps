@@ -23,7 +23,7 @@ import { RoutingProvider, useRouting, useSelectedRoute } from "@/contexts/Routin
 import { useLeafletMap } from "@/hooks/useLeafletMap";
 import type { POICategory } from "@/types/poi";
 import type { RouteAvoidanceProfile, LatLng } from "@/types/speedbumps";
-import { Navigation, X, MapPin, Loader2 } from "lucide-react";
+import { Navigation, X, MapPin, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 /**
@@ -238,8 +238,15 @@ function MapMainInner() {
                   </div>
                 </button>
                 <button
+                  onClick={() => setIsRoutePlanningOpen(true)}
+                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full shrink-0"
+                  aria-label="Edit route"
+                >
+                  <Pencil className="w-3.5 h-3.5 text-gray-400" />
+                </button>
+                <button
                   onClick={() => { routing.clearRoute(); setIsRoutePlanningOpen(false); }}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full shrink-0"
+                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full shrink-0"
                   aria-label="Clear route"
                 >
                   <X className="w-4 h-4 text-gray-500" />
@@ -251,24 +258,21 @@ function MapMainInner() {
                 <span className="text-sm font-medium text-gray-600 dark:text-gray-300 flex-1">Calculating route...</span>
               </>
             ) : (
-              <>
-                <button
-                  onClick={() => setIsRoutePlanningOpen(true)}
-                  className="flex items-center gap-2 flex-1 text-left"
-                  aria-label="Plan route"
-                >
-                  <MapPin className="w-5 h-5 text-gray-400 shrink-0" />
-                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                    Where to in Philly?
-                  </span>
-                </button>
-                <button
-                  onClick={() => setIsRoutePlanningOpen(true)}
-                  className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 shrink-0 ml-2"
-                >
-                  Routes
-                </button>
-              </>
+              <button
+                onClick={() => setIsRoutePlanningOpen(true)}
+                className="flex items-center gap-3 flex-1 text-left"
+                aria-label="Plan route"
+              >
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
+                  <MapPin className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex-1">
+                  Where to in Philly?
+                </span>
+                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0">
+                  Go
+                </span>
+              </button>
             )}
           </div>
           {routing.status === "error" && routing.error && (
