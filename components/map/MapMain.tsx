@@ -16,7 +16,7 @@ import { useMapMarkers } from "@/hooks/useMapMarkers";
 import { usePOIManager } from "@/hooks/usePOIManager";
 import { useSpeedBumpMarkers } from "@/hooks/useSpeedBumpMarkers";
 import { useRoutePolyline } from "@/hooks/useRoutePolyline";
-import { useLocationTracking } from "@/hooks/useLocationTracking";
+import { useLocationTracking, type UserLocation } from "@/hooks/useLocationTracking";
 import { useRouteDeviation } from "@/hooks/useRouteDeviation";
 import { RoutingProvider, useRouting, useSelectedRoute } from "@/contexts/RoutingContext";
 import { useLeafletMap } from "@/hooks/useLeafletMap";
@@ -27,12 +27,12 @@ import { toast } from "sonner";
 
 /**
  * Inner component that has access to MapContext (LeafletMap must be a sibling, not parent).
+ * Location comes from a single parent `useLocationTracking()` — do not call the hook here.
  */
-function SpeedBumpsMap() {
+function SpeedBumpsMap({ location }: { location: UserLocation | null }) {
   const map = useLeafletMap();
   const routing = useRouting();
   const selectedRoute = useSelectedRoute();
-  const { location } = useLocationTracking();
 
   // Speed bump markers (viewport-based, canvas renderer)
   useSpeedBumpMarkers(map);
@@ -205,7 +205,7 @@ function MapMainInner() {
           maxZoom={tileLayerProps.maxZoom}
         />
         {/* SpeedBumps logic (map-context-dependent) */}
-        <SpeedBumpsMap />
+        <SpeedBumpsMap location={location} />
       </LeafletMap>
 
       {/* Search / Route bar */}

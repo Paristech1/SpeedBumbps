@@ -130,8 +130,14 @@ export function useGeolocation() {
     map.once('locationfound', handleLocationFound);
     map.once('locationerror', handleLocationError);
 
-    // Request user's location
-    map.locate({ setView: true, maxZoom: 16 });
+    // Request user's location (avoid short default timeout / high-accuracy GPS stalls)
+    map.locate({
+      setView: true,
+      maxZoom: 16,
+      enableHighAccuracy: false,
+      maximumAge: 60000,
+      timeout: 60000,
+    });
   }, [map, cleanupEventHandlers, clearLocationMarkers]);
 
   // Cleanup on unmount
