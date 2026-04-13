@@ -106,6 +106,7 @@ export function RoutePlanningPanel({
       setDestResults([]);
       return;
     }
+    // Don't clear existing results immediately — keep them visible while the next search loads
     setDestLoading(true);
     const timer = setTimeout(async () => {
       try {
@@ -116,7 +117,7 @@ export function RoutePlanningPanel({
       } finally {
         setDestLoading(false);
       }
-    }, 400);
+    }, 600);
     return () => clearTimeout(timer);
   }, [destQuery]);
 
@@ -197,6 +198,7 @@ export function RoutePlanningPanel({
                 {originResults.length > 0 && !selectedOrigin && (
                   <AddressDropdown
                     results={originResults}
+                    isLoading={originLoading}
                     onSelect={(r) => { setSelectedOrigin(r); setOriginQuery(''); setOriginResults([]); }}
                   />
                 )}
@@ -241,9 +243,10 @@ export function RoutePlanningPanel({
                   <X className="w-4 h-4" />
                 </button>
               )}
-              {destResults.length > 0 && !selectedDest && (
+              {(destResults.length > 0 || destLoading) && !selectedDest && (
                 <AddressDropdown
                   results={destResults}
+                  isLoading={destLoading}
                   onSelect={(r) => { setSelectedDest(r); setDestQuery(''); setDestResults([]); }}
                 />
               )}
@@ -323,16 +326,22 @@ export function RoutePlanningPanel({
 
 function AddressDropdown({
   results,
+  isLoading,
   onSelect,
 }: {
   results: GeocodingResult[];
+  isLoading: boolean;
   onSelect: (r: GeocodingResult) => void;
 }) {
+  if (results.length === 0 && !isLoading) return null;
   return (
     <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
       {results.map((r, i) => (
         <button
           key={i}
+          // onMouseDown + preventDefault keeps input focused and prevents blur
+          // firing before onClick on mobile, which would dismiss the dropdown
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => onSelect(r)}
           className="w-full flex items-start gap-3 px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
@@ -345,6 +354,9 @@ function AddressDropdown({
           </div>
         </button>
       ))}
+      {isLoading && results.length === 0 && (
+        <div className="px-3 py-2.5 text-sm text-gray-400 dark:text-gray-500">Searching…</div>
+      )}
     </div>
   );
 }
