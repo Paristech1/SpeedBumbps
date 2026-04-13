@@ -202,7 +202,8 @@ function valhallaToOsrm(trip: ValhallaTrip): OsrmLikeResponse {
   }
 
   // Re-encode full trip at precision 5 for OSRM client compatibility
-  const geometry = encodePolyline(allPoints.map(([lat, lng]) => [lat / 10, lng / 10]));
+  // allPoints already hold real lat/lng floats (decoded from Valhalla's precision-6 polyline)
+  const geometry = encodePolyline(allPoints);
 
   return {
     code: 'Ok',

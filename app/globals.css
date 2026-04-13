@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 :root {
   /* Base colors */
@@ -232,8 +233,6 @@
   animation-delay: 4s;
 }
 
-/* Leaflet CSS import */
-@import "leaflet/dist/leaflet.css";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
