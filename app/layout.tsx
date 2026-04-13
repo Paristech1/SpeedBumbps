@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Next.js Leaflet Starter",
+  title: "SpeedBumps - Navigate Philly Bump-Free",
   description:
-    "Enterprise-grade Next.js 16 starter template with vanilla Leaflet integration",
+    "Navigate Philadelphia with smart speed bump avoidance. Find the smoothest routes across the city.",
 };
 
 export default function RootLayout({

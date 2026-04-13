@@ -18,16 +18,23 @@
   --button-active: rgba(59, 130, 246, 0.2);
   --button-disabled: rgba(156, 163, 175, 0.5);
 
+  /* SpeedBumps brand colors */
+  --speedbumps-green: #00C853;
+  --speedbumps-blue: #2196F3;
+  --speedbumps-red: #FF1744;
+  --speedbumps-orange: #FF6B00;
+  --speedbumps-cyan: #00BCD4;
+
   /* Accent colors */
-  --accent-primary: #3b82f6;
-  --accent-secondary: #8b5cf6;
-  --accent-success: #10b981;
-  --accent-warning: #f59e0b;
-  --accent-error: #ef4444;
+  --accent-primary: #2196F3;
+  --accent-secondary: #00BCD4;
+  --accent-success: #00C853;
+  --accent-warning: #FF6B00;
+  --accent-error: #FF1744;
 
   /* Gradient colors */
-  --gradient-start: #3b82f6;
-  --gradient-end: #8b5cf6;
+  --gradient-start: #2196F3;
+  --gradient-end: #00BCD4;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
