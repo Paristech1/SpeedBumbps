@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SpeedBumps - Location Details</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&amp;family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-container": "#00320f",
+                        "primary-fixed-dim": "#9ecaff",
+                        "outline-variant": "#404752",
+                        "secondary": "#44d8f1",
+                        "inverse-on-surface": "#2e3037",
+                        "on-background": "#e2e2eb",
+                        "tertiary-container": "#00a844",
+                        "on-primary-fixed-variant": "#00497d",
+                        "on-tertiary": "#003912",
+                        "tertiary-fixed-dim": "#3ce36a",
+                        "surface-variant": "#33343b",
+                        "on-secondary-fixed-variant": "#004e59",
+                        "inverse-primary": "#0061a4",
+                        "background": "#111319",
+                        "error": "#ffb4ab",
+                        "on-secondary": "#00363e",
+                        "on-error": "#690005",
+                        "surface-container-highest": "#33343b",
+                        "on-primary": "#003258",
+                        "on-primary-container": "#002c4f",
+                        "on-tertiary-fixed-variant": "#00531e",
+                        "on-secondary-container": "#004650",
+                        "surface-container-high": "#282a30",
+                        "primary": "#9ecaff",
+                        "inverse-surface": "#e2e2eb",
+                        "on-surface-variant": "#bfc7d4",
+                        "surface-dim": "#111319",
+                        "surface": "#111319",
+                        "primary-fixed": "#d1e4ff",
+                        "on-primary-fixed": "#001d36",
+                        "surface-bright": "#373940",
+                        "error-container": "#93000a",
+                        "secondary-fixed": "#a1efff",
+                        "on-secondary-fixed": "#001f25",
+                        "on-surface": "#e2e2eb",
+                        "tertiary": "#3ce36a",
+                        "surface-tint": "#9ecaff",
+                        "tertiary-fixed": "#69ff87",
+                        "surface-container-low": "#191b22",
+                        "outline": "#89919d",
+                        "secondary-container": "#00bcd4",
+                        "secondary-fixed-dim": "#44d8f1",
+                        "on-tertiary-fixed": "#002108",
+                        "primary-container": "#2196f3",
+                        "surface-container": "#1e1f26",
+                        "surface-container-lowest": "#0c0e14"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Manrope"],
+                        "label": ["Manrope"]
+                    }
+                },
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass {
+            background: rgba(51, 52, 59, 0.6);
+            backdrop-filter: blur(20px);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest font-body text-on-surface select-none overflow-hidden h-screen w-full">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 w-full bg-transparent shadow-2xl shadow-blue-500/10">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-blue-400">explore</span>
+<h1 class="font-['Space_Grotesk'] font-bold tracking-tight text-2xl font-black tracking-tighter text-slate-100">SpeedBumps</h1>
+</div>
+<div class="w-10 h-10 rounded-full border border-outline-variant/20 overflow-hidden hover:bg-slate-800/40 transition-colors">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="close up portrait of a young man with stylish hair and minimalist aesthetic lighting on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCN3QrHLkmM2l8zTKQRClj17CPWUTBKNOKEFZ9rmk0UI3CDkGr4tPB-U9e12Onl7pKcmw8vt_ZwTexcif2elDku_yqBrIgWfklI2ZjJPubXRUeylEhahqRX2Bc8guaus-OCLh3aNTsSZaM6dhGFVS-CFyGc3JVZDyDWOF1OXpYyjiJRF8VvUjjstkWK1Sp0yhzDF_vHpRBfZCZVi3xglvzgNQcctlIfZOeckXhc2U2jG8tC9OdoCv2OgXmK9BQBH0qAPWIssEtghSXd"/>
+</div>
+</header>
+<!-- Map Background Placeholder -->
+<main class="fixed inset-0 z-0">
+<div class="w-full h-full bg-surface-container-lowest grayscale contrast-[1.1] brightness-[0.4]" data-alt="stylized dark navy and charcoal digital map texture with subtle glowing cyan route lines and urban grid patterns" data-location="Philadelphia" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA_VjQVB7ZufmpSbpTqhwCUsx9WjZUz4mE8i0BY7u7Voe0Nki_cGv2uF9SA9Oebt0i39ss3OVOU54us3VTAo2Sj_yjITCRsuFiz38-MZROrybP5nbbK3yOLaz9L6DZKBaQ651N3pIn6H-aq2nmTPECpieGX8De9XxjOG-fEqxmjNjh27vEs4J79TNNfQaCj5ODg098wYKsnDTLWEoeB0Y1fKWiHqrslGvXcjMBdMNFrvHUSnApVg_VG5cd4f_7WvunrK2cvX-wQiluy'); background-size: cover; background-position: center;">
+</div>
+</main>
+<!-- Location Details Drawer -->
+<section class="fixed inset-x-0 bottom-0 z-40 flex flex-col h-[663px] md:max-w-lg md:mx-auto">
+<!-- Snap Point / Handle -->
+<div class="w-full flex justify-center pb-2">
+<div class="w-12 h-1.5 bg-outline-variant/40 rounded-full"></div>
+</div>
+<div class="flex-1 glass rounded-t-xl border-t border-outline-variant/10 overflow-hidden flex flex-col">
+<!-- Hero Header -->
+<div class="relative h-56 shrink-0">
+<img alt="Liberty Bell Center" class="w-full h-full object-cover" data-alt="iconic bronze Liberty Bell in its glass enclosure with the Independence Hall in the blurred background at night with dramatic spotlighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOZR6lq2wCC9DFQjYiEjnNz8dWvXxB4Mu9NidRWXT61NSuXswvtDXt_lB02kXOOtcYldPB7cTU1gtmCcZ9n5ZEgDizyY56Fl7XPBbkvAIQJPeQxm845FH3y30PEkb_HTamRXy06pzFOZAEWqnvrAqPF9h3YxiPKf_lD1hLt2runnUFhr2HeKYQBtyvT-dZf0quzbaGIaqZvV8arBCbn0W9tB7lUW3ffo_Iry_AdkWlEA94ddYCNulhwCj0lNi6SdJm0BdcQF9wloCy"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"></div>
+<div class="absolute bottom-6 left-6">
+<h2 class="font-headline font-extrabold text-3xl text-slate-100 tracking-tight leading-none mb-1">Liberty Bell Center</h2>
+<p class="text-secondary text-sm font-semibold tracking-wide uppercase">Historical Landmark • Old City</p>
+</div>
+<!-- Floating Close Button -->
+<button class="absolute top-4 right-4 w-10 h-10 rounded-full glass flex items-center justify-center text-on-surface active:scale-90 transition-transform">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Content Canvas -->
+<div class="flex-1 overflow-y-auto hide-scrollbar px-6 pt-6 pb-24 space-y-8">
+<!-- 2x2 Grid Actions -->
+<div class="grid grid-cols-4 gap-4">
+<div class="flex flex-col items-center gap-2">
+<button class="w-14 h-14 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary shadow-lg shadow-secondary/20 active:scale-95 transition-all">
+<span class="material-symbols-outlined font-bold" style="font-variation-settings: 'FILL' 1;">directions</span>
+</button>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Directions</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<button class="w-14 h-14 rounded-full border-2 border-primary/40 flex items-center justify-center text-primary active:scale-95 transition-all">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Save</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<button class="w-14 h-14 rounded-full border-2 border-primary/40 flex items-center justify-center text-primary active:scale-95 transition-all">
+<span class="material-symbols-outlined">explore_nearby</span>
+</button>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Nearby</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<button class="w-14 h-14 rounded-full border-2 border-primary/40 flex items-center justify-center text-primary active:scale-95 transition-all">
+<span class="material-symbols-outlined">share</span>
+</button>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Share</span>
+</div>
+</div>
+<!-- Quick Facts Data Grid -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Address -->
+<div class="bg-surface-container-high rounded-lg p-4 flex flex-col gap-1">
+<div class="flex items-center gap-2 text-primary-fixed-dim">
+<span class="material-symbols-outlined text-[18px]">location_on</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Address</span>
+</div>
+<p class="text-sm font-medium text-on-surface leading-tight mt-1">526 Market St, Philadelphia, PA 19106</p>
+</div>
+<!-- Rating -->
+<div class="bg-surface-container-high rounded-lg p-4 flex flex-col gap-1">
+<div class="flex items-center gap-2 text-tertiary">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Rating</span>
+</div>
+<div class="flex items-baseline gap-1 mt-1">
+<p class="text-2xl font-headline font-bold text-on-surface">4.8</p>
+<p class="text-[10px] text-on-surface-variant">/ 5.0</p>
+</div>
+</div>
+<!-- Hours -->
+<div class="bg-surface-container-high rounded-lg p-4 flex flex-col gap-1">
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Hours</span>
+</div>
+<p class="text-sm font-medium text-on-surface mt-1">Open 9AM – 5PM</p>
+</div>
+<!-- Bumps Nearby -->
+<div class="bg-surface-container-high rounded-lg p-4 flex flex-col gap-1 border-l-4 border-error/50">
+<div class="flex items-center gap-2 text-error">
+<span class="material-symbols-outlined text-[18px]">report_problem</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Bumps Nearby</span>
+</div>
+<div class="flex items-baseline gap-1 mt-1">
+<p class="text-2xl font-headline font-bold text-on-surface">2</p>
+<span class="text-[10px] bg-error-container text-on-error-container px-1.5 py-0.5 rounded uppercase font-black">Warning</span>
+</div>
+</div>
+</div>
+<!-- Extra Info Section -->
+<div class="space-y-4">
+<h3 class="font-headline text-lg font-bold text-slate-200">About this location</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">
+                        The Liberty Bell Center is a museum featuring the famous Liberty Bell, an iconic symbol of American independence. Expect high pedestrian traffic and narrow historic cobblestone streets in the immediate vicinity.
+                    </p>
+</div>
+</div>
+</div>
+</section>
+<!-- Bottom Navigation Bar (Shell) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-[#111319]/80 backdrop-blur-xl rounded-t-[32px] border-t border-slate-700/20 shadow-[0_-8px_30px_rgb(0,0,0,0.5)]">
+<a class="flex flex-col items-center justify-center bg-blue-500/20 text-blue-300 rounded-[24px] px-5 py-2 active:scale-90 duration-150 transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">map</span>
+<span class="font-['Manrope'] text-[10px] font-semibold uppercase tracking-widest mt-1">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 px-5 py-2 hover:text-blue-200 active:scale-90 duration-150 transition-all" href="#">
+<span class="material-symbols-outlined">bookmark</span>
+<span class="font-['Manrope'] text-[10px] font-semibold uppercase tracking-widest mt-1">Saved</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 px-5 py-2 hover:text-blue-200 active:scale-90 duration-150 transition-all" href="#">
+<span class="material-symbols-outlined">report_problem</span>
+<span class="font-['Manrope'] text-[10px] font-semibold uppercase tracking-widest mt-1">Reports</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 px-5 py-2 hover:text-blue-200 active:scale-90 duration-150 transition-all" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Manrope'] text-[10px] font-semibold uppercase tracking-widest mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

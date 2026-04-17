@@ -10,7 +10,7 @@ interface MapTileSwitcherProps {
 }
 
 /**
- * MapTileSwitcher - Tile layer switcher UI
+ * MapTileSwitcher — Velocity Dark glass-panel tile layer selector.
  */
 export function MapTileSwitcher({
   selectedProviderId,
@@ -46,11 +46,11 @@ export function MapTileSwitcher({
 
   return (
     <div
-      className="absolute bottom-24 sm:bottom-8 left-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 z-[1000]"
+      className="absolute bottom-32 sm:bottom-32 left-6 flex flex-col sm:flex-row items-start sm:items-center gap-2 z-[1000]"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Slide-out Panel - Above on mobile, Right on desktop */}
+      {/* Slide-out Panel */}
       <div
         className={`order-first sm:order-last flex items-center gap-2 transition-all duration-300 ease-out ${
           isHovered
@@ -58,7 +58,7 @@ export function MapTileSwitcher({
             : "opacity-0 translate-y-4 sm:translate-y-0 sm:-translate-x-4 pointer-events-none"
         }`}
       >
-        <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-1 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2 glass-panel rounded-2xl shadow-xl p-1 ghost-border">
           {layerOptions.map((layer) => (
             <button
               key={layer.id}
@@ -66,8 +66,8 @@ export function MapTileSwitcher({
               disabled={!layer.provider}
               className={`flex flex-col items-center gap-1.5 px-2 sm:px-3 py-2 rounded-xl transition-all ${
                 selectedProviderId === layer.id
-                  ? "bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-500 dark:ring-blue-400"
-                  : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                  ? "bg-[#2196F3]/20 ring-2 ring-[#2196F3]"
+                  : "hover:bg-[#373940]"
               } ${!layer.provider ? "opacity-50 cursor-not-allowed" : ""}`}
               title={layer.label}
             >
@@ -80,7 +80,7 @@ export function MapTileSwitcher({
                   className="object-cover"
                 />
               </div>
-              <span className="text-[10px] sm:text-xs font-medium text-gray-700 dark:text-gray-300">
+              <span className="text-[10px] sm:text-xs font-medium text-[#bfc7d4]">
                 {layer.label}
               </span>
             </button>
@@ -91,7 +91,7 @@ export function MapTileSwitcher({
       {/* Main Tile Button */}
       <div className="flex flex-col items-center gap-1">
         <button
-          className="overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all"
+          className="overflow-hidden rounded-2xl glass-panel shadow-lg hover:shadow-xl transition-all ghost-border"
           aria-label="Tile layer options"
         >
           <div className="relative h-16 w-16 sm:h-18 sm:w-20">
@@ -103,7 +103,7 @@ export function MapTileSwitcher({
               className="object-cover"
             />
           </div>
-          <span className="block bg-white dark:bg-gray-800 px-2 py-1 text-[10px] sm:text-xs font-medium text-gray-700 dark:text-gray-300">
+          <span className="block glass-panel px-2 py-1 text-[10px] sm:text-xs font-medium text-[#bfc7d4]">
             {selectedLayer.label}
           </span>
         </button>

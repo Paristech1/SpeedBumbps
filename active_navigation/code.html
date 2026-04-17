@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&amp;family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-container": "#00320f",
+                        "primary-fixed-dim": "#9ecaff",
+                        "outline-variant": "#404752",
+                        "secondary": "#44d8f1",
+                        "inverse-on-surface": "#2e3037",
+                        "on-background": "#e2e2eb",
+                        "tertiary-container": "#00a844",
+                        "on-primary-fixed-variant": "#00497d",
+                        "on-tertiary": "#003912",
+                        "tertiary-fixed-dim": "#3ce36a",
+                        "surface-variant": "#33343b",
+                        "on-secondary-fixed-variant": "#004e59",
+                        "inverse-primary": "#0061a4",
+                        "background": "#111319",
+                        "error": "#ffb4ab",
+                        "on-secondary": "#00363e",
+                        "on-error": "#690005",
+                        "surface-container-highest": "#33343b",
+                        "on-primary": "#003258",
+                        "on-primary-container": "#002c4f",
+                        "on-tertiary-fixed-variant": "#00531e",
+                        "on-secondary-container": "#004650",
+                        "surface-container-high": "#282a30",
+                        "primary": "#9ecaff",
+                        "inverse-surface": "#e2e2eb",
+                        "on-surface-variant": "#bfc7d4",
+                        "surface-dim": "#111319",
+                        "surface": "#111319",
+                        "primary-fixed": "#d1e4ff",
+                        "on-primary-fixed": "#001d36",
+                        "surface-bright": "#373940",
+                        "error-container": "#93000a",
+                        "secondary-fixed": "#a1efff",
+                        "on-secondary-fixed": "#001f25",
+                        "on-surface": "#e2e2eb",
+                        "tertiary": "#3ce36a",
+                        "surface-tint": "#9ecaff",
+                        "tertiary-fixed": "#69ff87",
+                        "surface-container-low": "#191b22",
+                        "outline": "#89919d",
+                        "secondary-container": "#00bcd4",
+                        "secondary-fixed-dim": "#44d8f1",
+                        "on-tertiary-fixed": "#002108",
+                        "primary-container": "#2196f3",
+                        "surface-container": "#1e1f26",
+                        "surface-container-lowest": "#0c0e14"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Manrope"],
+                        "label": ["Manrope"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(51, 52, 59, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .map-gradient-overlay {
+            background: radial-gradient(circle at center, transparent 0%, rgba(17, 19, 25, 0.4) 100%);
+        }
+        .route-glow {
+            filter: drop-shadow(0 0 8px rgba(68, 216, 241, 0.6));
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body overflow-hidden h-screen w-screen flex flex-col">
+<!-- TOP BANNER (Navigation Instruction) -->
+<header class="fixed top-0 left-0 w-full z-[60] bg-gradient-to-r from-[#1565C0] to-[#2196F3] shadow-2xl">
+<div class="flex items-center justify-between px-6 py-5">
+<div class="flex items-center gap-5">
+<div class="bg-white/20 p-3 rounded-2xl">
+<span class="material-symbols-outlined text-white text-4xl" style="font-variation-settings: 'wght' 700;">turn_left</span>
+</div>
+<div>
+<h1 class="font-headline font-bold text-2xl text-white tracking-tight leading-tight">Turn Left on Broad St</h1>
+<p class="font-label font-medium text-white/80 text-sm tracking-wider uppercase">In 0.3 mi</p>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="text-right border-l border-white/20 pl-6 hidden sm:block">
+<span class="font-headline font-black text-3xl text-white block">12</span>
+<span class="font-label font-semibold text-white/70 text-[10px] uppercase tracking-[0.2em]">min</span>
+</div>
+<button class="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined text-white text-2xl">close</span>
+</button>
+</div>
+</div>
+</header>
+<!-- MAP BASE -->
+<main class="relative flex-1 w-full h-full">
+<!-- Mock Map Environment -->
+<div class="absolute inset-0 z-0">
+<img alt="dark topographic navigation map" class="w-full h-full object-cover opacity-60 grayscale-[0.5] contrast-[1.2]" data-alt="A cinematic dark mode satellite map view of a city grid with glowing blue route lines and deep shadows" data-location="Downtown City Grid" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGXdWx6TVuyPY-6jJSeZJCCqEuoYk5AaRJaY2m_dJvF-S48pmcuFJzjQme0UY9H3HTVXn4KQBQQYwfAVN9U3IYREHgHjMeuTIbnHLXKysw9j8bjyjYLDNH5QpYChO3fUKah64CsbWfIT8iwGarXoo0I_WSl47VRACp1VXt_d_zHCuWDoCdUcsvNvrg2CRt2i82U-nRexYzHqMj8eJWQTKKEjUCO5GpIg1Ph2L2lFI4DXF7To1nBAFUwZjg7g5LFwhMsI-z-ZMK_Vjb"/>
+<div class="absolute inset-0 map-gradient-overlay pointer-events-none"></div>
+</div>
+<!-- SVG Route & Markers Layer -->
+<svg class="absolute inset-0 w-full h-full z-10 pointer-events-none" preserveaspectratio="none" viewbox="0 0 1000 1000">
+<!-- Navigation Route Line -->
+<path class="route-glow opacity-80" d="M 500 1000 L 500 600 L 200 600 L 200 100" fill="none" stroke="#44d8f1" stroke-linecap="round" stroke-linejoin="round" stroke-width="12"></path>
+<!-- Speed Bump Markers (Caution) -->
+<g transform="translate(500, 800)">
+<circle fill="#FF6B00" opacity="0.2" r="20"></circle>
+<circle fill="#FF6B00" r="12"></circle>
+<text fill="white" font-family="Material Symbols Outlined" font-size="16" x="-8" y="8">warning</text>
+</g>
+<g transform="translate(500, 720)">
+<circle fill="#FF6B00" opacity="0.2" r="20"></circle>
+<circle fill="#FF6B00" r="12"></circle>
+<text fill="white" font-family="Material Symbols Outlined" font-size="16" x="-8" y="8">warning</text>
+</g>
+<g transform="translate(350, 600)">
+<circle fill="#FF6B00" opacity="0.2" r="20"></circle>
+<circle fill="#FF6B00" r="12"></circle>
+<text fill="white" font-family="Material Symbols Outlined" font-size="16" x="-8" y="8">warning</text>
+</g>
+</svg>
+<!-- Current Location Indicator -->
+<div class="absolute bottom-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+<div class="relative flex items-center justify-center">
+<div class="absolute w-24 h-24 bg-primary/20 rounded-full animate-ping"></div>
+<div class="w-10 h-10 bg-primary border-4 border-white rounded-full shadow-lg shadow-primary/40 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-xl" style="font-variation-settings: 'FILL' 1;">navigation</span>
+</div>
+</div>
+</div>
+<!-- Floating UI Components -->
+<div class="absolute top-32 right-6 z-40 flex flex-col gap-4">
+<button class="w-14 h-14 glass-panel rounded-2xl flex items-center justify-center shadow-lg hover:bg-surface-bright/40 transition-colors">
+<span class="material-symbols-outlined text-primary">add</span>
+</button>
+<button class="w-14 h-14 glass-panel rounded-2xl flex items-center justify-center shadow-lg hover:bg-surface-bright/40 transition-colors">
+<span class="material-symbols-outlined text-primary">my_location</span>
+</button>
+<button class="w-14 h-14 glass-panel rounded-2xl flex items-center justify-center shadow-lg hover:bg-surface-bright/40 transition-colors">
+<span class="material-symbols-outlined text-primary">layers</span>
+</button>
+</div>
+<!-- BOTTOM ARRIVAL CARD (Glassmorphic) -->
+<div class="absolute bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-50">
+<div class="glass-panel p-6 rounded-lg shadow-2xl border border-white/5 flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label text-xs font-bold text-white/50 uppercase tracking-[0.15em] mb-1">Estimated Arrival</span>
+<h2 class="font-headline font-bold text-2xl text-on-surface">Arriving at 5:30 PM</h2>
+</div>
+<button class="bg-error-container hover:bg-error transition-all active:scale-95 px-8 py-3 rounded-full flex items-center gap-2 group">
+<span class="material-symbols-outlined text-on-error text-xl" style="font-variation-settings: 'FILL' 1;">stop_circle</span>
+<span class="font-headline font-bold text-on-error tracking-tight">Stop</span>
+</button>
+</div>
+</div>
+</main>
+<!-- Map Indicator Chips -->
+<div class="fixed bottom-32 left-6 z-40 flex flex-col gap-2">
+<div class="flex items-center gap-2 px-3 py-2 rounded-full glass-panel border border-white/5">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+<span class="font-label text-[10px] font-bold text-white/70 uppercase">GPS High Precision</span>
+</div>
+<div class="flex items-center gap-2 px-3 py-2 rounded-full glass-panel border border-white/5">
+<span class="material-symbols-outlined text-primary text-sm">speed</span>
+<span class="font-label text-[10px] font-bold text-white/70 uppercase">45 MPH</span>
+</div>
+</div>
+</body></html>

@@ -6,11 +6,11 @@ import type { MapConfig } from '@/types/map';
 
 /**
  * Default map configuration
- * Center: Philadelphia, PA (Bala Cynwyd area)
+ * Center: Philadelphia, PA (City Hall / Downtown)
  */
 export const DEFAULT_MAP_CONFIG: MapConfig = {
-  defaultCenter: [40.0094, -75.2194],
-  defaultZoom: 15,
+  defaultCenter: [39.9526, -75.1652],
+  defaultZoom: 14,
   minZoom: 3,
   maxZoom: 18,
   zoomControl: false, // Using custom controls in dock

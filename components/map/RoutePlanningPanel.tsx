@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * Route planning panel — slide-up sheet for selecting origin/destination and preferences.
- * Ported from Flutter: lib/features/routing/presentation/widgets/route_planning_sheet.dart
+ * Route planning panel — Velocity Dark slide-up sheet.
+ * Matches the route_planner stitch: dark bottom sheet with glassmorphism,
+ * vehicle selector pills, routing strategy cards, and gradient CTA.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -33,10 +34,10 @@ const VEHICLE_OPTIONS: { id: VehicleProfile; label: string; emoji: string }[] = 
   { id: 'bicycle', label: 'Bicycle', emoji: '🚲' },
 ];
 
-const MODE_OPTIONS: { id: RoutePreferenceMode; label: string; description: string }[] = [
-  { id: 'smoothRide', label: 'Smooth Ride', description: 'Avoids all bumps — may take longer' },
-  { id: 'balanced', label: 'Balanced', description: 'Avoids most bumps while staying efficient' },
-  { id: 'fastest', label: 'Fastest', description: 'Shortest time, avoids worst bumps only' },
+const MODE_OPTIONS: { id: RoutePreferenceMode; label: string; description: string; icon: string }[] = [
+  { id: 'smoothRide', label: 'Smooth Ride', description: 'Avoids all bumps & dips', icon: '🛣️' },
+  { id: 'balanced', label: 'Balanced', description: 'Optimal time vs. road quality', icon: '⚖️' },
+  { id: 'fastest', label: 'Fastest', description: 'Shortest arrival time possible', icon: '⚡' },
 ];
 
 export function RoutePlanningPanel({
@@ -141,47 +142,51 @@ export function RoutePlanningPanel({
   return (
     <div className="absolute inset-0 z-[1100] flex items-end pointer-events-none">
       <div
-        className="pointer-events-auto w-full bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
+        className="pointer-events-auto w-full max-w-2xl mx-auto bg-[#1A1D27] rounded-t-[24px] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] max-h-[90vh] overflow-y-auto hide-scrollbar"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Handle bar */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
-        </div>
+        {/* Drag Handle */}
+        <div className="w-12 h-1.5 bg-[#404752]/30 rounded-full mx-auto mt-3 mb-6" />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 pb-3 border-b border-gray-100 dark:border-gray-700">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Plan Route</h2>
+        <div className="flex justify-between items-center px-6 mb-8">
+          <h2 className="font-[var(--font-headline)] text-2xl font-bold tracking-tight text-[#e2e2eb]">Plan Route</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-2 rounded-full hover:bg-[#33343b] transition-colors"
             aria-label="Close"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-[#bfc7d4]" />
           </button>
         </div>
 
-        <div className="px-4 py-4 space-y-4">
-          {/* FROM field */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              From
-            </label>
+        <div className="px-6 pb-6 space-y-8">
+          {/* Search Fields */}
+          <div className="space-y-4">
+            {/* FROM Field */}
             {useMyLocation ? (
-              <div className="flex items-center gap-2 mt-1 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
-                <Navigation className="w-4 h-4 text-green-600 shrink-0" />
-                <span className="text-sm font-medium text-green-700 dark:text-green-400 flex-1">
-                  My Location
-                </span>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                  <Navigation className="w-5 h-5 text-[#3ce36a]" />
+                </div>
+                <input
+                  className="w-full h-14 bg-[#00a844]/10 border-none rounded-2xl pl-12 pr-4 font-semibold text-[#3ce36a] focus:ring-2 focus:ring-[#3ce36a]"
+                  readOnly
+                  type="text"
+                  value="My Location"
+                />
                 <button
                   onClick={() => setUseMyLocation(false)}
-                  className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[#89919d] hover:text-[#e2e2eb]"
                 >
                   Change
                 </button>
               </div>
             ) : (
-              <div className="relative mt-1">
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                  <Navigation className="w-5 h-5 text-[#3ce36a]" />
+                </div>
                 <input
                   type="text"
                   value={selectedOrigin ? selectedOrigin.shortName : originQuery}
@@ -190,10 +195,10 @@ export function RoutePlanningPanel({
                     setOriginQuery(e.target.value);
                   }}
                   placeholder="Enter starting address"
-                  className="w-full p-3 pr-10 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full h-14 bg-[#282a30] border-none rounded-2xl pl-12 pr-10 font-medium text-[#e2e2eb] placeholder:text-[#89919d] focus:ring-2 focus:ring-[#9ecaff]"
                 />
                 {originLoading && (
-                  <Loader2 className="absolute right-3 top-3 w-4 h-4 text-gray-400 animate-spin" />
+                  <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#89919d] animate-spin" />
                 )}
                 {originResults.length > 0 && !selectedOrigin && (
                   <AddressDropdown
@@ -204,40 +209,40 @@ export function RoutePlanningPanel({
                 )}
                 <button
                   onClick={() => setUseMyLocation(true)}
-                  className="mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  className="mt-1 text-xs text-[#2196F3] hover:underline"
                 >
                   Use my location
                 </button>
               </div>
             )}
-          </div>
 
-          {/* TO field */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              To
-            </label>
-            <div className="relative mt-1">
-              <MapPin className="absolute left-3 top-3 w-4 h-4 text-red-500 pointer-events-none" />
+            {/* Connection Line */}
+            <div className="absolute left-10 h-6 w-0.5 border-l-2 border-dashed border-[#404752]/40 -mt-2" />
+
+            {/* TO Field */}
+            <div className="relative mt-2">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                <MapPin className="w-5 h-5 text-[#ffb4ab]" />
+              </div>
               <input
                 ref={destInputRef}
                 type="text"
                 value={selectedDest ? selectedDest.shortName : destQuery}
                 onChange={(e) => {
                   setSelectedDest(null);
-                  destIsPrefillRef.current = false; // user is typing — enable autocomplete
+                  destIsPrefillRef.current = false;
                   setDestQuery(e.target.value);
                 }}
                 placeholder="Where to in Philly?"
-                className="w-full p-3 pl-10 pr-10 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-14 bg-[#282a30] border-none rounded-2xl pl-12 pr-10 font-medium text-[#e2e2eb] placeholder:text-[#89919d]/50 focus:ring-2 focus:ring-[#9ecaff]"
               />
               {destLoading && (
-                <Loader2 className="absolute right-3 top-3 w-4 h-4 text-gray-400 animate-spin" />
+                <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#89919d] animate-spin" />
               )}
               {selectedDest && (
                 <button
                   onClick={() => { setSelectedDest(null); setDestQuery(''); }}
-                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#89919d] hover:text-[#e2e2eb]"
                   aria-label="Clear destination"
                 >
                   <X className="w-4 h-4" />
@@ -255,68 +260,74 @@ export function RoutePlanningPanel({
 
           {/* Vehicle Profile */}
           <div>
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Vehicle
+            <label className="block font-[var(--font-headline)] text-xs font-bold uppercase tracking-widest text-[#bfc7d4] mb-4 px-1">
+              Vehicle Profile
             </label>
-            <div className="flex gap-2 mt-2 flex-wrap">
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
               {VEHICLE_OPTIONS.map((v) => (
                 <button
                   key={v.id}
                   onClick={() => setVehicle(v.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  className={`flex items-center gap-2 px-6 py-3 rounded-full whitespace-nowrap transition-all active:scale-95 duration-150 ${
                     vehicle === v.id
-                      ? 'bg-blue-600 text-white shadow'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-[#9ecaff] text-[#003258] shadow-lg shadow-[#9ecaff]/20'
+                      : 'bg-[#33343b] text-[#e2e2eb] hover:bg-[#373940]'
                   }`}
                 >
                   <span>{v.emoji}</span>
-                  {v.label}
+                  <span className="font-bold text-sm">{v.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Route Preference */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Route Preference
+          {/* Route Preferences */}
+          <div className="space-y-3">
+            <label className="block font-[var(--font-headline)] text-xs font-bold uppercase tracking-widest text-[#bfc7d4] mb-4 px-1">
+              Routing Strategy
             </label>
-            <div className="space-y-2 mt-2">
-              {MODE_OPTIONS.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => setMode(m.id)}
-                  className={`w-full flex items-start gap-3 p-3 rounded-xl text-left transition-all border ${
-                    mode === m.id
-                      ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-400 dark:border-blue-500'
-                      : 'bg-white dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 hover:border-gray-300'
-                  }`}
-                >
-                  <div
-                    className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                      mode === m.id
-                        ? 'border-blue-600 bg-blue-600'
-                        : 'border-gray-300 dark:border-gray-500'
-                    }`}
-                  >
-                    {mode === m.id && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+            {MODE_OPTIONS.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setMode(m.id)}
+                className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
+                  mode === m.id
+                    ? 'bg-[#2196F3]/10 border-2 border-[#2196F3] shadow-xl shadow-[#2196F3]/5'
+                    : 'bg-[#282a30] border border-transparent hover:border-[#404752]/30'
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
+                    mode === m.id ? 'bg-[#2196F3]' : 'bg-[#33343b]'
+                  }`}>
+                    {m.icon}
                   </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{m.label}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{m.description}</div>
+                  <div className="text-left">
+                    <h4 className={`font-bold ${mode === m.id ? 'text-[#9ecaff]' : 'text-[#e2e2eb]'}`}>
+                      {m.label}
+                    </h4>
+                    <p className={`text-sm ${mode === m.id ? 'text-[#9ecaff]/70' : 'text-[#bfc7d4]'}`}>
+                      {m.description}
+                    </p>
                   </div>
-                </button>
-              ))}
-            </div>
+                </div>
+                {mode === m.id ? (
+                  <svg className="w-6 h-6 text-[#9ecaff]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                ) : (
+                  <svg className="w-6 h-6 text-[#404752]/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                )}
+              </button>
+            ))}
           </div>
 
-          {/* Find Route Button */}
+          {/* Main CTA — Gradient button */}
           <button
             onClick={handlePlanRoute}
             disabled={!canPlanRoute}
-            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white font-semibold rounded-xl transition-colors disabled:cursor-not-allowed"
+            className="w-full h-14 bg-gradient-to-r from-[#2196F3] to-[#00BCD4] rounded-full font-[var(--font-headline)] text-lg font-extrabold text-white shadow-xl shadow-[#00BCD4]/20 flex items-center justify-center gap-3 active:scale-95 transition-transform duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Find Route
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
           </button>
         </div>
       </div>
@@ -335,7 +346,7 @@ function AddressDropdown({
 }) {
   if (results.length === 0 && !isLoading) return null;
   return (
-    <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+    <div className="absolute left-0 right-0 top-full mt-1 bg-[#1e1f26] border border-[#404752]/20 rounded-2xl shadow-lg z-50 max-h-48 overflow-y-auto hide-scrollbar">
       {results.map((r, i) => (
         <button
           key={i}
@@ -343,19 +354,19 @@ function AddressDropdown({
           // firing before onClick on mobile, which would dismiss the dropdown
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onSelect(r)}
-          className="w-full flex items-start gap-3 px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[#373940] transition-colors"
         >
-          <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+          <MapPin className="w-4 h-4 text-[#89919d] mt-0.5 shrink-0" />
           <div className="min-w-0">
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+            <div className="text-sm font-medium text-[#e2e2eb] truncate">
               {r.shortName}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{r.displayName}</div>
+            <div className="text-xs text-[#89919d] truncate">{r.displayName}</div>
           </div>
         </button>
       ))}
       {isLoading && results.length === 0 && (
-        <div className="px-3 py-2.5 text-sm text-gray-400 dark:text-gray-500">Searching…</div>
+        <div className="px-4 py-3 text-sm text-[#89919d]">Searching…</div>
       )}
     </div>
   );

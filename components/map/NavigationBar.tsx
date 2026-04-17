@@ -1,15 +1,15 @@
 'use client';
 
 /**
- * Active navigation guidance bar — shown when isNavigating === true.
- * Displays current turn instruction, distance to next maneuver,
- * and remaining trip stats. Advances steps as user approaches each waypoint.
+ * Active navigation guidance bar — Velocity Dark "HUD" style.
+ * Matches the active_navigation stitch: gradient blue header with
+ * turn icon, instruction, ETA, and arrival card.
  */
 
 import { useState, useEffect, useRef } from 'react';
 import {
   ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight,
-  MoveUpRight, MoveUpLeft, MapPin, RotateCw, GitFork, X,
+  MoveUpRight, MoveUpLeft, MapPin, RotateCw, GitFork, X, Square,
 } from 'lucide-react';
 import type { RouteStep, LatLng } from '@/types/speedbumps';
 import { haversineDistance, formatDistance, formatDuration } from '@/lib/geo-utils';
@@ -55,48 +55,82 @@ export function NavigationBar({ steps, currentLocation, onEndNavigation }: Navig
   const remainingDuration = remainingSteps.reduce((sum, s) => sum + s.durationSeconds, 0);
 
   const isLastStep = currentStepIndex === steps.length - 1;
+  const remainingMinutes = Math.ceil(remainingDuration / 60);
 
   return (
-    <div className="absolute left-0 right-0 top-0 z-[1100] bg-blue-600 dark:bg-blue-700 shadow-lg">
-      <div className="flex items-center gap-3 px-4 py-3">
-        {/* Turn icon */}
-        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-          <TurnIcon instruction={currentStep.instruction} />
-        </div>
-
-        {/* Instruction + distance */}
-        <div className="flex-1 min-w-0">
-          <div className="text-white font-semibold text-sm leading-tight truncate">
-            {currentStep.instruction}
+    <>
+      {/* Top Navigation Banner — Velocity Dark gradient header */}
+      <header className="fixed top-0 left-0 w-full z-[1100] bg-gradient-to-r from-[#1565C0] to-[#2196F3] shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-5">
+          <div className="flex items-center gap-5">
+            <div className="bg-white/20 p-3 rounded-2xl">
+              <TurnIcon instruction={currentStep.instruction} />
+            </div>
+            <div>
+              <h1 className="font-[var(--font-headline)] font-bold text-xl text-white tracking-tight leading-tight">
+                {currentStep.instruction}
+              </h1>
+              <p className="font-[var(--font-body)] font-medium text-white/80 text-sm tracking-wider uppercase">
+                {isLastStep
+                  ? 'Arriving at destination'
+                  : `In ${formatDistance(currentStep.distanceMeters)}`}
+              </p>
+            </div>
           </div>
-          <div className="text-blue-200 text-xs mt-0.5">
-            {isLastStep
-              ? 'Arriving at destination'
-              : `In ${formatDistance(currentStep.distanceMeters)}`}
+          <div className="flex items-center gap-6">
+            <div className="text-right border-l border-white/20 pl-6 hidden sm:block">
+              <span className="font-[var(--font-headline)] font-black text-3xl text-white block">
+                {remainingMinutes}
+              </span>
+              <span className="font-[var(--font-body)] font-semibold text-white/70 text-[10px] uppercase tracking-[0.2em]">
+                min
+              </span>
+            </div>
+            <button
+              onClick={onEndNavigation}
+              className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"
+              aria-label="End navigation"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
           </div>
         </div>
+      </header>
 
-        {/* Remaining trip summary */}
-        <div className="text-right shrink-0 mr-1">
-          <div className="text-white font-semibold text-sm">{formatDuration(remainingDuration)}</div>
-          <div className="text-blue-200 text-xs">{formatDistance(remainingDistance)}</div>
+      {/* Bottom Arrival Card — Glassmorphic */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-[1100]">
+        <div className="glass-panel p-6 rounded-2xl shadow-2xl ghost-border flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="font-[var(--font-body)] text-xs font-bold text-white/50 uppercase tracking-[0.15em] mb-1">
+              Remaining
+            </span>
+            <h2 className="font-[var(--font-headline)] font-bold text-2xl text-[#e2e2eb]">
+              {formatDuration(remainingDuration)} · {formatDistance(remainingDistance)}
+            </h2>
+          </div>
+          <button
+            onClick={onEndNavigation}
+            className="bg-[#93000a] hover:bg-[#ffb4ab]/20 transition-all active:scale-95 px-8 py-3 rounded-full flex items-center gap-2 group"
+          >
+            <Square className="w-5 h-5 text-[#ffdad6] fill-current" />
+            <span className="font-[var(--font-headline)] font-bold text-[#ffdad6] tracking-tight">Stop</span>
+          </button>
         </div>
-
-        {/* End navigation */}
-        <button
-          onClick={onEndNavigation}
-          className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center shrink-0 transition-colors"
-          aria-label="End navigation"
-        >
-          <X className="w-4 h-4 text-white" />
-        </button>
       </div>
-    </div>
+
+      {/* Map indicator chips */}
+      <div className="fixed bottom-32 left-6 z-[1100] flex flex-col gap-2">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-full glass-panel ghost-border">
+          <div className="w-2 h-2 rounded-full bg-[#3ce36a]" />
+          <span className="font-[var(--font-body)] text-[10px] font-bold text-white/70 uppercase">GPS High Precision</span>
+        </div>
+      </div>
+    </>
   );
 }
 
 function TurnIcon({ instruction }: { instruction: string }) {
-  const cls = 'w-5 h-5 text-white';
+  const cls = 'w-6 h-6 text-white';
   const lower = instruction.toLowerCase();
 
   if (lower.startsWith('arrive')) return <MapPin className={cls} />;

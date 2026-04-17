@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&amp;family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#00531e",
+                    "surface": "#111319",
+                    "secondary-fixed": "#a1efff",
+                    "outline": "#89919d",
+                    "on-error": "#690005",
+                    "secondary": "#44d8f1",
+                    "inverse-surface": "#e2e2eb",
+                    "tertiary-fixed-dim": "#3ce36a",
+                    "inverse-on-surface": "#2e3037",
+                    "error-container": "#93000a",
+                    "surface-container-highest": "#33343b",
+                    "secondary-container": "#00bcd4",
+                    "on-secondary": "#00363e",
+                    "surface-bright": "#373940",
+                    "on-primary-fixed": "#001d36",
+                    "on-primary-fixed-variant": "#00497d",
+                    "on-primary": "#003258",
+                    "surface-container-high": "#282a30",
+                    "primary": "#9ecaff",
+                    "on-surface": "#e2e2eb",
+                    "tertiary": "#3ce36a",
+                    "error": "#ffb4ab",
+                    "on-tertiary": "#003912",
+                    "surface-container": "#1e1f26",
+                    "on-error-container": "#ffdad6",
+                    "on-background": "#e2e2eb",
+                    "tertiary-fixed": "#69ff87",
+                    "outline-variant": "#404752",
+                    "surface-dim": "#111319",
+                    "tertiary-container": "#00a844",
+                    "surface-variant": "#33343b",
+                    "on-tertiary-container": "#00320f",
+                    "surface-container-low": "#191b22",
+                    "on-primary-container": "#002c4f",
+                    "primary-fixed": "#d1e4ff",
+                    "on-surface-variant": "#bfc7d4",
+                    "background": "#111319",
+                    "on-secondary-fixed": "#001f25",
+                    "inverse-primary": "#0061a4",
+                    "primary-fixed-dim": "#9ecaff",
+                    "surface-tint": "#9ecaff",
+                    "on-tertiary-fixed": "#002108",
+                    "primary-container": "#2196f3",
+                    "on-secondary-fixed-variant": "#004e59",
+                    "surface-container-lowest": "#0c0e14",
+                    "secondary-fixed-dim": "#44d8f1",
+                    "on-secondary-container": "#004650"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Space Grotesk"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>.glass-panel {
+    background: rgba(25, 27, 34, 0.7);
+    backdrop-filter: blur(20px)
+    }
+.map-bg {
+    background-image: linear-gradient(to bottom, rgba(17, 19, 25, 0.4), rgba(17, 19, 25, 0.9)), url(https://lh3.googleusercontent.com/aida-public/AB6AXuDLfARuK4i9IdmG5Xodv7N3FpN-I-G5r6u2ficlR0eg7yfhVz-d2rdDxKv2g4gccMDEaVguYnbEzud9CcLnyRze6lcNsP3abul-fsAcV-Bj8Hh-tQQYWQnmNjyffUo2BTf8w3FsmS-1NwPUsaKmHagv_uFUrzRG4PJ23v5KDwR9JOZhM7-5ODf9yy1y-wwow1qx4wwI6VrNvIdktnisdEBYE-99NsQ1EvwMn1TnRl64TgQ_AwwC8KXXQ2IcOfTiY9dviCHb-x39ATO9);
+    background-size: cover;
+    background-position: center
+    }</style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background font-body text-on-surface antialiased min-h-screen">
+<header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 bg-slate-900/60 backdrop-blur-xl rounded-full mx-4 mt-4 shadow-2xl shadow-blue-500/10">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-blue-500" data-icon="menu">menu</span>
+<h1 class="text-2xl font-bold bg-gradient-to-br from-blue-400 to-cyan-400 bg-clip-text text-transparent font-headline tracking-tight">SpeedBumps</h1>
+</div>
+<div class="w-10 h-10 rounded-full border-2 border-primary/20 overflow-hidden scale-95 active:scale-90 transition-transform">
+<img alt="Profile" data-alt="close up of a professional young man with a friendly expression in high-key studio lighting with a neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAP2PrrBFIAKHJ8P1fnqv6MHtWlrgC_pJyN3OST6upfWzqFlQWkRVWshsVkV8wjDSiDsbX8NENMmo5oqdU-FFp5PzzljwrYIFdpSUFhhquXwDrhlewz-iEdip3n4YSirCuScug6lFH_XTezgpb4HZbQhDU_lSPXJ3gzN-BBU82C-a8eGOGR8OMaTLAXjQMxHvRHle1Bwhy3h1RS1Y2EJmpOE1QNf77Gj-Ynnh2aERjqD69GCNJUp3T7xfiwJ_Ag3x9Zy1BQ4v_p_VDV"/>
+</div>
+</header>
+<main class="relative min-h-screen pt-32 pb-40 px-4 map-bg" data-location="Philadelphia">
+<div class="max-w-xl mx-auto space-y-4">
+<div class="relative group">
+<div class="flex items-center bg-surface-container-highest/80 backdrop-blur-xl px-6 py-4 rounded-full shadow-2xl transition-all duration-300">
+<span class="material-symbols-outlined text-outline" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-lg w-full px-4 font-body placeholder-outline-variant" placeholder="Where to?" type="text" value="Reading Terminal"/>
+<span class="material-symbols-outlined text-primary cursor-pointer" data-icon="mic">mic</span>
+</div>
+<div class="mt-4 overflow-hidden rounded-lg glass-panel shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-outline-variant/10">
+<div class="flex items-center px-6 py-4 hover:bg-white/5 cursor-pointer transition-colors group/item">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center mr-4">
+<span class="material-symbols-outlined text-outline" data-icon="location_on">location_on</span>
+</div>
+<div class="flex-grow">
+<h3 class="text-on-surface font-bold">Liberty Bell Center</h3>
+<p class="text-sm text-on-surface-variant">526 Market St, Philadelphia, PA</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant opacity-0 group-hover/item:opacity-100 transition-opacity" data-icon="chevron_right">chevron_right</span>
+</div>
+<div class="flex items-center px-6 py-4 bg-blue-500/10 border-l-4 border-primary cursor-pointer transition-all">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center mr-4">
+<span class="material-symbols-outlined text-primary" data-icon="location_on" data-weight="fill" style="font-variation-settings: 'FILL' 1;">location_on</span>
+</div>
+<div class="flex-grow">
+<h3 class="text-on-surface font-bold">Reading Terminal Market</h3>
+<p class="text-sm text-primary/80">51 N 12th St, Philadelphia, PA</p>
+</div>
+<span class="material-symbols-outlined text-primary" data-icon="chevron_right">chevron_right</span>
+</div>
+<div class="flex items-center px-6 py-4 hover:bg-white/5 cursor-pointer transition-colors group/item">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center mr-4">
+<span class="material-symbols-outlined text-outline" data-icon="location_on">location_on</span>
+</div>
+<div class="flex-grow">
+<h3 class="text-on-surface font-bold">Art Museum</h3>
+<p class="text-sm text-on-surface-variant">2600 Benjamin Franklin Pkwy, Philadelphia</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant opacity-0 group-hover/item:opacity-100 transition-opacity" data-icon="chevron_right">chevron_right</span>
+</div>
+<div class="px-6 py-4 bg-surface-container-high/40 flex items-center cursor-pointer hover:bg-primary/10 transition-colors group/locate">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center mr-4 shadow-lg shadow-primary/20 scale-100 group-active/locate:scale-90 transition-transform">
+<span class="material-symbols-outlined text-on-primary-container" data-icon="my_location">my_location</span>
+</div>
+<span class="font-bold text-primary">Find my current location</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 mt-8">
+<div class="p-6 rounded-lg glass-panel border border-outline-variant/10">
+<span class="material-symbols-outlined text-secondary text-4xl mb-2" data-icon="bolt" data-weight="fill" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<p class="text-on-surface-variant text-sm uppercase tracking-widest font-label">ETA Trend</p>
+<h2 class="text-3xl font-headline font-bold text-on-surface">-4 min</h2>
+</div>
+<div class="p-6 rounded-lg glass-panel border border-outline-variant/10">
+<span class="material-symbols-outlined text-tertiary text-4xl mb-2" data-icon="speed" data-weight="fill" style="font-variation-settings: 'FILL' 1;">speed</span>
+<p class="text-on-surface-variant text-sm uppercase tracking-widest font-label">Current Speed</p>
+<h2 class="text-3xl font-headline font-bold text-on-surface">42 <span class="text-sm font-body font-normal text-outline">MPH</span></h2>
+</div>
+</div>
+</div>
+</main>
+<div class="fixed bottom-0 w-full z-50 flex justify-around items-center px-6 pb-8 pt-4 bg-slate-900/80 backdrop-blur-2xl rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.4)]">
+<div class="flex flex-col items-center justify-center text-slate-500 hover:text-cyan-400 scale-110 transition-all duration-300 cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="explore">explore</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-widest">Explore</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-blue-500/20 text-blue-400 rounded-full px-5 py-2 scale-110 transition-all duration-300 cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="navigation" data-weight="fill" style="font-variation-settings: 'FILL' 1;">navigation</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-widest">Navigate</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500 hover:text-cyan-400 scale-110 transition-all duration-300 cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="warning">warning</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-widest">Alerts</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500 hover:text-cyan-400 scale-110 transition-all duration-300 cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="settings">settings</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-widest">Settings</span>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SpeedBumps | Philadelphia Navigator</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error-container": "#ffdad6",
+                    "on-tertiary-container": "#00320f",
+                    "primary-fixed-dim": "#9ecaff",
+                    "outline-variant": "#404752",
+                    "secondary": "#44d8f1",
+                    "inverse-on-surface": "#2e3037",
+                    "on-background": "#e2e2eb",
+                    "tertiary-container": "#00a844",
+                    "on-primary-fixed-variant": "#00497d",
+                    "on-tertiary": "#003912",
+                    "tertiary-fixed-dim": "#3ce36a",
+                    "surface-variant": "#33343b",
+                    "on-secondary-fixed-variant": "#004e59",
+                    "inverse-primary": "#0061a4",
+                    "background": "#111319",
+                    "error": "#ffb4ab",
+                    "on-secondary": "#00363e",
+                    "on-error": "#690005",
+                    "surface-container-highest": "#33343b",
+                    "on-primary": "#003258",
+                    "on-primary-container": "#002c4f",
+                    "on-tertiary-fixed-variant": "#00531e",
+                    "on-secondary-container": "#004650",
+                    "surface-container-high": "#282a30",
+                    "primary": "#9ecaff",
+                    "inverse-surface": "#e2e2eb",
+                    "on-surface-variant": "#bfc7d4",
+                    "surface-dim": "#111319",
+                    "surface": "#111319",
+                    "primary-fixed": "#d1e4ff",
+                    "on-primary-fixed": "#001d36",
+                    "surface-bright": "#373940",
+                    "error-container": "#93000a",
+                    "secondary-fixed": "#a1efff",
+                    "on-secondary-fixed": "#001f25",
+                    "on-surface": "#e2e2eb",
+                    "tertiary": "#3ce36a",
+                    "surface-tint": "#9ecaff",
+                    "tertiary-fixed": "#69ff87",
+                    "surface-container-low": "#191b22",
+                    "outline": "#89919d",
+                    "secondary-container": "#00bcd4",
+                    "secondary-fixed-dim": "#44d8f1",
+                    "on-tertiary-fixed": "#002108",
+                    "primary-container": "#2196f3",
+                    "surface-container": "#1e1f26",
+                    "surface-container-lowest": "#0c0e14"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Space Grotesk"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(51, 52, 59, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .map-glow {
+            box-shadow: 0 0 40px 10px rgba(33, 150, 243, 0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-dim text-on-surface font-body overflow-hidden">
+<!-- Full Screen Map Base -->
+<div class="fixed inset-0 z-0">
+<div class="absolute inset-0 bg-surface-container-lowest" data-location="Philadelphia" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA_VjQVB7ZufmpSbpTqhwCUsx9WjZUz4mE8i0BY7u7Voe0Nki_cGv2uF9SA9Oebt0i39ss3OVOU54us3VTAo2Sj_yjITCRsuFiz38-MZROrybP5nbbK3yOLaz9L6DZKBaQ651N3pIn6H-aq2nmTPECpieGX8De9XxjOG-fEqxmjNjh27vEs4J79TNNfQaCj5ODg098wYKsnDTLWEoeB0Y1fKWiHqrslGvXcjMBdMNFrvHUSnApVg_VG5cd4f_7WvunrK2cvX-wQiluy'); background-size: cover; background-position: center; filter: grayscale(100%) brightness(0.4) contrast(1.2);"></div>
+<!-- Gradient Overlay for Map Depth -->
+<div class="absolute inset-0 bg-gradient-to-b from-background/60 via-transparent to-background/80 pointer-events-none"></div>
+</div>
+<!-- Top Navigation Bar (Shared Component Logic) -->
+<nav class="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 w-full bg-transparent">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-blue-400 text-3xl">explore</span>
+<h1 class="font-['Space_Grotesk'] font-bold tracking-tight text-2xl font-black tracking-tighter text-slate-100">SpeedBumps</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 flex items-center justify-center rounded-full glass-panel text-on-surface hover:bg-slate-800/40 transition-colors">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+<div class="w-10 h-10 rounded-full border-2 border-primary/20 overflow-hidden shadow-2xl shadow-blue-500/10">
+<img class="w-full h-full object-cover" data-alt="professional male portrait with soft rim lighting on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3ElK2qnbqpwzQUJZwKB77l_b1rc7QtwEgSsuOUsVXszrWzJR9mCUZ0-AvtsEIF5cc4wr68VFZRStunNRmqqgPp-2UxBZDC4wf5jnirdVHdI8tq0BVyARGRzUsV10kCACeUcOnsCV94sNt9wNmVg0rQg17ytSWMNnTHyZYbvj98hV6hIiVZDKTwIQWEEkA5n0p-bxol-OQltSyQ3Lsx726PLzW4KtnnzKKL3MPLc5vZ7ZK94y74vicFrh5bGYq3lAqLV9EI13Ra9E9"/>
+</div>
+</div>
+</nav>
+<!-- Main UI Layout Canvas -->
+<main class="relative z-10 w-full h-screen flex flex-col p-6 pt-24">
+<!-- Search & Tools Cluster (Top Center/Left) -->
+<div class="w-full max-w-md flex flex-col gap-4">
+<!-- Search Bar -->
+<div class="glass-panel rounded-full px-6 py-4 flex items-center gap-4 shadow-2xl border border-outline-variant/10">
+<span class="material-symbols-outlined text-primary">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-on-surface-variant font-medium w-full" placeholder="Search Philadelphia..." type="text"/>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">mic</button>
+</div>
+<!-- Map Tools Grid -->
+<div class="glass-panel rounded-lg p-2 grid grid-cols-4 gap-2 shadow-xl border border-outline-variant/10">
+<button class="flex flex-col items-center justify-center gap-1 p-3 rounded-lg hover:bg-surface-bright transition-all group">
+<span class="material-symbols-outlined text-secondary group-hover:scale-110 transition-transform">straighten</span>
+<span class="text-[10px] font-bold font-headline uppercase tracking-tighter text-on-surface-variant">Measure</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 p-3 rounded-lg hover:bg-surface-bright transition-all group">
+<span class="material-symbols-outlined text-secondary group-hover:scale-110 transition-transform">star</span>
+<span class="text-[10px] font-bold font-headline uppercase tracking-tighter text-on-surface-variant">My Places</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 p-3 rounded-lg hover:bg-surface-bright transition-all group">
+<span class="material-symbols-outlined text-secondary group-hover:scale-110 transition-transform">draw</span>
+<span class="text-[10px] font-bold font-headline uppercase tracking-tighter text-on-surface-variant">Draw</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 p-3 rounded-lg hover:bg-surface-bright transition-all group">
+<span class="material-symbols-outlined text-secondary group-hover:scale-110 transition-transform">restart_alt</span>
+<span class="text-[10px] font-bold font-headline uppercase tracking-tighter text-on-surface-variant">Reset</span>
+</button>
+</div>
+</div>
+<!-- Floating Category Pills (Top Right Scrolling) -->
+<div class="absolute top-24 right-6 left-[30rem] hidden lg:flex overflow-x-auto no-scrollbar gap-3 pb-4 mask-fade-right">
+<button class="glass-panel px-6 py-2.5 rounded-full flex items-center gap-2 whitespace-nowrap border border-outline-variant/10 text-on-surface font-semibold text-sm hover:bg-primary/20 transition-all active:scale-95">
+<span class="material-symbols-outlined text-primary text-xl">restaurant</span>
+                Restaurants
+            </button>
+<button class="glass-panel px-6 py-2.5 rounded-full flex items-center gap-2 whitespace-nowrap border border-outline-variant/10 text-on-surface font-semibold text-sm hover:bg-primary/20 transition-all active:scale-95">
+<span class="material-symbols-outlined text-primary text-xl">hotel</span>
+                Hotels
+            </button>
+<button class="glass-panel px-6 py-2.5 rounded-full flex items-center gap-2 whitespace-nowrap border border-outline-variant/10 text-on-surface font-semibold text-sm hover:bg-primary/20 transition-all active:scale-95">
+<span class="material-symbols-outlined text-primary text-xl">attractions</span>
+                Attractions
+            </button>
+<button class="glass-panel px-6 py-2.5 rounded-full flex items-center gap-2 whitespace-nowrap border border-outline-variant/10 text-on-surface font-semibold text-sm hover:bg-primary/20 transition-all active:scale-95">
+<span class="material-symbols-outlined text-primary text-xl">directions_bus</span>
+                Transit
+            </button>
+</div>
+<!-- Right Side Control Stack -->
+<div class="absolute right-6 bottom-32 flex flex-col gap-3">
+<div class="glass-panel flex flex-col rounded-2xl shadow-2xl border border-outline-variant/10 overflow-hidden">
+<button class="p-4 hover:bg-surface-bright text-on-surface transition-colors border-b border-outline-variant/10" title="Zoom In">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="p-4 hover:bg-surface-bright text-on-surface transition-colors" title="Zoom Out">
+<span class="material-symbols-outlined">remove</span>
+</button>
+</div>
+<button class="glass-panel w-14 h-14 rounded-full flex items-center justify-center text-primary-fixed-dim shadow-2xl border border-outline-variant/10 hover:bg-primary/10 active:scale-90 transition-all" title="My Location">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">my_location</span>
+</button>
+<button class="glass-panel w-14 h-14 rounded-full flex items-center justify-center text-on-surface shadow-2xl border border-outline-variant/10 hover:bg-surface-bright transition-all" title="Reset View">
+<span class="material-symbols-outlined">explore_off</span>
+</button>
+<button class="glass-panel w-14 h-14 rounded-full flex items-center justify-center text-on-surface shadow-2xl border border-outline-variant/10 hover:bg-surface-bright transition-all" title="Toggle Fullscreen">
+<span class="material-symbols-outlined">fullscreen</span>
+</button>
+</div>
+<!-- Hazard Alert Overlay (The Kinetic Luminescence) -->
+<div class="absolute bottom-32 left-6">
+<div class="glass-panel rounded-lg p-5 flex items-center gap-5 border-l-4 border-error shadow-2xl max-w-sm">
+<div class="bg-error-container p-3 rounded-full">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">report_problem</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface leading-tight">Construction Ahead</h3>
+<p class="text-on-surface-variant text-sm font-medium">Market St. closed until 6:00 PM</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar (Shared Component Logic) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-[#111319]/80 backdrop-blur-xl border-t border-slate-700/20 shadow-[0_-8px_30px_rgb(0,0,0,0.5)]">
+<!-- Explore (Active) -->
+<a class="flex flex-col items-center justify-center bg-blue-500/20 text-blue-300 rounded-[24px] px-5 py-2 active:scale-90 duration-150 group" href="#">
+<span class="material-symbols-outlined mb-1 group-hover:text-blue-200 transition-all" style="font-variation-settings: 'FILL' 1;">map</span>
+<span class="font-['Manrope'] text-[10px] font-semibold uppercase tracking-widest">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 px-5 py-2 hover:text-blue-200 transition-all active:scale-90 duration-150 group" href="#">
+<span class="material-symbols-outlined mb-1">bookmark</span>
+<span class="font-['Manrope'] text-[10px] font-semibold uppercase tracking-widest">Saved</span>
+</a>
+<!-- SpeedBumps Signature FAB Floating above Nav -->
+<div class="relative -top-8">
+<button class="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary-container flex items-center justify-center text-on-primary shadow-[0_0_30px_rgba(33,150,243,0.5)] border-4 border-surface-dim active:scale-95 transition-all">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">add_location_alt</span>
+</button>
+</div>
+<a class="flex flex-col items-center justify-center text-slate-500 px-5 py-2 hover:text-blue-200 transition-all active:scale-90 duration-150 group" href="#">
+<span class="material-symbols-outlined mb-1">report_problem</span>
+<span class="font-['Manrope'] text-[10px] font-semibold uppercase tracking-widest">Reports</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 px-5 py-2 hover:text-blue-200 transition-all active:scale-90 duration-150 group" href="#">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="font-['Manrope'] text-[10px] font-semibold uppercase tracking-widest">Profile</span>
+</a>
+</nav>
+<!-- Map Elements / Fake HUD Details -->
+<div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+<div class="w-4 h-4 rounded-full bg-secondary shadow-[0_0_20px_#44d8f1]"></div>
+</div>
+</body></html>

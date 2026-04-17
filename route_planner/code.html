@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SpeedBumps - Route Planning</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-error-container": "#ffdad6",
+            "on-tertiary-container": "#00320f",
+            "primary-fixed-dim": "#9ecaff",
+            "outline-variant": "#404752",
+            "secondary": "#44d8f1",
+            "inverse-on-surface": "#2e3037",
+            "on-background": "#e2e2eb",
+            "tertiary-container": "#00a844",
+            "on-primary-fixed-variant": "#00497d",
+            "on-tertiary": "#003912",
+            "tertiary-fixed-dim": "#3ce36a",
+            "surface-variant": "#33343b",
+            "on-secondary-fixed-variant": "#004e59",
+            "inverse-primary": "#0061a4",
+            "background": "#111319",
+            "error": "#ffb4ab",
+            "on-secondary": "#00363e",
+            "on-error": "#690005",
+            "surface-container-highest": "#33343b",
+            "on-primary": "#003258",
+            "on-primary-container": "#002c4f",
+            "on-tertiary-fixed-variant": "#00531e",
+            "on-secondary-container": "#004650",
+            "surface-container-high": "#282a30",
+            "primary": "#9ecaff",
+            "inverse-surface": "#e2e2eb",
+            "on-surface-variant": "#bfc7d4",
+            "surface-dim": "#111319",
+            "surface": "#111319",
+            "primary-fixed": "#d1e4ff",
+            "on-primary-fixed": "#001d36",
+            "surface-bright": "#373940",
+            "error-container": "#93000a",
+            "secondary-fixed": "#a1efff",
+            "on-secondary-fixed": "#001f25",
+            "on-surface": "#e2e2eb",
+            "tertiary": "#3ce36a",
+            "surface-tint": "#9ecaff",
+            "tertiary-fixed": "#69ff87",
+            "surface-container-low": "#191b22",
+            "outline": "#89919d",
+            "secondary-container": "#00bcd4",
+            "secondary-fixed-dim": "#44d8f1",
+            "on-tertiary-fixed": "#002108",
+            "primary-container": "#2196f3",
+            "surface-container": "#1e1f26",
+            "surface-container-lowest": "#0c0e14"
+          },
+          "borderRadius": {
+            "DEFAULT": "1rem",
+            "lg": "2rem",
+            "xl": "3rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Space Grotesk"],
+            "body": ["Manrope"],
+            "label": ["Manrope"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .glass-card {
+      background: rgba(51, 52, 59, 0.6);
+      backdrop-filter: blur(20px);
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-dim font-body text-on-surface selection:bg-primary selection:text-on-primary">
+<!-- Top Navigation Shell (Contextual Suppression Logic: Hidden on focus screens but shown here as it is the top-level app context) -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 w-full bg-transparent shadow-2xl shadow-blue-500/10">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-blue-400">explore</span>
+<h1 class="font-['Space_Grotesk'] font-bold tracking-tight text-2xl font-black tracking-tighter text-slate-100">SpeedBumps</h1>
+</div>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img alt="User Avatar" data-alt="portrait of a modern driver in urban clothing against a soft neon city light background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNv561ErZX3ndOWWZE90TwkgmUQKcQ4xLlXV9B76KIG_l8QAEqxfVAvHd3i3PxZ0RmcyuFputknw0pRPpsC9EhgNRNMEDxl8nsh47aUfkv9A9Hkw4RDpqbRnxGUy2jxH2BBVnaoENXoeDuXWGj6sq6KCi5fCtMPciNqHXRa_WxibMXnbxbQfyCJaLWAT8LXy5V5R4IhtPRSkGmv_R1Ee_4a9wADiQ1lvLLrbLjSpkxlapxl4Y_dGGZZC78UfqU6flVMzN3naQsZDGE"/>
+</div>
+</header>
+<!-- Background Map (Canvas) -->
+<main class="relative h-screen w-full overflow-hidden bg-surface-container-lowest">
+<div class="absolute inset-0 z-0">
+<img class="w-full h-full object-cover opacity-60" data-alt="high angle dark charcoal map of a city grid with glowing cyan and blue neon route lines" data-location="Philadelphia" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6SXj5XlXLJwHio2Q3q4O6tr3s514MWxWSBxSIEiKtkhPZDj9f9OQA4280wPXrAzx1p0aT5yBP64geA7VGw7bt5uoxc5Ti4S7xf0J-YQfc4yH6g3Nr7OJQo6ociJXomDgThSJdMjslsZ77JBftRKoHhieeU5qUG9oFxYXI3EIyQjD_UhVmjyAAhv7DLbClf8bYN9cKYTJyORx6V-NVfxsXyF0j0MtzJCrHny_YwCfTOZpYmV3WNGvR6TtnIM9Otg58FEuAK-8ZtMxs"/>
+<div class="absolute inset-0 bg-gradient-to-b from-surface-dim/40 via-transparent to-surface-dim"></div>
+</div>
+<!-- Active Navigation Shell (Bottom Sheet Trigger Context) -->
+<!-- Content hidden by the bottom sheet overlay -->
+</main>
+<!-- Route Planning Bottom Sheet -->
+<section class="fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center">
+<!-- Drag Handle Area -->
+<div class="w-full max-w-2xl bg-[#1A1D27] rounded-t-[24px] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] pt-3 pb-6 px-6">
+<div class="w-12 h-1.5 bg-outline-variant/30 rounded-full mx-auto mb-6"></div>
+<!-- Header -->
+<div class="flex justify-between items-center mb-8">
+<h2 class="font-headline text-2xl font-bold tracking-tight text-on-surface">Plan Route</h2>
+<button class="p-2 rounded-full hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">close</span>
+</button>
+</div>
+<!-- Search Fields -->
+<div class="space-y-4 mb-8">
+<!-- From Field -->
+<div class="relative group">
+<div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary-fixed-dim" style="font-variation-settings: 'FILL' 1;">near_me</span>
+</div>
+<input class="w-full h-14 bg-tertiary-container/10 border-none rounded-2xl pl-12 pr-4 font-semibold text-tertiary-fixed-dim focus:ring-2 focus:ring-tertiary" readonly="" type="text" value="My Location"/>
+</div>
+<!-- Connection Line Visual -->
+<div class="absolute left-10 h-6 w-0.5 border-l-2 border-dashed border-outline-variant/40 -mt-2"></div>
+<!-- To Field -->
+<div class="relative group mt-6">
+<div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">location_on</span>
+</div>
+<input class="w-full h-14 bg-surface-container-high border-none rounded-2xl pl-12 pr-4 font-medium text-on-surface placeholder:text-on-surface-variant/50 focus:ring-2 focus:ring-primary" placeholder="Where to in Philly?" type="text"/>
+</div>
+</div>
+<!-- Vehicle Selector (Horizontal Scrolling) -->
+<div class="mb-8">
+<label class="block font-headline text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4 px-1">Vehicle Profile</label>
+<div class="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+<button class="flex items-center gap-2 px-6 py-3 rounded-full bg-surface-container-highest text-on-surface whitespace-nowrap hover:bg-surface-bright transition-all active:scale-95 duration-150">
+<span>🚗</span>
+<span class="font-bold text-sm">Sedan</span>
+</button>
+<button class="flex items-center gap-2 px-6 py-3 rounded-full bg-surface-container-highest text-on-surface whitespace-nowrap hover:bg-surface-bright transition-all active:scale-95 duration-150">
+<span>🚙</span>
+<span class="font-bold text-sm">SUV</span>
+</button>
+<button class="flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-on-primary whitespace-nowrap shadow-lg shadow-primary/20 transition-all active:scale-95 duration-150">
+<span>🏎️</span>
+<span class="font-bold text-sm">Lowered</span>
+</button>
+<button class="flex items-center gap-2 px-6 py-3 rounded-full bg-surface-container-highest text-on-surface whitespace-nowrap hover:bg-surface-bright transition-all active:scale-95 duration-150">
+<span>🏍️</span>
+<span class="font-bold text-sm">Motorcycle</span>
+</button>
+<button class="flex items-center gap-2 px-6 py-3 rounded-full bg-surface-container-highest text-on-surface whitespace-nowrap hover:bg-surface-bright transition-all active:scale-95 duration-150">
+<span>🚲</span>
+<span class="font-bold text-sm">Bicycle</span>
+</button>
+</div>
+</div>
+<!-- Route Preferences (Vertical Cards) -->
+<div class="space-y-3 mb-10">
+<label class="block font-headline text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4 px-1">Routing Strategy</label>
+<!-- Smooth Ride -->
+<button class="w-full flex items-center justify-between p-4 rounded-2xl bg-surface-container-high border border-transparent hover:border-outline-variant/30 transition-all">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-surface-container-highest flex items-center justify-center text-2xl">🛣️</div>
+<div class="text-left">
+<h4 class="font-bold text-on-surface">Smooth Ride</h4>
+<p class="text-sm text-on-surface-variant">Avoids all bumps &amp; dips</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant/30">chevron_right</span>
+</button>
+<!-- Balanced (Active) -->
+<button class="w-full flex items-center justify-between p-4 rounded-2xl bg-primary-container/10 border-2 border-primary-container shadow-xl shadow-primary-container/5 transition-all">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-primary-container flex items-center justify-center text-2xl">⚖️</div>
+<div class="text-left">
+<h4 class="font-bold text-primary">Balanced</h4>
+<p class="text-sm text-primary/70">Optimal time vs. road quality</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary">check_circle</span>
+</button>
+<!-- Fastest -->
+<button class="w-full flex items-center justify-between p-4 rounded-2xl bg-surface-container-high border border-transparent hover:border-outline-variant/30 transition-all">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-surface-container-highest flex items-center justify-center text-2xl">⚡</div>
+<div class="text-left">
+<h4 class="font-bold text-on-surface">Fastest</h4>
+<p class="text-sm text-on-surface-variant">Shortest arrival time possible</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant/30">chevron_right</span>
+</button>
+</div>
+<!-- Main CTA -->
+<button class="w-full h-14 bg-gradient-to-r from-[#2196F3] to-[#00BCD4] rounded-full font-headline text-lg font-extrabold text-white shadow-xl shadow-secondary-container/20 flex items-center justify-center gap-3 active:scale-95 transition-transform duration-150">
+        Find Route
+        <span class="material-symbols-outlined">directions_car</span>
+</button>
+</div>
+</section>
+<!-- Navigation Shell (Bottom) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-[#111319]/80 backdrop-blur-xl rounded-t-[32px] border-t border-slate-700/20 shadow-[0_-8px_30px_rgb(0,0,0,0.5)]">
+<div class="flex flex-col items-center justify-center text-slate-500 px-5 py-2 hover:text-blue-200 transition-all active:scale-90 duration-150 cursor-pointer">
+<span class="material-symbols-outlined">map</span>
+<span class="font-['Manrope'] text-[10px] font-semibold uppercase tracking-widest mt-1">Explore</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500 px-5 py-2 hover:text-blue-200 transition-all active:scale-90 duration-150 cursor-pointer">
+<span class="material-symbols-outlined">bookmark</span>
+<span class="font-['Manrope'] text-[10px] font-semibold uppercase tracking-widest mt-1">Saved</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500 px-5 py-2 hover:text-blue-200 transition-all active:scale-90 duration-150 cursor-pointer">
+<span class="material-symbols-outlined">report_problem</span>
+<span class="font-['Manrope'] text-[10px] font-semibold uppercase tracking-widest mt-1">Reports</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-blue-500/20 text-blue-300 rounded-[24px] px-5 py-2 hover:text-blue-200 transition-all active:scale-90 duration-150 cursor-pointer">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Manrope'] text-[10px] font-semibold uppercase tracking-widest mt-1">Profile</span>
+</div>
+</nav>
+</body></html>

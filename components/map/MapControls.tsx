@@ -6,11 +6,11 @@ import { useMapControls } from "@/hooks/useMapControls";
 import { useGeolocation } from "@/hooks/useGeolocation";
 
 /**
- * MapControls - Map control buttons at bottom right
+ * MapControls — Velocity Dark glass-panel controls at bottom right.
  * Includes: Location, Zoom In/Out, Reset View, Fullscreen
  *
- * Uses project's useMapControls hook for map interactions
- * Memoized to prevent unnecessary re-renders
+ * Design: Glass-panel containers with ghost-borders per the
+ * Kinetic Luminescence design spec.
  */
 export const MapControls = memo(function MapControls() {
   const { map, zoomIn, zoomOut, toggleFullscreen, resetView } =
@@ -31,65 +31,58 @@ export const MapControls = memo(function MapControls() {
   }, []);
 
   return (
-    <div className="absolute bottom-24 sm:bottom-8 right-4 flex flex-col items-center gap-2 z-[1000]">
-      {/* Location Button */}
-      <button
-        onClick={locateUser}
-        disabled={!isAvailable || isLocating}
-        className={`flex h-9 w-9 items-center justify-center rounded-full bg-white dark:bg-slate-700 shadow-lg hover:bg-gray-50 dark:hover:bg-slate-600 ${
-          isLocating ? "animate-pulse" : ""
-        } disabled:opacity-50 disabled:cursor-not-allowed`}
-        title="Find my location"
-        aria-label="Find my location"
-      >
-        <svg
-          className={`h-5 w-5 ${
-            isLocating
-              ? "text-blue-600 dark:text-blue-400"
-              : "text-gray-600 dark:text-gray-100"
-          }`}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <circle cx="12" cy="12" r="3" />
-          <path d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
-        </svg>
-      </button>
-
-      {/* Zoom Controls */}
-      <div className="flex flex-col overflow-hidden rounded-lg bg-white dark:bg-slate-700 shadow-lg">
+    <div className="absolute bottom-32 sm:bottom-32 right-6 flex flex-col items-center gap-3 z-[1000]">
+      {/* Zoom Controls — Glass container with ghost border */}
+      <div className="glass-panel flex flex-col rounded-2xl shadow-2xl ghost-border overflow-hidden">
         <button
           onClick={zoomIn}
           disabled={!map}
-          className="flex h-9 w-9 items-center justify-center border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Zoom in"
+          className="p-4 hover:bg-[#373940] text-[#e2e2eb] transition-colors border-b border-[#404752]/15 disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Zoom In"
           aria-label="Zoom in"
         >
-          <Plus className="h-5 w-5 text-gray-600 dark:text-gray-100" />
+          <Plus className="h-5 w-5" />
         </button>
         <button
           onClick={zoomOut}
           disabled={!map}
-          className="flex h-9 w-9 items-center justify-center hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Zoom out"
+          className="p-4 hover:bg-[#373940] text-[#e2e2eb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Zoom Out"
           aria-label="Zoom out"
         >
-          <Minus className="h-5 w-5 text-gray-600 dark:text-gray-100" />
+          <Minus className="h-5 w-5" />
         </button>
       </div>
 
-      {/* Reset View Button */}
+      {/* My Location — Circular glass button with neon accent */}
+      <button
+        onClick={locateUser}
+        disabled={!isAvailable || isLocating}
+        className={`glass-panel w-14 h-14 rounded-full flex items-center justify-center text-[#9ecaff] shadow-2xl ghost-border hover:bg-[#9ecaff]/10 active:scale-90 transition-all ${
+          isLocating ? "animate-pulse-glow" : ""
+        } disabled:opacity-50 disabled:cursor-not-allowed`}
+        title="My Location"
+        aria-label="Find my location"
+      >
+        <svg
+          className="h-5 w-5"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" />
+        </svg>
+      </button>
+
+      {/* Reset View */}
       <button
         onClick={resetView}
         disabled={!map}
-        className="flex h-9 w-9 items-center justify-center rounded bg-white dark:bg-slate-700 shadow-lg hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-        title="Reset view"
+        className="glass-panel w-14 h-14 rounded-full flex items-center justify-center text-[#e2e2eb] shadow-2xl ghost-border hover:bg-[#373940] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Reset View"
         aria-label="Reset view to default"
       >
         <svg
-          className="h-5 w-5 text-gray-600 dark:text-gray-100"
+          className="h-5 w-5"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -102,17 +95,17 @@ export const MapControls = memo(function MapControls() {
         </svg>
       </button>
 
-      {/* Fullscreen Button */}
+      {/* Fullscreen */}
       <button
         onClick={toggleFullscreen}
-        className="flex h-9 w-9 items-center justify-center rounded bg-white dark:bg-slate-700 shadow-lg hover:bg-gray-50 dark:hover:bg-slate-600"
+        className="glass-panel w-14 h-14 rounded-full flex items-center justify-center text-[#e2e2eb] shadow-2xl ghost-border hover:bg-[#373940] transition-all"
         title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
         aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
       >
         {isFullscreen ? (
-          <Minimize2 className="h-5 w-5 text-gray-600 dark:text-gray-100" />
+          <Minimize2 className="h-5 w-5" />
         ) : (
-          <Maximize2 className="h-5 w-5 text-gray-600 dark:text-gray-100" />
+          <Maximize2 className="h-5 w-5" />
         )}
       </button>
     </div>

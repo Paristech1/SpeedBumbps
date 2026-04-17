@@ -1,95 +1,155 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
+/* ============================================
+   VELOCITY DARK — "The Kinetic Luminescence"
+   Design System for SpeedBumps Philly Navigator
+   ============================================ */
+
 :root {
-  /* Base colors */
+  /* === Tonal Foundations (Dark Canvas) === */
+  --sb-background: #111319;
+  --sb-surface: #111319;
+  --sb-surface-dim: #111319;
+  --sb-surface-container-lowest: #0c0e14;
+  --sb-surface-container-low: #191b22;
+  --sb-surface-container: #1e1f26;
+  --sb-surface-container-high: #282a30;
+  --sb-surface-container-highest: #33343b;
+  --sb-surface-bright: #373940;
+  --sb-surface-variant: #33343b;
 
-  /* Map-specific colors */
-  --map-background: #f5f5f5;
-  --map-border: #e5e5e5;
+  /* === Brand Colors === */
+  --sb-primary: #9ecaff;
+  --sb-primary-container: #2196f3;
+  --sb-primary-fixed: #d1e4ff;
+  --sb-primary-fixed-dim: #9ecaff;
+  --sb-on-primary: #003258;
+  --sb-on-primary-container: #002c4f;
+  --sb-on-primary-fixed: #001d36;
 
-  /* Dock colors */
-  --dock-background: rgba(255, 255, 255, 0.1);
-  --dock-border: rgba(255, 255, 255, 0.2);
-  --dock-shadow: rgba(0, 0, 0, 0.1);
+  --sb-secondary: #44d8f1;
+  --sb-secondary-container: #00bcd4;
+  --sb-secondary-fixed: #a1efff;
+  --sb-secondary-fixed-dim: #44d8f1;
+  --sb-on-secondary: #00363e;
+  --sb-on-secondary-container: #004650;
 
-  /* Button colors */
-  --button-background: rgba(255, 255, 255, 0.8);
-  --button-hover: rgba(255, 255, 255, 1);
-  --button-active: rgba(59, 130, 246, 0.2);
-  --button-disabled: rgba(156, 163, 175, 0.5);
+  --sb-tertiary: #3ce36a;
+  --sb-tertiary-container: #00a844;
+  --sb-tertiary-fixed: #69ff87;
+  --sb-tertiary-fixed-dim: #3ce36a;
+  --sb-on-tertiary: #003912;
+  --sb-on-tertiary-container: #00320f;
 
-  /* SpeedBumps brand colors */
-  --speedbumps-green: #00C853;
-  --speedbumps-blue: #2196F3;
-  --speedbumps-red: #FF1744;
-  --speedbumps-orange: #FF6B00;
-  --speedbumps-cyan: #00BCD4;
+  /* === Semantic Colors === */
+  --sb-error: #ffb4ab;
+  --sb-error-container: #93000a;
+  --sb-on-error: #690005;
+  --sb-on-error-container: #ffdad6;
 
-  /* Accent colors */
-  --accent-primary: #2196F3;
-  --accent-secondary: #00BCD4;
-  --accent-success: #00C853;
-  --accent-warning: #FF6B00;
-  --accent-error: #FF1744;
+  /* === Text Colors === */
+  --sb-on-surface: #e2e2eb;
+  --sb-on-surface-variant: #bfc7d4;
+  --sb-on-background: #e2e2eb;
+  --sb-outline: #89919d;
+  --sb-outline-variant: #404752;
+  --sb-inverse-surface: #e2e2eb;
+  --sb-inverse-on-surface: #2e3037;
+  --sb-inverse-primary: #0061a4;
+  --sb-surface-tint: #9ecaff;
 
-  /* Gradient colors */
-  --gradient-start: #2196F3;
-  --gradient-end: #00BCD4;
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* === Accent Shortcuts === */
+  --sb-warning-orange: #FF6B00;
+  --sb-gradient-start: #2196F3;
+  --sb-gradient-end: #00BCD4;
+
+  /* === Map === */
+  --map-background: #0c0e14;
+  --map-border: #1e1f26;
+
+  /* === Glass Effects === */
+  --glass-bg: rgba(51, 52, 59, 0.6);
+  --glass-blur: 20px;
+  --ghost-border: rgba(64, 71, 82, 0.15);
+
+  /* === Legacy shadcn tokens (mapped to Velocity Dark) === */
+  --radius: 1rem;
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.93 0.01 270);
+  --card: oklch(0.18 0.005 270);
+  --card-foreground: oklch(0.93 0.01 270);
+  --popover: oklch(0.18 0.005 270);
+  --popover-foreground: oklch(0.93 0.01 270);
+  --primary: oklch(0.78 0.1 250);
+  --primary-foreground: oklch(0.22 0.04 250);
+  --secondary: oklch(0.82 0.12 200);
+  --secondary-foreground: oklch(0.2 0.04 200);
+  --muted: oklch(0.22 0.005 270);
+  --muted-foreground: oklch(0.65 0.02 270);
+  --accent: oklch(0.22 0.005 270);
+  --accent-foreground: oklch(0.93 0.01 270);
+  --destructive: oklch(0.7 0.19 22);
+  --border: oklch(0.3 0.01 270 / 40%);
+  --input: oklch(0.3 0.01 270 / 50%);
+  --ring: oklch(0.78 0.1 250);
+  --chart-1: oklch(0.78 0.1 250);
+  --chart-2: oklch(0.82 0.12 200);
+  --chart-3: oklch(0.73 0.18 155);
+  --chart-4: oklch(0.7 0.19 22);
+  --chart-5: oklch(0.65 0.2 35);
+  --sidebar: oklch(0.17 0.005 270);
+  --sidebar-foreground: oklch(0.93 0.01 270);
+  --sidebar-primary: oklch(0.78 0.1 250);
+  --sidebar-primary-foreground: oklch(0.22 0.04 250);
+  --sidebar-accent: oklch(0.22 0.005 270);
+  --sidebar-accent-foreground: oklch(0.93 0.01 270);
+  --sidebar-border: oklch(0.3 0.01 270 / 30%);
+  --sidebar-ring: oklch(0.78 0.1 250);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /* SpeedBumps Velocity Dark tokens */
+  --color-sb-background: var(--sb-background);
+  --color-sb-surface: var(--sb-surface);
+  --color-sb-surface-dim: var(--sb-surface-dim);
+  --color-sb-surface-container-lowest: var(--sb-surface-container-lowest);
+  --color-sb-surface-container-low: var(--sb-surface-container-low);
+  --color-sb-surface-container: var(--sb-surface-container);
+  --color-sb-surface-container-high: var(--sb-surface-container-high);
+  --color-sb-surface-container-highest: var(--sb-surface-container-highest);
+  --color-sb-surface-bright: var(--sb-surface-bright);
+  --color-sb-primary: var(--sb-primary);
+  --color-sb-primary-container: var(--sb-primary-container);
+  --color-sb-on-primary: var(--sb-on-primary);
+  --color-sb-secondary: var(--sb-secondary);
+  --color-sb-secondary-container: var(--sb-secondary-container);
+  --color-sb-on-secondary: var(--sb-on-secondary);
+  --color-sb-tertiary: var(--sb-tertiary);
+  --color-sb-tertiary-container: var(--sb-tertiary-container);
+  --color-sb-error: var(--sb-error);
+  --color-sb-error-container: var(--sb-error-container);
+  --color-sb-on-error: var(--sb-on-error);
+  --color-sb-on-error-container: var(--sb-on-error-container);
+  --color-sb-on-surface: var(--sb-on-surface);
+  --color-sb-on-surface-variant: var(--sb-on-surface-variant);
+  --color-sb-outline: var(--sb-outline);
+  --color-sb-outline-variant: var(--sb-outline-variant);
+  --color-sb-warning-orange: var(--sb-warning-orange);
+
   --color-map-background: var(--map-background);
   --color-map-border: var(--map-border);
-  --color-dock-background: var(--dock-background);
-  --color-dock-border: var(--dock-border);
-  --color-button-background: var(--button-background);
-  --color-button-hover: var(--button-hover);
-  --color-button-active: var(--button-active);
-  --color-button-disabled: var(--button-disabled);
-  --color-accent-primary: var(--accent-primary);
-  --color-accent-secondary: var(--accent-secondary);
-  --color-accent-success: var(--accent-success);
-  --color-accent-warning: var(--accent-warning);
-  --color-accent-error: var(--accent-error);
-  --color-gradient-start: var(--gradient-start);
-  --color-gradient-end: var(--gradient-end);
-  --font-sans: var(--font-geist-sans);
+
+  /* Font families */
+  --font-headline: "Space Grotesk", sans-serif;
+  --font-body: "Manrope", sans-serif;
+  --font-sans: var(--font-body);
   --font-mono: var(--font-geist-mono);
+
+  /* Shadcn mappings */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -125,113 +185,104 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Base colors */
+/* ============================================
+   GLASSMORPHISM UTILITIES
+   ============================================ */
 
-    /* Map-specific colors */
-    --map-background: #1a1a1a;
-    --map-border: #2a2a2a;
-
-    /* Dock colors */
-    --dock-background: rgba(0, 0, 0, 0.3);
-    --dock-border: rgba(255, 255, 255, 0.1);
-    --dock-shadow: rgba(0, 0, 0, 0.3);
-
-    /* Button colors */
-    --button-background: rgba(0, 0, 0, 0.6);
-    --button-hover: rgba(0, 0, 0, 0.8);
-    --button-active: rgba(59, 130, 246, 0.3);
-    --button-disabled: rgba(75, 85, 99, 0.5);
-
-    /* Accent colors remain the same for consistency */
-  }
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 
-/* Dark mode class for manual theme switching */
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --map-background: #1a1a1a;
-  --map-border: #2a2a2a;
-  --dock-background: rgba(0, 0, 0, 0.3);
-  --dock-border: rgba(255, 255, 255, 0.1);
-  --dock-shadow: rgba(0, 0, 0, 0.3);
-  --button-background: rgba(0, 0, 0, 0.6);
-  --button-hover: rgba(0, 0, 0, 0.8);
-  --button-active: rgba(59, 130, 246, 0.3);
-  --button-disabled: rgba(75, 85, 99, 0.5);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+.glass-panel-heavy {
+  background: rgba(25, 27, 34, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
 
-/* Blob animation for gradient background */
+/* Ghost border for subtle definition (per design spec — never at full opacity) */
+.ghost-border {
+  border: 1px solid var(--ghost-border);
+}
+
+/* ============================================
+   ROUTE & MAP GLOW EFFECTS
+   ============================================ */
+
+.route-glow {
+  filter: drop-shadow(0 0 8px rgba(68, 216, 241, 0.6));
+}
+
+.map-glow {
+  box-shadow: 0 0 40px 10px rgba(33, 150, 243, 0.1);
+}
+
+.neon-dot {
+  box-shadow: 0 0 20px var(--sb-secondary);
+}
+
+/* ============================================
+   GRADIENT & BRAND  
+   ============================================ */
+
+.gradient-primary {
+  background: linear-gradient(135deg, var(--sb-primary) 0%, var(--sb-primary-container) 100%);
+}
+
+.gradient-cta {
+  background: linear-gradient(to right, #2196F3, #00BCD4);
+}
+
+/* ============================================
+   TYPOGRAPHY  
+   ============================================ */
+
+.font-headline {
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.font-body {
+  font-family: "Manrope", sans-serif;
+}
+
+.font-label {
+  font-family: "Manrope", sans-serif;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
 @keyframes blob {
-  0%, 100% {
-    transform: translate(0px, 0px) scale(1);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
 }
 
 @keyframes blob-reverse {
-  0%, 100% {
-    transform: translate(0px, 0px) scale(1);
-  }
-  33% {
-    transform: translate(-30px, 50px) scale(1.1);
-  }
-  66% {
-    transform: translate(20px, -20px) scale(0.9);
-  }
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(-30px, 50px) scale(1.1); }
+  66% { transform: translate(20px, -20px) scale(0.9); }
 }
 
-.animate-blob {
-  animation: blob 7s ease-in-out infinite;
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px var(--sb-primary-container), 0 0 24px rgba(33, 150, 243, 0.2); }
+  50% { box-shadow: 0 0 16px var(--sb-primary-container), 0 0 40px rgba(33, 150, 243, 0.4); }
 }
 
-.animate-blob-reverse {
-  animation: blob-reverse 7s ease-in-out infinite;
-}
+.animate-blob { animation: blob 7s ease-in-out infinite; }
+.animate-blob-reverse { animation: blob-reverse 7s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animation-delay-2000 { animation-delay: 2s; }
+.animation-delay-4000 { animation-delay: 4s; }
 
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
+/* ============================================
+   SCROLLBAR UTILITIES
+   ============================================ */
 
-.animation-delay-4000 {
-  animation-delay: 4s;
-}
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 @import "tw-animate-css";
 
@@ -250,7 +301,7 @@
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: rgb(209 213 219) transparent;
+    scrollbar-color: rgb(64 71 82) transparent;
   }
 
   .scrollbar-thin::-webkit-scrollbar {
@@ -263,24 +314,35 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: rgb(209 213 219);
+    background-color: rgb(64 71 82);
     border-radius: 3px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(156 163 175);
+    background-color: rgb(89 91 99);
   }
+}
 
-  /* Dark mode scrollbar */
-  .dark .scrollbar-thin {
-    scrollbar-color: rgb(75 85 99) transparent;
-  }
+/* ============================================
+   LEAFLET OVERRIDES for Dark Theme
+   ============================================ */
 
-  .dark .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: rgb(75 85 99);
-  }
+.leaflet-container {
+  background: var(--sb-surface-container-lowest) !important;
+}
 
-  .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(107 114 128);
-  }
+.leaflet-control-attribution {
+  background: rgba(17, 19, 25, 0.7) !important;
+  color: var(--sb-on-surface-variant) !important;
+  font-family: "Manrope", sans-serif !important;
+  font-size: 10px !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--sb-primary) !important;
+}
+
+/* Google Material Symbols (icon font used in stitch files) */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }

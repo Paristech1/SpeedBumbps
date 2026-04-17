@@ -37,7 +37,7 @@ export const TILE_PROVIDERS: TileProvider[] = [
 /**
  * Default tile provider ID
  */
-export const DEFAULT_TILE_PROVIDER_ID = 'osm';
+export const DEFAULT_TILE_PROVIDER_ID = 'dark';
 
 /**
  * Get tile provider by ID

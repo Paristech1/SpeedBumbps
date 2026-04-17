@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * Route result card — bottom sheet showing route info and controls.
- * Ported from Flutter: map_screen.dart _buildRouteResultCard()
+ * Route result card — Velocity Dark bottom sheet showing route info.
+ * Matches the directions_step_list stitch: glass-panel modals,
+ * bold typography, gradient CTA, and proper dark theming.
  */
 
 import { useState } from 'react';
@@ -36,34 +37,38 @@ export function RouteResultCard({
   const hasAlternative = !!alternativeRoute;
 
   const bumpBadge = selectedRoute.isSpeedBumpFree ? (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
+    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-[#00a844]/20 text-[#3ce36a] uppercase tracking-wider">
       ✅ Bump-free
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300">
+    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-[#FF6B00]/20 text-[#FF6B00] uppercase tracking-wider">
       🚧 {selectedRoute.speedBumpCount} bump{selectedRoute.speedBumpCount !== 1 ? 's' : ''}
     </span>
   );
 
   return (
     <>
-      {/* Main card */}
-      <div className="absolute bottom-0 left-0 right-0 z-[1050] bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl px-4 pb-6 pt-4">
+      {/* Main card — Velocity Dark glass panel */}
+      <div className="absolute bottom-0 left-0 right-0 z-[1050] bg-[#1A1D27] rounded-t-[24px] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] px-6 pb-8 pt-4">
         {/* Handle */}
-        <div className="flex justify-center mb-3">
-          <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+        <div className="flex justify-center mb-4">
+          <div className="w-12 h-1.5 bg-[#404752]/30 rounded-full" />
         </div>
 
-        {/* Route summary row */}
-        <div className="flex items-center gap-3 mb-3">
-          <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-200">
-            <Clock className="w-4 h-4 text-blue-500" />
-            <span className="text-base font-semibold">{formatDuration(selectedRoute.durationSeconds)}</span>
+        {/* Route summary — large ETA style from stitch */}
+        <div className="flex items-end gap-4 mb-4">
+          <div className="flex flex-col">
+            <span className="text-4xl font-[var(--font-headline)] font-extrabold text-[#44d8f1]">
+              {formatDuration(selectedRoute.durationSeconds)}
+            </span>
+            <span className="text-xs text-[#bfc7d4] font-medium uppercase tracking-wider">Duration</span>
           </div>
-          <span className="text-gray-300 dark:text-gray-600">·</span>
-          <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-200">
-            <Ruler className="w-4 h-4 text-gray-400" />
-            <span className="text-sm">{formatDistance(selectedRoute.distanceMeters)}</span>
+          <div className="h-10 w-px bg-[#404752]/30 mb-2" />
+          <div className="flex flex-col">
+            <span className="text-4xl font-[var(--font-headline)] font-extrabold text-[#e2e2eb]">
+              {formatDistance(selectedRoute.distanceMeters)}
+            </span>
+            <span className="text-xs text-[#bfc7d4] font-medium uppercase tracking-wider">Distance</span>
           </div>
           <div className="flex-1" />
           {bumpBadge}
@@ -71,7 +76,7 @@ export function RouteResultCard({
 
         {/* Route toggle (when alternative exists) */}
         {hasAlternative && (
-          <div className="flex gap-2 mb-3">
+          <div className="flex gap-3 mb-4">
             <RouteTabButton
               label="Fastest"
               subLabel={`${formatDuration(primaryRoute.durationSeconds)} · ${primaryRoute.speedBumpCount > 0 ? `${primaryRoute.speedBumpCount} bumps` : 'Bump-free'}`}
@@ -90,24 +95,24 @@ export function RouteResultCard({
         )}
 
         {/* Action buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <button
             onClick={onClearRoute}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            className="flex items-center gap-2 px-5 py-3 rounded-full text-sm font-bold bg-[#33343b] text-[#e2e2eb] hover:bg-[#373940] transition-colors active:scale-95"
           >
             <X className="w-4 h-4" />
             Cancel
           </button>
           <button
             onClick={() => setStepsOpen(true)}
-            className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            className="flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold bg-[#33343b] text-[#e2e2eb] hover:bg-[#373940] transition-colors active:scale-95"
           >
             <ChevronRight className="w-4 h-4" />
             Directions
           </button>
           <button
             onClick={onStartNavigation}
-            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold bg-gradient-to-br from-[#9ecaff] to-[#2196F3] text-[#003258] shadow-xl shadow-[#2196F3]/20 transition-all active:scale-[0.98]"
           >
             <Navigation className="w-4 h-4" />
             Start
@@ -115,37 +120,74 @@ export function RouteResultCard({
         </div>
       </div>
 
-      {/* Steps modal */}
+      {/* Steps modal — directions_step_list stitch style */}
       {stepsOpen && (
-        <div className="absolute inset-0 z-[1200] bg-black/50 flex items-end" onClick={() => setStepsOpen(false)}>
+        <div className="absolute inset-0 z-[1200] flex items-end justify-center pointer-events-none">
+          <div className="absolute inset-0 bg-[#0c0e14]/60 backdrop-blur-sm pointer-events-auto" onClick={() => setStepsOpen(false)} />
           <div
-            className="w-full bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto"
+            className="relative w-full max-w-2xl bg-[#282a30] rounded-t-[24px] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-[#404752]/20 flex flex-col pointer-events-auto"
+            style={{ maxHeight: '75vh' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white dark:bg-gray-800 px-4 pt-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Directions</h3>
+            {/* Modal Header */}
+            <div className="sticky top-0 z-20 flex items-center justify-between px-8 py-6 bg-[#282a30]/90 backdrop-blur-md rounded-t-[24px] border-b border-[#404752]/10">
+              <div className="flex items-center gap-4">
+                <div className="w-1.5 h-8 bg-[#9ecaff] rounded-full" />
+                <h2 className="text-2xl font-[var(--font-headline)] font-bold text-[#e2e2eb] tracking-tight">Directions</h2>
+              </div>
               <button
                 onClick={() => setStepsOpen(false)}
-                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="p-3 bg-[#33343b] rounded-full hover:bg-[#373940] transition-all active:scale-90 group"
                 aria-label="Close steps"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-[#bfc7d4] group-hover:text-[#e2e2eb]" />
               </button>
             </div>
-            <div className="px-4 py-3 space-y-1 pb-8">
+
+            {/* Steps List */}
+            <div className="flex-1 overflow-y-auto hide-scrollbar px-6 py-4 space-y-2">
               {selectedRoute.steps.map((step, i) => (
-                <div key={i} className="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-700/50 last:border-b-0">
-                  <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
-                    <DirectionIcon instruction={step.instruction} />
+                <div
+                  key={i}
+                  className={`flex items-start gap-5 p-6 rounded-2xl ${
+                    i === 0
+                      ? 'bg-[#9ecaff]/10 border border-[#9ecaff]/20'
+                      : 'hover:bg-[#33343b]/50 transition-colors'
+                  }`}
+                >
+                  <div className={`mt-1 w-12 h-12 flex items-center justify-center rounded-xl ${
+                    i === 0
+                      ? 'bg-[#2196F3] shadow-lg shadow-[#2196F3]/20'
+                      : 'bg-[#33343b] border border-[#404752]/20'
+                  }`}>
+                    <DirectionIcon instruction={step.instruction} isCurrent={i === 0} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{step.instruction}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  <div className="flex-1">
+                    {i === 0 && (
+                      <p className="text-[#9ecaff] text-xs font-bold uppercase tracking-widest mb-1">Current Step</p>
+                    )}
+                    <h3 className={`font-[var(--font-headline)] font-bold leading-snug ${
+                      i === 0 ? 'text-xl text-[#e2e2eb]' : 'text-lg text-[#e2e2eb]'
+                    }`}>
+                      {step.instruction}
+                    </h3>
+                    <p className="text-[#bfc7d4] font-medium mt-1">
                       {formatDistance(step.distanceMeters)} · {formatDuration(step.durationSeconds)}
-                    </div>
+                    </p>
                   </div>
                 </div>
               ))}
+              <div className="h-24" />
+            </div>
+
+            {/* Modal CTA Footer */}
+            <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-[#282a30] via-[#282a30] to-transparent">
+              <button
+                onClick={() => { setStepsOpen(false); onStartNavigation(); }}
+                className="w-full py-5 bg-gradient-to-br from-[#9ecaff] to-[#2196F3] text-[#003258] font-bold rounded-full text-lg shadow-xl shadow-[#2196F3]/20 active:scale-[0.98] transition-transform"
+              >
+                Resume Navigation
+              </button>
             </div>
           </div>
         </div>
@@ -154,8 +196,8 @@ export function RouteResultCard({
   );
 }
 
-function DirectionIcon({ instruction }: { instruction: string }) {
-  const cls = "w-4 h-4 text-blue-600 dark:text-blue-400";
+function DirectionIcon({ instruction, isCurrent }: { instruction: string; isCurrent?: boolean }) {
+  const cls = `w-5 h-5 ${isCurrent ? 'text-white' : 'text-[#44d8f1]'}`;
   const lower = instruction.toLowerCase();
 
   if (lower.startsWith('arrive')) return <MapPin className={cls} />;
@@ -189,19 +231,19 @@ function RouteTabButton({
   onClick: () => void;
 }) {
   const activeColor = color === 'green'
-    ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-    : 'border-blue-500 bg-blue-50 dark:bg-blue-900/20';
+    ? 'border-[#3ce36a] bg-[#3ce36a]/10'
+    : 'border-[#2196F3] bg-[#2196F3]/10';
   return (
     <button
       onClick={onClick}
-      className={`flex-1 text-left p-2.5 rounded-xl border-2 transition-all ${
+      className={`flex-1 text-left p-3 rounded-2xl border-2 transition-all ${
         isSelected
           ? activeColor
-          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+          : 'border-[#404752]/30 hover:border-[#404752]/60'
       }`}
     >
-      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{label}</div>
-      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subLabel}</div>
+      <div className="text-sm font-semibold text-[#e2e2eb]">{label}</div>
+      <div className="text-xs text-[#bfc7d4] mt-0.5">{subLabel}</div>
     </button>
   );
 }
