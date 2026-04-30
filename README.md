@@ -1,199 +1,183 @@
-# Next.js Leaflet Starter
+# 🚗 SpeedBump App
 
-A production-ready Next.js 16 starter template with vanilla Leaflet integration. Build modern, interactive map applications with a Google Maps-inspired UI.
+A navigation app that helps Philadelphia drivers avoid speed bumps, potholes, and road hazards using official city data and AI-powered detection. Starting with Philly's **1,584+ verified traffic calming devices**, SpeedBump aims to become the *"Waze for road conditions"* across 100+ cities.
 
-[![Next.js](https://img.shields.io/badge/Next.js-16.0.7-black?logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19.2.1-61DAFB?logo=react)](https://react.dev/)
-[![Leaflet](https://img.shields.io/badge/Leaflet-1.9-199900?logo=leaflet)](https://leafletjs.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
+[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev/)
+[![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%7C%20Auth-FFCA28?logo=firebase)](https://firebase.google.com/)
+[![Mapbox](https://img.shields.io/badge/Maps-Mapbox%20GL%20JS-000000?logo=mapbox)](https://docs.mapbox.com/)
+[![HERE Routing](https://img.shields.io/badge/Routing-HERE%20API-00AFAA)](https://developer.here.com/documentation/routing-api/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![GitHub Template](https://img.shields.io/badge/Template-Use%20this%20template-brightgreen?logo=github)](https://github.com/wellywahyudi/nextjs-leaflet-starter/generate)
 
-![Demo Screenshot](screenshot.png)
+---
 
-📖 **Read the full story:** [I Built a Google Maps Clone Using Next.js 16 + Leaflet](https://dev.to/wellywahyudi/i-built-a-google-maps-clone-using-nextjs-16-leaflet-now-its-an-open-source-starter-kit-9n5)
+## 📖 Overview
+
+Philadelphia has 1,584+ speed bumps hiding on daily routes — and your GPS doesn't tell you where they are. **SpeedBump does.** Plan routes that avoid them, protect your car, protect your cargo, and protect your sanity.
+
+**Target users:** Daily commuters, delivery drivers (DoorDash, Uber Eats, Instacart), rideshare drivers, and anyone who values a smooth ride.
+
+---
 
 ## ✨ Features
 
-### Core Map Features
+### MVP (Phase 1)
+- **Interactive Map** — Display all 1,584 official Philadelphia speed bump locations as markers
+- **Smart Routing** — A-to-B navigation with real-time speed bump avoidance
+- **User Authentication** — Firebase Auth (email + Google sign-in)
+- **Vehicle Profiles** — Sedan, SUV, lowered car, motorcycle, bicycle — avoidance thresholds adjust accordingly
 
-- **Modern Map Interface** — Google Maps-inspired UI with smooth animations
-- **Multiple Tile Providers** — OpenStreetMap, Satellite (Esri), and Dark mode (CARTO)
-- **Theme-Aware Basemaps** — Auto-switches map style based on light/dark theme
-- **GeoJSON Support** — Render and style geographic features with fly-to animations
-- **Country Search** — Debounced search with keyboard navigation (↑↓ Enter Esc)
-- **Map Controls** — Zoom, fullscreen, geolocation, and reset view
-- **Responsive Design** — Mobile-first approach with adaptive layouts
-- **Server Components** — Next.js 16 App Router with optimized client boundaries
+### Coming Soon (Phase 2+)
+- 📳 **Accelerometer-Based Severity Scoring** — Automatically rates bumps 1–5 using your phone's sensor
+- 📸 **Community Submissions** — Photo-based crowdsourced bump reporting with GPS extraction
+- 🤖 **AI Detection** — RoboFlow/YOLO models auto-verify submissions at 80%+ confidence
+- 🎚️ **Route Preference Modes** — Smooth Ride, Fast, or Cargo-Conscious
+- 🏆 **Gamification** — Road Scout badges, neighborhood leaderboards, verification challenges
+- 💰 **Premium Tier ($4.99/mo)** — Ad-free, offline maps, super smooth routes, custom themes
 
-### 🆕 POI (Point of Interest) Management
+---
 
-- **Full CRUD Operations** — Create, read, update, and delete custom places
-- **14 Category Types** — Food & Drink, Shopping, Transport, Lodging, Health, Entertainment, Nature, Services, Education, Religion, Business, Tourism, Emergency, Utilities
-- **Interactive Location Picker** — Click-to-select with live cursor tracking and crosshair cursor
-- **LocalStorage Persistence** — Your places are saved automatically
-- **GeoJSON Import/Export** — Share and backup your places
-- **Category Filtering** — Filter places by category with color-coded markers
-- **Fly-to Animation** — Smooth navigation to any saved place
-- **Mobile-Optimized** — Drawer UI on mobile, side panel on desktop
-- **Toast Notifications** — Beautiful, colorful feedback for all actions
+## 🛠️ Tech Stack
 
-### 🎯 Advanced Features
+| Category        | Technology                                      |
+| --------------- | ----------------------------------------------- |
+| Framework       | Flutter (React Native cross-platform)           |
+| Map Display     | Mapbox GL JS                                    |
+| Routing         | HERE Routing API (segment avoidance)            |
+| Backend / Auth  | Firebase (Firestore, Auth, Storage, Functions)  |
+| AI / CV         | RoboFlow hosted inference, YOLOv8               |
+| Geospatial      | Turf.js, Firebase GeoFire                       |
+| State Mgmt      | Freezed + Riverpod                              |
+| Analytics       | Firebase Analytics + Sentry                     |
+| Language        | Dart / TypeScript                               |
 
-- **Context Menu** — Right-click for quick actions (copy coordinates, add marker, measure, save place)
-- **Measurement Tools** — Distance and area measurement with interactive drawing
-- **User Markers** — Add custom markers anywhere on the map
-- **Real-time Coordinate Display** — Live lat/lng tracking when selecting locations
-- **Dark Mode Support** — Seamless theme switching with persistent preferences
-- **Error Boundaries** — Graceful error handling with fallback UI
+---
 
-## 🛠 Tech Stack
+## 📊 Data Sources
 
-| Category      | Technology                              |
-| ------------- | --------------------------------------- |
-| Framework     | Next.js 16.0.7 (App Router)             |
-| UI            | React 19.2.1, Tailwind CSS 4, shadcn/ui |
-| Maps          | Leaflet 1.9 (vanilla, no wrapper)       |
-| Icons         | Lucide React                            |
-| Theming       | next-themes                             |
-| Notifications | Sonner (toast notifications)            |
-| Drawers       | Vaul (mobile-optimized)                 |
-| Language      | TypeScript 5                            |
+- **Primary:** [OpenDataPhilly — Traffic Calming Devices](https://opendataphilly.org/datasets/traffic-calming/)
+  - 1,584+ speed bumps, speed cushions, humps, and tables
+  - Fields: Object ID, Speed Bump ID, Street Segment ID, Install Date, GPS Coordinates
+  - REST API: `https://services.arcgis.com/fLeGjb7u4uXqeF9q/arcgis/rest/services/traffic_calming_devices/FeatureServer/0/`
+- **Supporting:** [Street Centerlines](https://opendataphilly.org/datasets/street-centerlines/) — base layer for routing and street segment matching
 
-## 🚀 Quick Start
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Flutter SDK (3.x+)
+- Xcode + iOS Simulator (for iOS builds)
+- CocoaPods (`brew install cocoapods`)
+- Android Studio (for Android builds)
+- Firebase project configured
+
+### Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/wellywahyudi/nextjs-leaflet-starter.git
-cd nextjs-leaflet-starter
+# 1. Clone the repo
+git clone https://github.com/Paristech1/SpeedBumbps.git
+cd SpeedBumbps
 
-# Install dependencies
-npm install
+# 2. Install dependencies
+flutter pub get
 
-# Start development server
-npm run dev
+# 3. Generate Freezed/serialization code (required after every clone)
+dart run build_runner build --delete-conflicting-outputs
+
+# 4. Install iOS pods
+cd ios && pod install --repo-update && cd ..
+
+# 5. Run the app
+flutter run
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the landing page, then navigate to `/map` for the interactive map.
+> **Note:** Accept Xcode license if prompted: `sudo xcodebuild -license`  
+> **Note:** If CocoaPods fails, try `cd ios && rm Podfile.lock && pod install --repo-update`
+
+---
 
 ## 📁 Project Structure
 
 ```
-├── app/
-│   ├── api/countries/     # Country search API
-│   ├── map/               # Map page (Server Component)
-│   └── page.tsx           # Landing page
-├── components/
-│   ├── landing/           # Hero, navigation, tech stack
-│   ├── map/               # Map components (controls, layers, search)
-│   └── ui/                # shadcn/ui components
-├── contexts/              # MapContext, ThemeContext
-├── hooks/                 # useLeafletMap, useMapControls, useMapTileProvider
-├── constants/             # Map config, tile providers
-└── types/                 # TypeScript definitions
+lib/
+├── core/
+│   └── utils/              # exif_extractor, geospatial helpers
+├── features/
+│   ├── auth/               # Firebase Auth datasource, Google Sign-In 7.x
+│   ├── map/                # Map display, routing, geolocator
+│   ├── submission/         # User-submitted bumps, photo upload, voting
+│   └── admin/              # Admin dashboard, submission review
+ios/
+│   ├── Podfile             # platform :ios, '15.0'
+│   └── Flutter/            # xcconfig files (Debug, Release, Profile)
 ```
 
-## 🗺 Map Components
+---
 
-| Component             | Description                                 |
-| --------------------- | ------------------------------------------- |
-| `LeafletMap`          | Core map container with initialization      |
-| `LeafletTileLayer`    | Dynamic tile layer switching                |
-| `LeafletGeoJSON`      | GeoJSON rendering with styling              |
-| `LeafletMarker`       | Custom markers with popups                  |
-| `MapControls`         | Zoom, fullscreen, location, reset           |
-| `MapTileSwitcher`     | Tile provider switcher with previews        |
-| `MapSearchBar`        | Country search with autocomplete            |
-| `MapContextMenu`      | Right-click menu for quick actions          |
-| `MapPOIPanel`         | POI management with CRUD operations         |
-| `MapMeasurementPanel` | Distance and area measurement tools         |
-| `MapDetailsPanel`     | Country information with REST Countries API |
-| `MapErrorBoundary`    | Error handling with fallback UI             |
+## 🗺️ Routing Strategy
 
-## 🎨 Customization
+1. Calculate standard route via **HERE Routing API** (`avoid[segments]` parameter)
+2. Check if route intersects speed bump locations (10–50m buffer using **Turf.js**)
+3. If intersections found → add waypoints to force route around bumps
+4. Recalculate and return the smoothest valid route
 
-### Default Map View
+---
 
-Edit `constants/map-config.ts`:
+## 🤖 AI / Computer Vision (Post-MVP)
 
-```typescript
-export const DEFAULT_MAP_CONFIG: MapConfig = {
-  defaultCenter: [-2.911154, 120.074263], // Indonesia
-  defaultZoom: 5,
-  minZoom: 3,
-  maxZoom: 18,
-};
-```
+User-submitted photo flow:
+1. User uploads photo via mobile
+2. Send to **RoboFlow** hosted inference API
+3. Model returns detection confidence + bounding boxes
+4. If confidence > 80% → extract GPS from photo EXIF data
+5. Add to database under `pending` status for community verification
+6. 3+ upvotes → promote to `verified` layer
 
-### Add Tile Providers
+Models available:
+- Speed Bumps Detection (1,212 images)
+- Speed Bump by Road Safety (1,415 images)
+- YOLOv8: 90% accuracy, 31.76 FPS, mobile-capable
 
-Edit `constants/tile-providers.ts`:
+---
 
-```typescript
-export const TILE_PROVIDERS: TileProvider[] = [
-  {
-    id: "custom",
-    name: "Custom Map",
-    url: "https://your-tile-server/{z}/{x}/{y}.png",
-    attribution: "© Your Attribution",
-    maxZoom: 19,
-    category: "standard",
-  },
-  // ...existing providers
-];
-```
+## 🔒 Privacy
 
-## 📜 Scripts
+- ❌ No exact user location history stored (only anonymized route patterns)
+- ✅ Anonymous submission option
+- ✅ EXIF data stripped except GPS before public display
+- ✅ GDPR/CCPA compliant (data deletion on request)
 
-```bash
-npm run dev      # Start development server
-npm run build    # Build for production
-npm run start    # Start production server
-npm run lint     # Run ESLint
-```
+---
 
-## 🚢 Deploy to Vercel
+## 🎯 Roadmap & Success Metrics
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/wellywahyudi/nextjs-leaflet-starter)
+| Phase | Timeline   | Goal                         | Key Metric                       |
+| ----- | ---------- | ---------------------------- | -------------------------------- |
+| 0     | Weeks 1–4  | Pre-launch validation        | 500+ email signups               |
+| 1     | Weeks 5–12 | MVP launch                   | 1,000 downloads, 4.0+ stars      |
+| 2     | Weeks 13–20| Accelerometer + community    | 5,000 users, 50K severity points |
+| 3     | Weeks 21–32| Gamification + monetization  | 500 premium subscribers, $2.5K MRR |
+| 4     | Weeks 33–48| Full launch + media          | 25,000 users, $10K MRR           |
+| 5     | Year 2+    | Multi-city expansion         | 100K users, 100 cities           |
 
-### Manual Deployment
+---
 
-1. Install Vercel CLI:
+## 📚 Resources
 
-```bash
-npm i -g vercel
-```
+- [OpenDataPhilly](https://opendataphilly.org)
+- [HERE Routing API Docs](https://developer.here.com/documentation/routing-api/)
+- [Mapbox Directions API](https://docs.mapbox.com/api/navigation/directions/)
+- [RoboFlow Universe](https://universe.roboflow.com) — search "speed bump"
+- [YOLOv8 Documentation](https://docs.ultralytics.com/)
+- [FixMyStreet (open source reference)](https://fixmystreet.org)
 
-2. Deploy:
-
-```bash
-vercel
-```
-
-3. Follow the prompts to link your project
-
-### Environment Variables
-
-No environment variables required for basic deployment. The app uses public GeoJSON data from the `/public/data` directory.
-
-## 📊 Production Readiness
-
-This starter is production-ready with:
-
-- ✅ Error boundaries and graceful fallbacks
-- ✅ Optimized bundle size with code splitting
-- ✅ Memory leak prevention with proper cleanup
-- ✅ Toast notifications instead of blocking alerts
-- ✅ TypeScript strict mode
-- ✅ Responsive design (mobile-first)
-- ✅ Accessibility features (ARIA labels, keyboard navigation)
-- ✅ Dark mode support
+---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions welcome! Please open an issue first to discuss what you'd like to change.
 
 ## 📄 License
 
-MIT License — feel free to use this starter for personal or commercial projects.
+MIT License
