@@ -126,6 +126,8 @@ function MapMainInner() {
   const [activeTab, setActiveTab] = useState<TabId>("explore");
   // Brand header is a startup splash only — it fades away once the app is in use
   const [showBrand, setShowBrand] = useState(true);
+  // Opt-in immersive mode (expand button): hides the overlay chrome
+  const [isImmersive, setIsImmersive] = useState(false);
   const [routeSnap, setRouteSnap] = useState<number | string | null>(ROUTE_SHEET_SNAP_POINTS[1]);
   const [viewportH, setViewportH] = useState(0);
   const [isSelectingReportLocation, setIsSelectingReportLocation] = useState(false);
@@ -362,9 +364,9 @@ function MapMainInner() {
       {!routing.isNavigating && (
         <nav
           className={`fixed top-0 w-full z-[1002] flex justify-between items-center px-6 py-4 bg-transparent transition-all duration-700 ${
-            showBrand ? "opacity-100" : "opacity-0 -translate-y-4 pointer-events-none"
+            showBrand && !isImmersive ? "opacity-100" : "opacity-0 -translate-y-4 pointer-events-none"
           }`}
-          aria-hidden={!showBrand}
+          aria-hidden={!showBrand || isImmersive}
         >
           <div className="flex items-center gap-3">
             <svg className="w-7 h-7 text-[#2196F3]" viewBox="0 0 24 24" fill="currentColor">
@@ -402,12 +404,14 @@ function MapMainInner() {
         />
       )}
 
-      {/* Search / Route bar — Velocity Dark glass style; rises to the top once the brand splash fades */}
+      {/* Search / Route bar — Velocity Dark glass style. Stays put (stable);
+          hidden only in opt-in immersive mode */}
       {!routing.isNavigating && (
         <div
-          className={`absolute left-0 right-0 sm:left-6 sm:right-auto z-[1001] px-4 sm:px-0 transition-all duration-700 ${
-            showBrand ? "top-20" : "top-5"
+          className={`absolute left-0 right-0 sm:left-6 sm:right-auto top-20 z-[1001] px-4 sm:px-0 transition-all duration-500 ${
+            isImmersive ? "opacity-0 -translate-y-4 pointer-events-none" : "opacity-100"
           }`}
+          aria-hidden={isImmersive}
         >
           <div className="flex items-center gap-3">
           <div className="flex items-center gap-3 glass-panel ghost-border px-5 py-4 shadow-2xl rounded-full w-full sm:w-[380px]">
@@ -488,8 +492,8 @@ function MapMainInner() {
       )}
 
       {/* Floating Category Pills (Desktop) */}
-      {!routing.isNavigating && !hasRoute && (
-        <div className={`absolute right-6 left-[28rem] hidden lg:flex overflow-x-auto hide-scrollbar gap-3 pb-4 z-[1001] transition-all duration-700 ${showBrand ? "top-20" : "top-5"}`}>
+      {!routing.isNavigating && !hasRoute && !isImmersive && (
+        <div className="absolute top-20 right-6 left-[28rem] hidden lg:flex overflow-x-auto hide-scrollbar gap-3 pb-4 z-[1001]">
           {[
             { icon: "🍽️", label: "Restaurants" },
             { icon: "🏨", label: "Hotels" },
@@ -508,13 +512,13 @@ function MapMainInner() {
       )}
 
       {/* Location tracking badge — Velocity Dark style */}
-      {!isTracking && (
-        <div className={`absolute right-4 z-[1001] px-3 py-1.5 glass-panel ghost-border text-[#FF6B00] text-xs font-bold rounded-full shadow uppercase tracking-wider transition-all duration-700 ${showBrand ? "top-16" : "top-[5.25rem]"}`}>
+      {!isTracking && !isImmersive && (
+        <div className="absolute top-16 right-4 z-[1001] px-3 py-1.5 glass-panel ghost-border text-[#FF6B00] text-xs font-bold rounded-full shadow uppercase tracking-wider">
           Location off
         </div>
       )}
-      {isTracking && location && location.accuracy > 20 && (
-        <div className={`absolute right-4 z-[1001] px-3 py-1.5 glass-panel ghost-border text-[#FF6B00] text-xs font-bold rounded-full shadow uppercase tracking-wider transition-all duration-700 ${showBrand ? "top-16" : "top-[5.25rem]"}`}>
+      {isTracking && location && location.accuracy > 20 && !isImmersive && (
+        <div className="absolute top-16 right-4 z-[1001] px-3 py-1.5 glass-panel ghost-border text-[#FF6B00] text-xs font-bold rounded-full shadow uppercase tracking-wider">
           GPS: {Math.round(location.accuracy)}m
         </div>
       )}
@@ -523,7 +527,12 @@ function MapMainInner() {
       <MapTileSwitcher selectedProviderId={currentProviderId} onProviderChange={setProviderId} />
 
       {/* Map Controls */}
-      <MapControls bottomOffset={controlsBottom} hidden={controlsHidden} />
+      <MapControls
+        bottomOffset={controlsBottom}
+        hidden={controlsHidden}
+        isImmersive={isImmersive}
+        onToggleImmersive={() => setIsImmersive((p) => !p)}
+      />
 
       {/* Measurement Panel */}
       <MapMeasurementPanel isOpen={isMeasurementOpen} onClose={() => setIsMeasurementOpen(false)} />

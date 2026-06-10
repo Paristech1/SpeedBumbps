@@ -17,11 +17,16 @@ interface MapControlsProps {
   bottomOffset?: number;
   /** Fade out (e.g. when a sheet covers most of the screen). */
   hidden?: boolean;
+  /** Immersive mode hides the overlay chrome (search bar etc.). */
+  isImmersive?: boolean;
+  onToggleImmersive?: () => void;
 }
 
 export const MapControls = memo(function MapControls({
   bottomOffset = 128,
   hidden = false,
+  isImmersive = false,
+  onToggleImmersive,
 }: MapControlsProps) {
   const { map, zoomIn, zoomOut, toggleFullscreen, isFullscreenAvailable, resetView } =
     useMapControls();
@@ -116,21 +121,25 @@ export const MapControls = memo(function MapControls({
         </svg>
       </button>
 
-      {/* Fullscreen — hidden where the browser has no fullscreen API */}
-      {canFullscreen && (
-        <button
-          onClick={toggleFullscreen}
-          className="glass-panel w-14 h-14 rounded-full flex items-center justify-center text-[#e2e2eb] shadow-2xl ghost-border hover:bg-[#373940] transition-all"
-          title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-          aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-        >
-          {isFullscreen ? (
-            <Minimize2 className="h-5 w-5" />
-          ) : (
-            <Maximize2 className="h-5 w-5" />
-          )}
-        </button>
-      )}
+      {/* Immersive view — hides the overlay chrome; also enters real
+          fullscreen where the browser supports it (not iPhone Safari) */}
+      <button
+        onClick={() => {
+          onToggleImmersive?.();
+          if (canFullscreen) toggleFullscreen();
+        }}
+        className={`glass-panel w-14 h-14 rounded-full flex items-center justify-center shadow-2xl ghost-border transition-all active:scale-90 ${
+          isImmersive ? "text-[#9ecaff] bg-[#9ecaff]/10" : "text-[#e2e2eb] hover:bg-[#373940]"
+        }`}
+        title={isImmersive ? "Exit immersive view" : "Immersive view"}
+        aria-label={isImmersive ? "Exit immersive view" : "Immersive view"}
+      >
+        {isImmersive || isFullscreen ? (
+          <Minimize2 className="h-5 w-5" />
+        ) : (
+          <Maximize2 className="h-5 w-5" />
+        )}
+      </button>
     </div>
   );
 });
