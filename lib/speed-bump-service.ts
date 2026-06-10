@@ -15,10 +15,21 @@ interface RawSpeedBump {
 }
 
 let cachedBumps: SpeedBump[] | null = null;
+let userBumps: SpeedBump[] = [];
 
-/** Load all speed bumps from the JSON asset (cached after first call). */
+/** Replace the set of user-reported bumps merged into loadAllBumps(). */
+export function setUserReportedBumps(bumps: SpeedBump[]): void {
+  userBumps = bumps;
+}
+
+/** Current user-reported bumps. */
+export function getUserReportedBumps(): SpeedBump[] {
+  return userBumps;
+}
+
+/** Load all speed bumps: JSON asset (cached after first fetch) + user reports. */
 export async function loadAllBumps(): Promise<SpeedBump[]> {
-  if (cachedBumps !== null) return cachedBumps;
+  if (cachedBumps !== null) return [...cachedBumps, ...userBumps];
 
   const response = await fetch('/data/phl_speed_bumps.json');
   if (!response.ok) {
@@ -31,9 +42,10 @@ export async function loadAllBumps(): Promise<SpeedBump[]> {
     location: { lat: item.lat, lng: item.lng },
     severity: 3, // default severity (matching Flutter defaults)
     isVerified: true,
+    source: 'dataset' as const,
   }));
 
-  return cachedBumps;
+  return [...cachedBumps, ...userBumps];
 }
 
 /** Get speed bumps within a bounding box. */

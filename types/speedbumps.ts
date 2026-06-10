@@ -12,6 +12,7 @@ export interface SpeedBump {
   location: LatLng;
   severity: number; // 1–5
   isVerified: boolean;
+  source?: 'dataset' | 'user';
 }
 
 export interface RouteStep {

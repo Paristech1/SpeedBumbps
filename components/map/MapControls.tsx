@@ -12,7 +12,17 @@ import { useGeolocation } from "@/hooks/useGeolocation";
  * Design: Glass-panel containers with ghost-borders per the
  * Kinetic Luminescence design spec.
  */
-export const MapControls = memo(function MapControls() {
+interface MapControlsProps {
+  /** Distance in px from the viewport bottom (clears bottom nav / open sheets). */
+  bottomOffset?: number;
+  /** Fade out (e.g. when a sheet covers most of the screen). */
+  hidden?: boolean;
+}
+
+export const MapControls = memo(function MapControls({
+  bottomOffset = 128,
+  hidden = false,
+}: MapControlsProps) {
   const { map, zoomIn, zoomOut, toggleFullscreen, resetView } =
     useMapControls();
   const { locateUser, isLocating, isAvailable } = useGeolocation();
@@ -31,7 +41,12 @@ export const MapControls = memo(function MapControls() {
   }, []);
 
   return (
-    <div className="absolute bottom-32 sm:bottom-32 right-6 flex flex-col items-center gap-3 z-[1000]">
+    <div
+      className={`absolute right-6 flex flex-col items-center gap-3 z-[1000] transition-[bottom,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        hidden ? "opacity-0 pointer-events-none" : ""
+      }`}
+      style={{ bottom: bottomOffset }}
+    >
       {/* Zoom Controls — Glass container with ghost border */}
       <div className="glass-panel flex flex-col rounded-2xl shadow-2xl ghost-border overflow-hidden">
         <button

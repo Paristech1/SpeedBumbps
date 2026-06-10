@@ -9,8 +9,12 @@ import { MapMeasurementPanel } from "./MapMeasurementPanel";
 import { MapContextMenu } from "./MapContextMenu";
 import { MapPOIPanel } from "./MapPOIPanel";
 import { RoutePlanningPanel } from "./RoutePlanningPanel";
-import { RouteResultCard } from "./RouteResultCard";
+import { RouteResultCard, ROUTE_SHEET_SNAP_POINTS } from "./RouteResultCard";
 import { NavigationBar } from "./NavigationBar";
+import { BottomNavBar } from "./BottomNavBar";
+import { SavedPanel } from "./SavedPanel";
+import { ReportsPanel } from "./ReportsPanel";
+import { ProfilePanel } from "./ProfilePanel";
 import { useMapTileProvider } from "@/hooks/useMapTileProvider";
 import { useMapContextMenu } from "@/hooks/useMapContextMenu";
 import { useMapMarkers } from "@/hooks/useMapMarkers";
@@ -19,11 +23,15 @@ import { useSpeedBumpMarkers } from "@/hooks/useSpeedBumpMarkers";
 import { useRoutePolyline } from "@/hooks/useRoutePolyline";
 import { useLocationTracking, type UserLocation } from "@/hooks/useLocationTracking";
 import { useRouteDeviation } from "@/hooks/useRouteDeviation";
+import { useSavedRoutes } from "@/hooks/useSavedRoutes";
+import { useUserReports } from "@/hooks/useUserReports";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { RoutingProvider, useRouting, useSelectedRoute } from "@/contexts/RoutingContext";
 import { useLeafletMap } from "@/hooks/useLeafletMap";
 import type { POICategory } from "@/types/poi";
 import type { RouteAvoidanceProfile, LatLng } from "@/types/speedbumps";
-import { Navigation, X, MapPin, Loader2, Pencil } from "lucide-react";
+import type { SavedRoute, TabId } from "@/types/user-data";
+import { Navigation, X, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 /**
@@ -112,10 +120,18 @@ function MapMainInner() {
   const [isSelectingPOILocation, setIsSelectingPOILocation] = useState(false);
   const [cursorCoords, setCursorCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isRoutePlanningOpen, setIsRoutePlanningOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>("explore");
+  const [routeSnap, setRouteSnap] = useState<number | string | null>(ROUTE_SHEET_SNAP_POINTS[1]);
+  const [viewportH, setViewportH] = useState(0);
+  const [isSelectingReportLocation, setIsSelectingReportLocation] = useState(false);
+  const [reportPickedCoords, setReportPickedCoords] = useState<LatLng | null>(null);
 
   const routing = useRouting();
   const selectedRoute = useSelectedRoute();
   const { location, isTracking } = useLocationTracking();
+  const { savedRoutes, saveRoute, deleteRoute, isRouteSaved } = useSavedRoutes();
+  const { reports, addReport, deleteReport } = useUserReports();
+  const { profile, updateProfile, isLoaded: isProfileLoaded } = useUserProfile();
 
   const { tileProvider, currentProviderId, setProviderId } = useMapTileProvider();
   const { isOpen: isContextMenuOpen, position: contextMenuPosition, close: closeContextMenu } = useMapContextMenu();
@@ -140,6 +156,74 @@ function MapMainInner() {
     [routing]
   );
 
+  // Track viewport height for converting route-sheet snap points to px
+  useEffect(() => {
+    const update = () => setViewportH(window.innerHeight);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  // Apply the profile's default avoidance profile once it's hydrated
+  useEffect(() => {
+    if (isProfileLoaded) {
+      routing.setAvoidanceProfile(profile.defaultProfile);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isProfileLoaded]);
+
+  // New route result: reset sheet to default snap and return to the map
+  useEffect(() => {
+    if (routing.status === "success" && routing.result) {
+      setRouteSnap(ROUTE_SHEET_SNAP_POINTS[1]);
+      setActiveTab("explore");
+    }
+  }, [routing.status, routing.result]);
+
+  const handleTabChange = useCallback((tab: TabId) => {
+    setActiveTab(tab);
+    if (tab !== "reports") {
+      setIsSelectingReportLocation(false);
+      setReportPickedCoords(null);
+    }
+  }, []);
+
+  const handleRunSavedRoute = useCallback(
+    (route: SavedRoute) => {
+      setActiveTab("explore");
+      routing.calculateRoute(
+        route.origin,
+        route.destination,
+        route.originLabel,
+        route.destinationLabel,
+        route.profile
+      );
+    },
+    [routing]
+  );
+
+  const handleSaveRoute = useCallback(() => {
+    if (!routing.origin || !routing.destination || !selectedRoute) return;
+    if (isRouteSaved(routing.origin, routing.destination, routing.avoidanceProfile)) {
+      toast.info("Route already saved");
+      return;
+    }
+    saveRoute({
+      origin: routing.origin,
+      destination: routing.destination,
+      originLabel: routing.originLabel ?? "Origin",
+      destinationLabel: routing.destinationLabel ?? "Destination",
+      profile: routing.avoidanceProfile,
+      summary: {
+        durationSeconds: selectedRoute.durationSeconds,
+        distanceMeters: selectedRoute.distanceMeters,
+        speedBumpCount: selectedRoute.speedBumpCount,
+        isSpeedBumpFree: selectedRoute.isSpeedBumpFree,
+      },
+    });
+    toast.success("Route saved");
+  }, [routing, selectedRoute, isRouteSaved, saveRoute]);
+
   const handleAddMarker = useCallback((lat: number, lng: number) => { addMarker(lat, lng); }, [addMarker]);
   const handleContextMenuMeasurement = useCallback(() => { setIsMeasurementOpen(true); }, []);
   const handleContextMenuAddPOI = useCallback((lat: number, lng: number) => {
@@ -157,12 +241,17 @@ function MapMainInner() {
   }, []);
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
+    if (isSelectingReportLocation) {
+      setReportPickedCoords({ lat, lng });
+      setIsSelectingReportLocation(false);
+      return;
+    }
     if (isSelectingPOILocation) {
       setPOIInitialCoords({ lat, lng });
       setIsSelectingPOILocation(false);
       setCursorCoords(null);
     }
-  }, [isSelectingPOILocation]);
+  }, [isSelectingPOILocation, isSelectingReportLocation]);
 
   const handleMapMouseMove = useCallback((lat: number, lng: number) => {
     if (isSelectingPOILocation) setCursorCoords({ lat, lng });
@@ -192,6 +281,18 @@ function MapMainInner() {
 
   const hasRoute = routing.status === "success" && !!routing.result;
 
+  // Keep map controls above whichever sheet is open
+  const routeSheetVisible = hasRoute && !routing.isNavigating;
+  const snapToPx = (s: number | string | null): number => {
+    if (typeof s === "string") return parseInt(s, 10) || 0;
+    if (typeof s === "number") return Math.round(s * viewportH);
+    return 0;
+  };
+  const controlsBottom = routeSheetVisible ? snapToPx(routeSnap) + 16 : 128;
+  const controlsHidden =
+    (routeSheetVisible && typeof routeSnap === "number" && routeSnap >= 0.8) ||
+    activeTab !== "explore";
+
   return (
     <div className="relative h-screen w-full overflow-hidden bg-[#111319]">
       {/* Map */}
@@ -199,7 +300,7 @@ function MapMainInner() {
         className="w-full h-full"
         onClick={handleMapClick}
         onMouseMove={handleMapMouseMove}
-        cursorStyle={isSelectingPOILocation ? "crosshair" : "grab"}
+        cursorStyle={isSelectingPOILocation || isSelectingReportLocation ? "crosshair" : "grab"}
       >
         <LeafletTileLayer
           url={tileLayerProps.url}
@@ -227,11 +328,15 @@ function MapMainInner() {
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
               </svg>
             </button>
-            <div className="w-10 h-10 rounded-full border-2 border-[#2196F3]/20 overflow-hidden shadow-2xl shadow-blue-500/10">
+            <button
+              onClick={() => handleTabChange("profile")}
+              className="w-10 h-10 rounded-full border-2 border-[#2196F3]/20 overflow-hidden shadow-2xl shadow-blue-500/10 active:scale-95 transition-transform"
+              aria-label="Open profile"
+            >
               <div className="w-full h-full bg-gradient-to-br from-[#2196F3] to-[#00BCD4] flex items-center justify-center text-white font-bold text-sm">
-                P
+                {profile.displayName.charAt(0).toUpperCase() || "P"}
               </div>
-            </div>
+            </button>
           </div>
         </nav>
       )}
@@ -383,7 +488,7 @@ function MapMainInner() {
       <MapTileSwitcher selectedProviderId={currentProviderId} onProviderChange={setProviderId} />
 
       {/* Map Controls */}
-      <MapControls />
+      <MapControls bottomOffset={controlsBottom} hidden={controlsHidden} />
 
       {/* Measurement Panel */}
       <MapMeasurementPanel isOpen={isMeasurementOpen} onClose={() => setIsMeasurementOpen(false)} />
@@ -429,6 +534,7 @@ function MapMainInner() {
         userLocation={location?.position}
         onPlanRoute={handlePlanRoute}
         initialDestLabel={routing.destinationLabel}
+        initialProfile={routing.avoidanceProfile}
       />
 
       {/* Route Result Card — hidden during active navigation */}
@@ -439,38 +545,56 @@ function MapMainInner() {
           onToggleRoute={routing.toggleRoute}
           onClearRoute={() => { routing.clearRoute(); }}
           onStartNavigation={routing.startNavigation}
+          onSaveRoute={handleSaveRoute}
+          isRouteSaved={
+            !!routing.origin &&
+            !!routing.destination &&
+            isRouteSaved(routing.origin, routing.destination, routing.avoidanceProfile)
+          }
+          snap={routeSnap}
+          onSnapChange={setRouteSnap}
         />
       )}
 
+      {/* Saved / Reports / Profile tab drawers */}
+      <SavedPanel
+        isOpen={activeTab === "saved"}
+        onClose={() => handleTabChange("explore")}
+        pois={pois}
+        onFlyToPOI={flyToPOI}
+        onDeletePOI={deletePOI}
+        savedRoutes={savedRoutes}
+        onRunSavedRoute={handleRunSavedRoute}
+        onDeleteSavedRoute={deleteRoute}
+      />
+      <ReportsPanel
+        isOpen={activeTab === "reports"}
+        onClose={() => handleTabChange("explore")}
+        reports={reports}
+        onAddReport={addReport}
+        onDeleteReport={deleteReport}
+        userLocation={location?.position ?? null}
+        isPickingLocation={isSelectingReportLocation}
+        onTogglePickLocation={() => setIsSelectingReportLocation((p) => !p)}
+        pickedLocation={reportPickedCoords}
+        onClearPickedLocation={() => setReportPickedCoords(null)}
+      />
+      <ProfilePanel
+        isOpen={activeTab === "profile"}
+        onClose={() => handleTabChange("explore")}
+        profile={profile}
+        onUpdateProfile={updateProfile}
+        stats={{ places: pois.length, routes: savedRoutes.length, reports: reports.length }}
+        onAvoidanceProfileChange={routing.setAvoidanceProfile}
+      />
+
       {/* === BOTTOM NAVIGATION BAR (Velocity Dark shared component) === */}
       {!routing.isNavigating && (
-        <nav className="fixed bottom-0 left-0 w-full z-[1001] flex justify-around items-center px-4 pb-8 pt-4 bg-[#111319]/80 backdrop-blur-xl rounded-t-[32px] border-t border-slate-700/20 shadow-[0_-8px_30px_rgb(0,0,0,0.5)]">
-          <a className="flex flex-col items-center justify-center bg-blue-500/20 text-blue-300 rounded-[24px] px-5 py-2 active:scale-90 duration-150 group" href="#">
-            <svg className="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
-            <span className="font-[var(--font-body)] text-[10px] font-semibold uppercase tracking-widest">Explore</span>
-          </a>
-          <a className="flex flex-col items-center justify-center text-slate-500 px-5 py-2 hover:text-blue-200 transition-all active:scale-90 duration-150" href="#">
-            <svg className="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-            <span className="font-[var(--font-body)] text-[10px] font-semibold uppercase tracking-widest">Saved</span>
-          </a>
-          {/* SpeedBumps Signature FAB */}
-          <div className="relative -top-8">
-            <button
-              onClick={() => setIsRoutePlanningOpen(true)}
-              className="w-16 h-16 rounded-full bg-gradient-to-br from-[#9ecaff] to-[#2196F3] flex items-center justify-center text-[#003258] shadow-[0_0_30px_rgba(33,150,243,0.5)] border-4 border-[#111319] active:scale-95 transition-all"
-            >
-              <MapPin className="w-7 h-7" />
-            </button>
-          </div>
-          <a className="flex flex-col items-center justify-center text-slate-500 px-5 py-2 hover:text-blue-200 transition-all active:scale-90 duration-150" href="#">
-            <svg className="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            <span className="font-[var(--font-body)] text-[10px] font-semibold uppercase tracking-widest">Reports</span>
-          </a>
-          <a className="flex flex-col items-center justify-center text-slate-500 px-5 py-2 hover:text-blue-200 transition-all active:scale-90 duration-150" href="#">
-            <svg className="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span className="font-[var(--font-body)] text-[10px] font-semibold uppercase tracking-widest">Profile</span>
-          </a>
-        </nav>
+        <BottomNavBar
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          onFabClick={() => setIsRoutePlanningOpen(true)}
+        />
       )}
     </div>
   );

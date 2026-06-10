@@ -24,9 +24,11 @@ interface RoutePlanningPanelProps {
   ) => void;
   /** Pre-fill the destination label when re-opening after a route is active */
   initialDestLabel?: string;
+  /** Pre-select vehicle/mode (e.g. the profile's defaults) on open */
+  initialProfile?: RouteAvoidanceProfile;
 }
 
-const VEHICLE_OPTIONS: { id: VehicleProfile; label: string; emoji: string }[] = [
+export const VEHICLE_OPTIONS: { id: VehicleProfile; label: string; emoji: string }[] = [
   { id: 'sedan', label: 'Sedan', emoji: '🚗' },
   { id: 'suv', label: 'SUV', emoji: '🚙' },
   { id: 'lowered', label: 'Lowered', emoji: '🏎️' },
@@ -34,7 +36,7 @@ const VEHICLE_OPTIONS: { id: VehicleProfile; label: string; emoji: string }[] = 
   { id: 'bicycle', label: 'Bicycle', emoji: '🚲' },
 ];
 
-const MODE_OPTIONS: { id: RoutePreferenceMode; label: string; description: string; icon: string }[] = [
+export const MODE_OPTIONS: { id: RoutePreferenceMode; label: string; description: string; icon: string }[] = [
   { id: 'smoothRide', label: 'Smooth Ride', description: 'Avoids all bumps & dips', icon: '🛣️' },
   { id: 'balanced', label: 'Balanced', description: 'Optimal time vs. road quality', icon: '⚖️' },
   { id: 'fastest', label: 'Fastest', description: 'Shortest arrival time possible', icon: '⚡' },
@@ -46,6 +48,7 @@ export function RoutePlanningPanel({
   userLocation,
   onPlanRoute,
   initialDestLabel,
+  initialProfile,
 }: RoutePlanningPanelProps) {
   const [useMyLocation, setUseMyLocation] = useState(true);
   const [originQuery, setOriginQuery] = useState('');
@@ -64,9 +67,13 @@ export function RoutePlanningPanel({
 
   // Reset on open — snapshot initialDestLabel at open time only (not on every re-render)
   const initialDestLabelRef = useRef(initialDestLabel);
+  const initialProfileRef = useRef(initialProfile);
+  initialProfileRef.current = initialProfile;
   useEffect(() => {
     if (isOpen) {
       initialDestLabelRef.current = initialDestLabel;
+      setVehicle(initialProfileRef.current?.vehicle ?? 'sedan');
+      setMode(initialProfileRef.current?.mode ?? 'balanced');
       setUseMyLocation(true);
       setOriginQuery('');
       setSelectedOrigin(null);

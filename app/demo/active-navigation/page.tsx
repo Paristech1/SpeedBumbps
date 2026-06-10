@@ -7,7 +7,7 @@
 
 import { useState, useCallback } from "react";
 import { Navigation, X, ArrowBigUp } from "lucide-react";
-import { RouteResultCard } from "@/components/map/RouteResultCard";
+import { RouteResultCard, ROUTE_SHEET_SNAP_POINTS } from "@/components/map/RouteResultCard";
 import type { RouteCalculationResult } from "@/types/speedbumps";
 
 const DEMO_RESULT: RouteCalculationResult = {
@@ -73,6 +73,7 @@ const DEMO_RESULT: RouteCalculationResult = {
 
 export default function ActiveNavigationDemoPage() {
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<0 | 1>(0);
+  const [sheetSnap, setSheetSnap] = useState<number | string | null>(ROUTE_SHEET_SNAP_POINTS[1]);
 
   const onToggleRoute = useCallback(() => {
     setSelectedRouteIndex((i) => (i === 0 ? 1 : 0));
@@ -156,6 +157,10 @@ export default function ActiveNavigationDemoPage() {
         onToggleRoute={onToggleRoute}
         onClearRoute={onClearRoute}
         onStartNavigation={() => {}}
+        onSaveRoute={() => {}}
+        isRouteSaved={false}
+        snap={sheetSnap}
+        onSnapChange={setSheetSnap}
       />
     </div>
   );
