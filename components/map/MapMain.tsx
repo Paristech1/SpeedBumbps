@@ -121,6 +121,8 @@ function MapMainInner() {
   const [cursorCoords, setCursorCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isRoutePlanningOpen, setIsRoutePlanningOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("explore");
+  // Brand header is a startup splash only — it fades away once the app is in use
+  const [showBrand, setShowBrand] = useState(true);
   const [routeSnap, setRouteSnap] = useState<number | string | null>(ROUTE_SHEET_SNAP_POINTS[1]);
   const [viewportH, setViewportH] = useState(0);
   const [isSelectingReportLocation, setIsSelectingReportLocation] = useState(false);
@@ -162,6 +164,12 @@ function MapMainInner() {
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
+  }, []);
+
+  // Retire the brand header shortly after launch
+  useEffect(() => {
+    const timer = setTimeout(() => setShowBrand(false), 3000);
+    return () => clearTimeout(timer);
   }, []);
 
   // vaul 1.1.2 doesn't forward modal={false} to Radix Dialog, which sets
@@ -326,9 +334,14 @@ function MapMainInner() {
         <SpeedBumpsMap location={location} />
       </LeafletMap>
 
-      {/* === TOP NAV BAR (Velocity Dark shared component) === */}
+      {/* === TOP NAV BAR — startup splash only, fades once the app is in use === */}
       {!routing.isNavigating && (
-        <nav className="fixed top-0 w-full z-[1002] flex justify-between items-center px-6 py-4 bg-transparent">
+        <nav
+          className={`fixed top-0 w-full z-[1002] flex justify-between items-center px-6 py-4 bg-transparent transition-all duration-700 ${
+            showBrand ? "opacity-100" : "opacity-0 -translate-y-4 pointer-events-none"
+          }`}
+          aria-hidden={!showBrand}
+        >
           <div className="flex items-center gap-3">
             <svg className="w-7 h-7 text-[#2196F3]" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
@@ -365,9 +378,14 @@ function MapMainInner() {
         />
       )}
 
-      {/* Search / Route bar — Velocity Dark glass style */}
+      {/* Search / Route bar — Velocity Dark glass style; rises to the top once the brand splash fades */}
       {!routing.isNavigating && (
-        <div className="absolute left-0 right-0 sm:left-6 sm:right-auto top-20 z-[1001] px-4 sm:px-0">
+        <div
+          className={`absolute left-0 right-0 sm:left-6 sm:right-auto z-[1001] px-4 sm:px-0 transition-all duration-700 ${
+            showBrand ? "top-20" : "top-5"
+          }`}
+        >
+          <div className="flex items-center gap-3">
           <div className="flex items-center gap-3 glass-panel ghost-border px-5 py-4 shadow-2xl rounded-full w-full sm:w-[380px]">
             {hasRoute ? (
               <>
@@ -423,6 +441,19 @@ function MapMainInner() {
               </button>
             )}
           </div>
+          {/* Inline avatar — takes over profile access after the brand splash retires */}
+          {!showBrand && (
+            <button
+              onClick={() => handleTabChange(activeTab === "profile" ? "explore" : "profile")}
+              className="w-11 h-11 shrink-0 rounded-full border-2 border-[#2196F3]/20 overflow-hidden shadow-2xl shadow-blue-500/10 active:scale-95 transition-transform animate-in fade-in duration-500"
+              aria-label="Open profile"
+            >
+              <div className="w-full h-full bg-gradient-to-br from-[#2196F3] to-[#00BCD4] flex items-center justify-center text-white font-bold text-sm">
+                {profile.displayName.charAt(0).toUpperCase() || "P"}
+              </div>
+            </button>
+          )}
+          </div>
           {routing.status === "error" && routing.error && (
             <div className="mt-2 px-4 py-2 bg-[#93000a]/30 text-[#ffb4ab] text-sm rounded-xl shadow ghost-border">
               {routing.error}
@@ -476,7 +507,7 @@ function MapMainInner() {
 
       {/* Floating Category Pills (Desktop) */}
       {!routing.isNavigating && !hasRoute && (
-        <div className="absolute top-20 right-6 left-[28rem] hidden lg:flex overflow-x-auto hide-scrollbar gap-3 pb-4 z-[1001]">
+        <div className={`absolute right-6 left-[28rem] hidden lg:flex overflow-x-auto hide-scrollbar gap-3 pb-4 z-[1001] transition-all duration-700 ${showBrand ? "top-20" : "top-5"}`}>
           {[
             { icon: "🍽️", label: "Restaurants" },
             { icon: "🏨", label: "Hotels" },
@@ -496,12 +527,12 @@ function MapMainInner() {
 
       {/* Location tracking badge — Velocity Dark style */}
       {!isTracking && (
-        <div className="absolute top-16 right-4 z-[1001] px-3 py-1.5 glass-panel ghost-border text-[#FF6B00] text-xs font-bold rounded-full shadow uppercase tracking-wider">
+        <div className={`absolute right-4 z-[1001] px-3 py-1.5 glass-panel ghost-border text-[#FF6B00] text-xs font-bold rounded-full shadow uppercase tracking-wider transition-all duration-700 ${showBrand ? "top-16" : "top-[5.25rem]"}`}>
           Location off
         </div>
       )}
       {isTracking && location && location.accuracy > 20 && (
-        <div className="absolute top-16 right-4 z-[1001] px-3 py-1.5 glass-panel ghost-border text-[#FF6B00] text-xs font-bold rounded-full shadow uppercase tracking-wider">
+        <div className={`absolute right-4 z-[1001] px-3 py-1.5 glass-panel ghost-border text-[#FF6B00] text-xs font-bold rounded-full shadow uppercase tracking-wider transition-all duration-700 ${showBrand ? "top-16" : "top-[5.25rem]"}`}>
           GPS: {Math.round(location.accuracy)}m
         </div>
       )}
