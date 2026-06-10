@@ -75,7 +75,7 @@ export function RouteResultCard({
           <Drawer.Title className="sr-only">Route preview</Drawer.Title>
 
           {/* Handle */}
-          <div className="mx-auto mt-4 mb-4 h-1.5 w-12 shrink-0 rounded-full bg-[#404752]/30" />
+          <div className="mx-auto mt-4 mb-4 h-1.5 w-12 shrink-0 rounded-full bg-[#89919d]/70" />
 
           {/* Route summary — large ETA style from stitch */}
           <div className="flex items-end gap-4 px-6 mb-4 shrink-0">

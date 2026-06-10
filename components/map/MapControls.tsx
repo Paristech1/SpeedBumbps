@@ -23,22 +23,28 @@ export const MapControls = memo(function MapControls({
   bottomOffset = 128,
   hidden = false,
 }: MapControlsProps) {
-  const { map, zoomIn, zoomOut, toggleFullscreen, resetView } =
+  const { map, zoomIn, zoomOut, toggleFullscreen, isFullscreenAvailable, resetView } =
     useMapControls();
   const { locateUser, isLocating, isAvailable } = useGeolocation();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [canFullscreen, setCanFullscreen] = useState(false);
 
-  // Listen for fullscreen changes
+  // Listen for fullscreen changes; hide the button where the API doesn't exist (e.g. iPhone Safari)
   useEffect(() => {
+    // capability detection must run post-mount (SSR can't know the browser)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCanFullscreen(isFullscreenAvailable());
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
     };
-  }, []);
+  }, [isFullscreenAvailable]);
 
   return (
     <div
@@ -110,19 +116,21 @@ export const MapControls = memo(function MapControls({
         </svg>
       </button>
 
-      {/* Fullscreen */}
-      <button
-        onClick={toggleFullscreen}
-        className="glass-panel w-14 h-14 rounded-full flex items-center justify-center text-[#e2e2eb] shadow-2xl ghost-border hover:bg-[#373940] transition-all"
-        title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-        aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-      >
-        {isFullscreen ? (
-          <Minimize2 className="h-5 w-5" />
-        ) : (
-          <Maximize2 className="h-5 w-5" />
-        )}
-      </button>
+      {/* Fullscreen — hidden where the browser has no fullscreen API */}
+      {canFullscreen && (
+        <button
+          onClick={toggleFullscreen}
+          className="glass-panel w-14 h-14 rounded-full flex items-center justify-center text-[#e2e2eb] shadow-2xl ghost-border hover:bg-[#373940] transition-all"
+          title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+          aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+        >
+          {isFullscreen ? (
+            <Minimize2 className="h-5 w-5" />
+          ) : (
+            <Maximize2 className="h-5 w-5" />
+          )}
+        </button>
+      )}
     </div>
   );
 });

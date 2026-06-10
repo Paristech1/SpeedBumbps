@@ -63,6 +63,7 @@ export function ProfilePanel({
       onOpenChange={(open) => { if (!open) onClose(); }}
       modal={false}
       noBodyStyles
+      repositionInputs={false}
       snapPoints={snapPoints}
       activeSnapPoint={snap}
       setActiveSnapPoint={setSnap}
@@ -73,7 +74,7 @@ export function ProfilePanel({
           className="fixed bottom-0 left-0 right-0 !z-[1055] h-full flex flex-col rounded-t-[24px] bg-[#191b22] shadow-[0_-20px_60px_rgba(0,0,0,0.5)] outline-none"
         >
           <Drawer.Title className="sr-only">Profile</Drawer.Title>
-          <div className="mx-auto mt-4 mb-4 h-1.5 w-12 shrink-0 rounded-full bg-[#404752]/30" />
+          <div className="mx-auto mt-4 mb-4 h-1.5 w-12 shrink-0 rounded-full bg-[#89919d]/70" />
 
           <div className="flex-1 overflow-y-auto hide-scrollbar px-6 pb-32 space-y-6">
             {/* Identity */}
@@ -105,7 +106,14 @@ export function ProfilePanel({
                     </button>
                   </div>
                 ) : (
-                  <button onClick={() => setIsEditingName(true)} className="flex items-center gap-2 text-left group">
+                  <button
+                    onClick={() => {
+                      // expand first so the on-screen keyboard can't push the field out of view
+                      setSnap(snapPoints[1]);
+                      setIsEditingName(true);
+                    }}
+                    className="flex items-center gap-2 text-left group"
+                  >
                     <span className="text-2xl font-[var(--font-headline)] font-bold text-[#e2e2eb] tracking-tight truncate">
                       {profile.displayName}
                     </span>

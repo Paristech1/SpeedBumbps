@@ -56,7 +56,7 @@ export function SavedPanel({
           className="fixed bottom-0 left-0 right-0 !z-[1055] h-full flex flex-col rounded-t-[24px] bg-[#191b22] shadow-[0_-20px_60px_rgba(0,0,0,0.5)] outline-none"
         >
           <Drawer.Title className="sr-only">Saved</Drawer.Title>
-          <div className="mx-auto mt-4 mb-4 h-1.5 w-12 shrink-0 rounded-full bg-[#404752]/30" />
+          <div className="mx-auto mt-4 mb-4 h-1.5 w-12 shrink-0 rounded-full bg-[#89919d]/70" />
 
           {/* Header */}
           <div className="flex items-center gap-4 px-6 mb-4 shrink-0">

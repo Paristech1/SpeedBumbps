@@ -153,7 +153,7 @@ export function RoutePlanningPanel({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag Handle */}
-        <div className="w-12 h-1.5 bg-[#404752]/30 rounded-full mx-auto mt-3 mb-6" />
+        <div className="w-12 h-1.5 bg-[#89919d]/70 rounded-full mx-auto mt-3 mb-6" />
 
         {/* Header */}
         <div className="flex justify-between items-center px-6 mb-8">

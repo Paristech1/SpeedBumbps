@@ -164,6 +164,21 @@ function MapMainInner() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  // vaul 1.1.2 doesn't forward modal={false} to Radix Dialog, which sets
+  // pointer-events:none on <body> while any drawer is open — locking the
+  // bottom nav, map and controls. Undo it whenever it gets applied.
+  useEffect(() => {
+    const restore = () => {
+      if (document.body.style.pointerEvents === "none") {
+        document.body.style.pointerEvents = "";
+      }
+    };
+    restore();
+    const observer = new MutationObserver(restore);
+    observer.observe(document.body, { attributes: true, attributeFilter: ["style"] });
+    return () => observer.disconnect();
+  }, []);
+
   // Apply the profile's default avoidance profile once it's hydrated
   useEffect(() => {
     if (isProfileLoaded) {
@@ -329,7 +344,7 @@ function MapMainInner() {
               </svg>
             </button>
             <button
-              onClick={() => handleTabChange("profile")}
+              onClick={() => handleTabChange(activeTab === "profile" ? "explore" : "profile")}
               className="w-10 h-10 rounded-full border-2 border-[#2196F3]/20 overflow-hidden shadow-2xl shadow-blue-500/10 active:scale-95 transition-transform"
               aria-label="Open profile"
             >
@@ -418,7 +433,7 @@ function MapMainInner() {
           {!hasRoute && routing.status !== "loading" && (
             <div className="mt-3 glass-panel ghost-border rounded-2xl p-2 grid grid-cols-4 gap-2 shadow-xl w-full sm:w-[380px]">
               <button
-                onClick={() => setIsMeasurementOpen(true)}
+                onClick={() => setIsMeasurementOpen((p) => !p)}
                 className="flex flex-col items-center justify-center gap-1 p-3 rounded-2xl hover:bg-[#373940] transition-all group"
               >
                 <svg className="w-5 h-5 text-[#44d8f1] group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -427,7 +442,14 @@ function MapMainInner() {
                 <span className="text-[10px] font-bold font-[var(--font-headline)] uppercase tracking-tighter text-[#bfc7d4]">Measure</span>
               </button>
               <button
-                onClick={() => { setIsPOIPanelOpen(true); setPOIPanelMode("list"); }}
+                onClick={() => {
+                  if (isPOIPanelOpen) {
+                    handleClosePOIPanel();
+                  } else {
+                    setIsPOIPanelOpen(true);
+                    setPOIPanelMode("list");
+                  }
+                }}
                 className="flex flex-col items-center justify-center gap-1 p-3 rounded-2xl hover:bg-[#373940] transition-all group"
               >
                 <svg className="w-5 h-5 text-[#44d8f1] group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -593,7 +615,7 @@ function MapMainInner() {
         <BottomNavBar
           activeTab={activeTab}
           onTabChange={handleTabChange}
-          onFabClick={() => setIsRoutePlanningOpen(true)}
+          onFabClick={() => setIsRoutePlanningOpen((p) => !p)}
         />
       )}
     </div>

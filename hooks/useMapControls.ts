@@ -22,13 +22,31 @@ export function useMapControls() {
     }, [map]);
 
     const toggleFullscreen = useCallback(() => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
+        const doc = document as Document & {
+            webkitFullscreenElement?: Element | null;
+            webkitExitFullscreen?: () => void;
+        };
+        const root = document.documentElement as HTMLElement & {
+            webkitRequestFullscreen?: () => void;
+        };
+        if (!document.fullscreenElement && !doc.webkitFullscreenElement) {
+            if (root.requestFullscreen) {
+                root.requestFullscreen();
+            } else {
+                root.webkitRequestFullscreen?.();
             }
+        } else if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else {
+            doc.webkitExitFullscreen?.();
         }
+    }, []);
+
+    const isFullscreenAvailable = useCallback(() => {
+        const root = document.documentElement as HTMLElement & {
+            webkitRequestFullscreen?: () => void;
+        };
+        return !!(root.requestFullscreen || root.webkitRequestFullscreen);
     }, []);
 
     const resetView = useCallback(() => {
@@ -42,6 +60,7 @@ export function useMapControls() {
         zoomIn,
         zoomOut,
         toggleFullscreen,
+        isFullscreenAvailable,
         resetView,
         map,
     };
