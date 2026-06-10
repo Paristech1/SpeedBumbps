@@ -12,7 +12,7 @@
  * - drop bumps whose snapped coordinate duplicates an earlier one (6 dp)
  * - ~1 request/second out of politeness to the public server
  *
- * Usage: node scripts/snap-bumps-to-roads.mjs
+ * Usage: node scripts/snap-bumps-to-roads.mjs (also runs via GitHub Actions on push)
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';

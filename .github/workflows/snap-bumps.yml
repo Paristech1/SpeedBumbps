@@ -6,6 +6,13 @@ name: Snap speed bumps to roads
 
 on:
   workflow_dispatch:
+  # The CI integration can't dispatch manually, so changes to the snap
+  # script also trigger a run. The data commit itself doesn't re-trigger
+  # (path filter excludes the JSON).
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/snap-bumps-to-roads.mjs'
 
 permissions:
   contents: write
