@@ -23,6 +23,8 @@ import { useSpeedBumpMarkers } from "@/hooks/useSpeedBumpMarkers";
 import { useRoutePolyline } from "@/hooks/useRoutePolyline";
 import { useLocationTracking, type UserLocation } from "@/hooks/useLocationTracking";
 import { useRouteDeviation } from "@/hooks/useRouteDeviation";
+import { useWakeLock } from "@/hooks/useWakeLock";
+import { primeVoice, speak, isSpeechSupported } from "@/lib/voice-guidance";
 import { useSavedRoutes } from "@/hooks/useSavedRoutes";
 import { useUserReports } from "@/hooks/useUserReports";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -94,6 +96,7 @@ function SpeedBumpsMap({ location }: { location: UserLocation | null }) {
     currentLocation: location?.position ?? null,
     onDeviated: () => {
       if (routing.origin && routing.destination) {
+        if (routing.isNavigating) speak("Recalculating route");
         routing.calculateRoute(
           routing.origin,
           routing.destination,
@@ -303,6 +306,27 @@ function MapMainInner() {
   }, [importGeoJSON]);
 
   const hasRoute = routing.status === "success" && !!routing.result;
+
+  // Keep the screen on while navigating (GPS and speech die when it locks)
+  useWakeLock(routing.isNavigating);
+
+  // Start tap = the iOS user gesture that unlocks speechSynthesis
+  const handleStartNavigation = useCallback(() => {
+    primeVoice();
+    if (isSpeechSupported()) {
+      try {
+        if (!localStorage.getItem("speedbumps-voice-hint-shown")) {
+          localStorage.setItem("speedbumps-voice-hint-shown", "true");
+          toast("Voice guidance is on — keep your screen on. On iPhone, the silent switch mutes voice.", {
+            duration: 6000,
+          });
+        }
+      } catch {
+        // storage unavailable — skip the hint
+      }
+    }
+    routing.startNavigation();
+  }, [routing]);
 
   // Keep map controls above whichever sheet is open
   const routeSheetVisible = hasRoute && !routing.isNavigating;
@@ -555,7 +579,7 @@ function MapMainInner() {
           selectedRouteIndex={routing.selectedRouteIndex}
           onToggleRoute={routing.toggleRoute}
           onClearRoute={() => { routing.clearRoute(); }}
-          onStartNavigation={routing.startNavigation}
+          onStartNavigation={handleStartNavigation}
           onSaveRoute={handleSaveRoute}
           isRouteSaved={
             !!routing.origin &&

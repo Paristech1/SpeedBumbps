@@ -1,0 +1,33 @@
+name: Snap speed bumps to roads
+
+# One-time data fix, run manually. Snaps every bump coordinate in
+# public/data/phl_speed_bumps.json onto the nearest road via the free
+# OSRM demo server and commits the corrected dataset.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  snap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Snap coordinates
+        run: node scripts/snap-bumps-to-roads.mjs
+      - name: Commit result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet public/data/phl_speed_bumps.json; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git add public/data/phl_speed_bumps.json
+          git commit -m "Snap speed bump coordinates onto nearest roads (OSRM)"
+          git push

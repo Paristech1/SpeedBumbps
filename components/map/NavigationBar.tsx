@@ -10,9 +10,12 @@ import { useState, useEffect, useRef } from 'react';
 import {
   ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight,
   MoveUpRight, MoveUpLeft, MapPin, RotateCw, GitFork, X, Square,
+  Volume2, VolumeX,
 } from 'lucide-react';
 import type { RouteStep, LatLng } from '@/types/speedbumps';
 import { haversineDistance, formatDistance, formatDuration } from '@/lib/geo-utils';
+import { useVoiceGuidance } from '@/hooks/useVoiceGuidance';
+import { isSpeechSupported, isVoiceMuted, setVoiceMuted } from '@/lib/voice-guidance';
 
 const STEP_ADVANCE_RADIUS_M = 30;
 
@@ -24,7 +27,16 @@ interface NavigationBarProps {
 
 export function NavigationBar({ steps, currentLocation, onEndNavigation }: NavigationBarProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [voiceMuted, setVoiceMutedState] = useState(() => isVoiceMuted());
   const prevLocationRef = useRef<LatLng | null>(null);
+
+  useVoiceGuidance({ steps, currentStepIndex, currentLocation, active: true });
+
+  const toggleVoice = () => {
+    const next = !voiceMuted;
+    setVoiceMutedState(next);
+    setVoiceMuted(next); // also cancels any in-flight speech when muting
+  };
 
   // Advance step when user comes within STEP_ADVANCE_RADIUS_M of the current step's location
   useEffect(() => {
@@ -86,6 +98,22 @@ export function NavigationBar({ steps, currentLocation, onEndNavigation }: Navig
                 min
               </span>
             </div>
+            {isSpeechSupported() && (
+              <button
+                onClick={toggleVoice}
+                className={`p-2 rounded-full transition-colors ${
+                  voiceMuted ? 'bg-white/10 hover:bg-white/20' : 'bg-white/20 hover:bg-white/30'
+                }`}
+                title={voiceMuted ? 'Unmute voice guidance' : 'Mute voice guidance'}
+                aria-label={voiceMuted ? 'Unmute voice guidance' : 'Mute voice guidance'}
+              >
+                {voiceMuted ? (
+                  <VolumeX className="w-6 h-6 text-white/60" />
+                ) : (
+                  <Volume2 className="w-6 h-6 text-white" />
+                )}
+              </button>
+            )}
             <button
               onClick={onEndNavigation}
               className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"
