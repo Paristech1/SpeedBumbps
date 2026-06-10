@@ -460,48 +460,6 @@ function MapMainInner() {
             </div>
           )}
 
-          {/* Map Tools Grid (visible in default state) */}
-          {!hasRoute && routing.status !== "loading" && (
-            <div className="mt-3 glass-panel ghost-border rounded-2xl p-2 grid grid-cols-4 gap-2 shadow-xl w-full sm:w-[380px]">
-              <button
-                onClick={() => setIsMeasurementOpen((p) => !p)}
-                className="flex flex-col items-center justify-center gap-1 p-3 rounded-2xl hover:bg-[#373940] transition-all group"
-              >
-                <svg className="w-5 h-5 text-[#44d8f1] group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M2 12h20M2 12l4-4M2 12l4 4M22 12l-4-4M22 12l-4 4" />
-                </svg>
-                <span className="text-[10px] font-bold font-[var(--font-headline)] uppercase tracking-tighter text-[#bfc7d4]">Measure</span>
-              </button>
-              <button
-                onClick={() => {
-                  if (isPOIPanelOpen) {
-                    handleClosePOIPanel();
-                  } else {
-                    setIsPOIPanelOpen(true);
-                    setPOIPanelMode("list");
-                  }
-                }}
-                className="flex flex-col items-center justify-center gap-1 p-3 rounded-2xl hover:bg-[#373940] transition-all group"
-              >
-                <svg className="w-5 h-5 text-[#44d8f1] group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg>
-                <span className="text-[10px] font-bold font-[var(--font-headline)] uppercase tracking-tighter text-[#bfc7d4]">My Places</span>
-              </button>
-              <button className="flex flex-col items-center justify-center gap-1 p-3 rounded-2xl hover:bg-[#373940] transition-all group opacity-50 cursor-not-allowed">
-                <svg className="w-5 h-5 text-[#44d8f1] group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" />
-                </svg>
-                <span className="text-[10px] font-bold font-[var(--font-headline)] uppercase tracking-tighter text-[#bfc7d4]">Draw</span>
-              </button>
-              <button className="flex flex-col items-center justify-center gap-1 p-3 rounded-2xl hover:bg-[#373940] transition-all group opacity-50 cursor-not-allowed">
-                <svg className="w-5 h-5 text-[#44d8f1] group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" />
-                </svg>
-                <span className="text-[10px] font-bold font-[var(--font-headline)] uppercase tracking-tighter text-[#bfc7d4]">Reset</span>
-              </button>
-            </div>
-          )}
         </div>
       )}
 
