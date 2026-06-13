@@ -11,7 +11,6 @@
  * - MapMain: Main map layout with all controls
  * - MapControls: Zoom, fullscreen, location controls
  * - MapTopBar: Category pills and user menu
- * - MapSearchBar: Country search with keyboard navigation
  * - MapTileSwitcher: Base map layer switcher
  * - MapThemeSwitcher: Light/dark theme toggle
  * - MapDetailsPanel: Country information panel
@@ -31,7 +30,6 @@ export { MapProvider } from '@/contexts/MapContext';
 export { MapErrorBoundary } from './MapErrorBoundary';
 export { MapLoadingSpinner } from './MapLoadingSpinner';
 export { MapMain } from './MapMain';
-export { MapSearchBar } from './MapSearchBar';
 export { MapTopBar } from './MapTopBar';
 export { MapTileSwitcher } from './MapTileSwitcher';
 export { MapControls } from './MapControls';
