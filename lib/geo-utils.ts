@@ -46,6 +46,77 @@ export function distanceToLineSegment(
   return haversineDistance(point, closest);
 }
 
+/** Closest point on a segment to `point`, plus the clamped parameter t∈[0,1]. */
+function closestPointOnSegment(
+  point: LatLng,
+  lineStart: LatLng,
+  lineEnd: LatLng
+): { point: LatLng; t: number } {
+  const dx = lineEnd.lng - lineStart.lng;
+  const dy = lineEnd.lat - lineStart.lat;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return { point: lineStart, t: 0 };
+  let t =
+    ((point.lng - lineStart.lng) * dx + (point.lat - lineStart.lat) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  return { point: { lat: lineStart.lat + t * dy, lng: lineStart.lng + t * dx }, t };
+}
+
+export interface RouteProgress {
+  /** Nearest point on the route to the driver (the "snapped" position). */
+  snappedPoint: LatLng;
+  /** Perpendicular distance from the driver to the route, meters. */
+  offRouteMeters: number;
+  /** Index of the segment start vertex the driver is currently on. */
+  segmentIndex: number;
+  /** Distance remaining from the snapped point to the route end, meters. */
+  remainingMeters: number;
+}
+
+/**
+ * Project a live position onto a route polyline.
+ * Single source of truth for follow-cam ETA, progress trace, and snap line.
+ */
+export function routeProgress(points: LatLng[], loc: LatLng): RouteProgress {
+  if (points.length === 0) {
+    return { snappedPoint: loc, offRouteMeters: 0, segmentIndex: 0, remainingMeters: 0 };
+  }
+  if (points.length === 1) {
+    return {
+      snappedPoint: points[0],
+      offRouteMeters: haversineDistance(loc, points[0]),
+      segmentIndex: 0,
+      remainingMeters: 0,
+    };
+  }
+
+  let bestDist = Infinity;
+  let bestIndex = 0;
+  let bestPoint = points[0];
+  for (let i = 0; i < points.length - 1; i++) {
+    const { point } = closestPointOnSegment(loc, points[i], points[i + 1]);
+    const d = haversineDistance(loc, point);
+    if (d < bestDist) {
+      bestDist = d;
+      bestIndex = i;
+      bestPoint = point;
+    }
+  }
+
+  // Remaining = snapped→end-of-segment + every segment after it.
+  let remaining = haversineDistance(bestPoint, points[bestIndex + 1]);
+  for (let i = bestIndex + 1; i < points.length - 1; i++) {
+    remaining += haversineDistance(points[i], points[i + 1]);
+  }
+
+  return {
+    snappedPoint: bestPoint,
+    offRouteMeters: bestDist,
+    segmentIndex: bestIndex,
+    remainingMeters: remaining,
+  };
+}
+
 /** Index of the point in polyline closest to target. */
 export function findClosestPointIndex(target: LatLng, points: LatLng[]): number {
   let minDist = Infinity;

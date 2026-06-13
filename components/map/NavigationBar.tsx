@@ -13,7 +13,7 @@ import {
   Volume2, VolumeX,
 } from 'lucide-react';
 import type { RouteStep, LatLng } from '@/types/speedbumps';
-import { haversineDistance, formatDistance, formatDuration } from '@/lib/geo-utils';
+import { haversineDistance, formatDistance, formatDuration, routeProgress } from '@/lib/geo-utils';
 import { useVoiceGuidance } from '@/hooks/useVoiceGuidance';
 import { isSpeechSupported, isVoiceMuted, setVoiceMuted } from '@/lib/voice-guidance';
 
@@ -23,9 +23,20 @@ interface NavigationBarProps {
   steps: RouteStep[];
   currentLocation: LatLng | null;
   onEndNavigation: () => void;
+  /** Full route geometry + totals — drives the live ETA countdown. */
+  routePoints?: LatLng[];
+  totalDistanceMeters?: number;
+  totalDurationSeconds?: number;
 }
 
-export function NavigationBar({ steps, currentLocation, onEndNavigation }: NavigationBarProps) {
+export function NavigationBar({
+  steps,
+  currentLocation,
+  onEndNavigation,
+  routePoints,
+  totalDistanceMeters,
+  totalDurationSeconds,
+}: NavigationBarProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [voiceMuted, setVoiceMutedState] = useState(() => isVoiceMuted());
   const prevLocationRef = useRef<LatLng | null>(null);
@@ -61,13 +72,32 @@ export function NavigationBar({ steps, currentLocation, onEndNavigation }: Navig
 
   const currentStep = steps[currentStepIndex];
 
-  // Remaining distance/duration = sum of steps from currentStepIndex onward
-  const remainingSteps = steps.slice(currentStepIndex);
-  const remainingDistance = remainingSteps.reduce((sum, s) => sum + s.distanceMeters, 0);
-  const remainingDuration = remainingSteps.reduce((sum, s) => sum + s.durationSeconds, 0);
+  // Remaining distance/duration — continuous from GPS position when we have the
+  // full route geometry; otherwise fall back to summing the remaining steps.
+  const stepRemainingDistance = steps
+    .slice(currentStepIndex)
+    .reduce((sum, s) => sum + s.distanceMeters, 0);
+  const stepRemainingDuration = steps
+    .slice(currentStepIndex)
+    .reduce((sum, s) => sum + s.durationSeconds, 0);
+
+  let remainingDistance = stepRemainingDistance;
+  let remainingDuration = stepRemainingDuration;
+  if (
+    currentLocation &&
+    routePoints &&
+    routePoints.length >= 2 &&
+    totalDistanceMeters &&
+    totalDistanceMeters > 0 &&
+    totalDurationSeconds
+  ) {
+    const { remainingMeters } = routeProgress(routePoints, currentLocation);
+    remainingDistance = remainingMeters;
+    remainingDuration = totalDurationSeconds * (remainingMeters / totalDistanceMeters);
+  }
 
   const isLastStep = currentStepIndex === steps.length - 1;
-  const remainingMinutes = Math.ceil(remainingDuration / 60);
+  const remainingMinutes = Math.max(1, Math.ceil(remainingDuration / 60));
 
   return (
     <>

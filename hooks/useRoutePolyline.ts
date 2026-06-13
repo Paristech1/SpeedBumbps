@@ -8,18 +8,24 @@
 
 import { useEffect, useRef } from 'react';
 import type { Map as LeafletMap, Polyline, Marker } from 'leaflet';
-import type { AppRoute } from '@/types/speedbumps';
-import { routeColor } from '@/lib/geo-utils';
+import type { AppRoute, LatLng } from '@/types/speedbumps';
+import { routeColor, routeProgress } from '@/lib/geo-utils';
 import { polylineBounds } from '@/lib/bump-avoidance';
 
 const STROKE_WIDTH = 5;
 const ALT_STROKE_OPACITY = 0.6;
+const OFF_ROUTE_SNAP_MIN_M = 25;
 
 interface UseRoutePolylineOptions {
   map: LeafletMap | null;
   primaryRoute?: AppRoute;
   alternativeRoute?: AppRoute;
   selectedRouteIndex: 0 | 1;
+  /** Frame the whole route on render. Disable during navigation (follow-cam owns the camera). */
+  autoFit?: boolean;
+  /** Live driver position — drives the progress trace and off-route snap line. */
+  currentLocation?: LatLng | null;
+  isNavigating?: boolean;
 }
 
 export function useRoutePolyline({
@@ -27,11 +33,16 @@ export function useRoutePolyline({
   primaryRoute,
   alternativeRoute,
   selectedRouteIndex,
+  autoFit = true,
+  currentLocation = null,
+  isNavigating = false,
 }: UseRoutePolylineOptions) {
   const primaryPolylineRef = useRef<Polyline | null>(null);
   const altPolylineRef = useRef<Polyline | null>(null);
   const originMarkerRef = useRef<Marker | null>(null);
   const destMarkerRef = useRef<Marker | null>(null);
+  const traveledPolylineRef = useRef<Polyline | null>(null);
+  const snapLineRef = useRef<Polyline | null>(null);
 
   useEffect(() => {
     if (!map) return;
@@ -106,13 +117,15 @@ export function useRoutePolyline({
       const last = selectedRoute.polylinePoints[selectedRoute.polylinePoints.length - 1];
       destMarkerRef.current = L.marker([last.lat, last.lng], { icon: destIcon }).addTo(map);
 
-      // Fit map to route bounds
-      const bounds = polylineBounds(selectedRoute.polylinePoints);
-      if (bounds) {
-        map.fitBounds(
-          [[bounds.sw.lat, bounds.sw.lng], [bounds.ne.lat, bounds.ne.lng]],
-          { paddingTopLeft: [60, 120], paddingBottomRight: [60, 220], animate: true }
-        );
+      // Fit map to route bounds — skipped during navigation (follow-cam owns the camera)
+      if (autoFit) {
+        const bounds = polylineBounds(selectedRoute.polylinePoints);
+        if (bounds) {
+          map.fitBounds(
+            [[bounds.sw.lat, bounds.sw.lng], [bounds.ne.lat, bounds.ne.lng]],
+            { paddingTopLeft: [60, 120], paddingBottomRight: [60, 220], animate: true }
+          );
+        }
       }
     };
 
@@ -121,7 +134,80 @@ export function useRoutePolyline({
     return () => {
       mounted = false;
     };
+    // autoFit intentionally excluded: it should not trigger a re-render of the route
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, primaryRoute, alternativeRoute, selectedRouteIndex]);
+
+  // Navigation overlays: progress trace (traveled portion dimmed) + off-route snap line.
+  const selectedRoute = selectedRouteIndex === 1 && alternativeRoute ? alternativeRoute : primaryRoute;
+  const selectedPoints = selectedRoute?.polylinePoints;
+  const pointsKey = selectedRoute?.id ?? '';
+
+  useEffect(() => {
+    if (!map) return;
+    let mounted = true;
+
+    const clearOverlays = () => {
+      traveledPolylineRef.current?.remove();
+      traveledPolylineRef.current = null;
+      snapLineRef.current?.remove();
+      snapLineRef.current = null;
+    };
+
+    if (!isNavigating || !currentLocation || !selectedPoints || selectedPoints.length < 2) {
+      clearOverlays();
+      return;
+    }
+
+    const update = async () => {
+      const L = (await import('leaflet')).default;
+      if (!mounted || !map) return;
+
+      const progress = routeProgress(selectedPoints, currentLocation);
+
+      // Progress trace — dim the traveled portion up to the snapped point
+      const traveled = selectedPoints
+        .slice(0, progress.segmentIndex + 1)
+        .map((p) => [p.lat, p.lng] as [number, number]);
+      traveled.push([progress.snappedPoint.lat, progress.snappedPoint.lng]);
+      if (traveledPolylineRef.current) {
+        traveledPolylineRef.current.setLatLngs(traveled);
+      } else {
+        traveledPolylineRef.current = L.polyline(traveled, {
+          color: '#5b6472',
+          weight: STROKE_WIDTH,
+          opacity: 0.85,
+        }).addTo(map);
+      }
+
+      // Off-route snap line — faint dashed connector from driver to the route
+      if (progress.offRouteMeters > OFF_ROUTE_SNAP_MIN_M) {
+        const connector = [
+          [currentLocation.lat, currentLocation.lng] as [number, number],
+          [progress.snappedPoint.lat, progress.snappedPoint.lng] as [number, number],
+        ];
+        if (snapLineRef.current) {
+          snapLineRef.current.setLatLngs(connector);
+        } else {
+          snapLineRef.current = L.polyline(connector, {
+            color: '#9ecaff',
+            weight: 2,
+            opacity: 0.6,
+            dashArray: '4 6',
+          }).addTo(map);
+        }
+      } else {
+        snapLineRef.current?.remove();
+        snapLineRef.current = null;
+      }
+    };
+
+    update();
+
+    return () => {
+      mounted = false;
+    };
+  }, [map, isNavigating, currentLocation, selectedPoints, pointsKey]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -130,6 +216,8 @@ export function useRoutePolyline({
       altPolylineRef.current?.remove();
       originMarkerRef.current?.remove();
       destMarkerRef.current?.remove();
+      traveledPolylineRef.current?.remove();
+      snapLineRef.current?.remove();
     };
   }, []);
 }

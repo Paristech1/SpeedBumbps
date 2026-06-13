@@ -13,6 +13,7 @@ import type { LatLng } from '@/types/speedbumps';
 export interface UserLocation {
   position: LatLng;
   accuracy: number; // meters
+  heading: number | null; // degrees clockwise from north; null when stationary/unknown
   timestamp: number;
 }
 
@@ -92,6 +93,9 @@ export function useLocationTracking() {
                 lng: position.coords.longitude,
               },
               accuracy: position.coords.accuracy,
+              heading: Number.isFinite(position.coords.heading)
+                ? (position.coords.heading as number)
+                : null,
               timestamp: position.timestamp,
             },
             hasPermission: true,
@@ -126,6 +130,9 @@ export function useLocationTracking() {
                         lng: position.coords.longitude,
                       },
                       accuracy: position.coords.accuracy,
+                      heading: Number.isFinite(position.coords.heading)
+                        ? (position.coords.heading as number)
+                        : null,
                       timestamp: position.timestamp,
                     },
                     hasPermission: true,

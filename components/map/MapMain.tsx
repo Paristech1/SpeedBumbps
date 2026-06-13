@@ -23,6 +23,7 @@ import { useSpeedBumpMarkers } from "@/hooks/useSpeedBumpMarkers";
 import { useRoutePolyline } from "@/hooks/useRoutePolyline";
 import { useLocationTracking, type UserLocation } from "@/hooks/useLocationTracking";
 import { useRouteDeviation } from "@/hooks/useRouteDeviation";
+import { useNavigationCamera } from "@/hooks/useNavigationCamera";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { primeVoice, speak, isSpeechSupported } from "@/lib/voice-guidance";
 import { useSavedRoutes } from "@/hooks/useSavedRoutes";
@@ -33,14 +34,22 @@ import { useLeafletMap } from "@/hooks/useLeafletMap";
 import type { POICategory } from "@/types/poi";
 import type { RouteAvoidanceProfile, LatLng } from "@/types/speedbumps";
 import type { SavedRoute, TabId } from "@/types/user-data";
-import { Navigation, X, Loader2, Pencil } from "lucide-react";
+import { Navigation, X, Loader2, Pencil, LocateFixed } from "lucide-react";
 import { toast } from "sonner";
 
 /**
  * Inner component that has access to MapContext (LeafletMap must be a sibling, not parent).
  * Location comes from a single parent `useLocationTracking()` — do not call the hook here.
  */
-function SpeedBumpsMap({ location }: { location: UserLocation | null }) {
+function SpeedBumpsMap({
+  location,
+  isFollowing,
+  onUserPan,
+}: {
+  location: UserLocation | null;
+  isFollowing: boolean;
+  onUserPan: () => void;
+}) {
   const map = useLeafletMap();
   const routing = useRouting();
   const selectedRoute = useSelectedRoute();
@@ -48,15 +57,29 @@ function SpeedBumpsMap({ location }: { location: UserLocation | null }) {
   // Speed bump markers (viewport-based, canvas renderer)
   useSpeedBumpMarkers(map);
 
-  // Route polyline rendering
+  // Route polyline rendering — follow-cam owns the camera during navigation
   useRoutePolyline({
     map,
     primaryRoute: routing.result?.primaryRoute,
     alternativeRoute: routing.result?.alternativeRoute,
     selectedRouteIndex: routing.selectedRouteIndex,
+    autoFit: !routing.isNavigating,
+    currentLocation: location?.position ?? null,
+    isNavigating: routing.isNavigating,
   });
 
-  // User location blue dot — neon glow style per Velocity Dark
+  // Follow camera during navigation
+  useNavigationCamera({
+    map,
+    location,
+    isNavigating: routing.isNavigating,
+    isFollowing,
+    onUserPan,
+  });
+
+  // User location marker — glowing dot, or a heading arrow while navigating
+  const heading = location?.heading ?? null;
+  const showArrow = routing.isNavigating && heading != null;
   useEffect(() => {
     if (!map || !location) return;
     let mounted = true;
@@ -65,11 +88,14 @@ function SpeedBumpsMap({ location }: { location: UserLocation | null }) {
       const L = (await import("leaflet")).default;
       if (!mounted) return;
 
+      const dotHtml = `<div style="width:14px;height:14px;background:#2196F3;border:3px solid white;border-radius:50%;box-shadow:0 0 12px rgba(33,150,243,0.6), 0 0 24px rgba(33,150,243,0.3)"></div>`;
+      // Upward chevron rotated to the travel heading (north-up map)
+      const arrowHtml = `<div style="transform:rotate(${heading ?? 0}deg);width:30px;height:30px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 8px rgba(33,150,243,0.7))"><svg width="30" height="30" viewBox="0 0 24 24" fill="#2196F3" stroke="white" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2L20 21L12 16L4 21L12 2Z"/></svg></div>`;
       const icon = L.divIcon({
-        html: `<div style="width:14px;height:14px;background:#2196F3;border:3px solid white;border-radius:50%;box-shadow:0 0 12px rgba(33,150,243,0.6), 0 0 24px rgba(33,150,243,0.3)"></div>`,
-        className: "",
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
+        html: showArrow ? arrowHtml : dotHtml,
+        className: "user-location-marker",
+        iconSize: showArrow ? [30, 30] : [14, 14],
+        iconAnchor: showArrow ? [15, 15] : [7, 7],
       });
 
       // Remove previous user marker if any
@@ -88,7 +114,7 @@ function SpeedBumpsMap({ location }: { location: UserLocation | null }) {
 
     addDot();
     return () => { mounted = false; };
-  }, [map, location]);
+  }, [map, location, showArrow, heading]);
 
   // Route deviation detection
   useRouteDeviation({
@@ -128,6 +154,8 @@ function MapMainInner() {
   const [showBrand, setShowBrand] = useState(true);
   // Opt-in immersive mode (expand button): hides the overlay chrome
   const [isImmersive, setIsImmersive] = useState(false);
+  // Navigation follow-cam: true = camera tracks the driver; false = user panned away
+  const [isFollowing, setIsFollowing] = useState(true);
   const [routeSnap, setRouteSnap] = useState<number | string | null>(ROUTE_SHEET_SNAP_POINTS[1]);
   const [viewportH, setViewportH] = useState(0);
   const [isSelectingReportLocation, setIsSelectingReportLocation] = useState(false);
@@ -312,6 +340,11 @@ function MapMainInner() {
   // Keep the screen on while navigating (GPS and speech die when it locks)
   useWakeLock(routing.isNavigating);
 
+  // Snap back into follow mode whenever navigation (re)starts
+  useEffect(() => {
+    if (routing.isNavigating) setIsFollowing(true);
+  }, [routing.isNavigating]);
+
   // Start tap = the iOS user gesture that unlocks speechSynthesis
   const handleStartNavigation = useCallback(() => {
     primeVoice();
@@ -357,7 +390,11 @@ function MapMainInner() {
           maxZoom={tileLayerProps.maxZoom}
         />
         {/* SpeedBumps logic (map-context-dependent) */}
-        <SpeedBumpsMap location={location} />
+        <SpeedBumpsMap
+          location={location}
+          isFollowing={isFollowing}
+          onUserPan={() => setIsFollowing(false)}
+        />
       </LeafletMap>
 
       {/* === TOP NAV BAR — startup splash only, fades once the app is in use === */}
@@ -401,7 +438,22 @@ function MapMainInner() {
           steps={selectedRoute.steps}
           currentLocation={location?.position ?? null}
           onEndNavigation={routing.stopNavigation}
+          routePoints={selectedRoute.polylinePoints}
+          totalDistanceMeters={selectedRoute.distanceMeters}
+          totalDurationSeconds={selectedRoute.durationSeconds}
         />
+      )}
+
+      {/* Recenter — appears when the user pans away during navigation */}
+      {routing.isNavigating && !isFollowing && (
+        <button
+          onClick={() => setIsFollowing(true)}
+          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[1100] flex items-center gap-2 px-5 py-3 rounded-full glass-panel ghost-border shadow-2xl text-[#9ecaff] font-bold text-sm active:scale-95 transition-all"
+          aria-label="Recenter on my location"
+        >
+          <LocateFixed className="w-4 h-4" />
+          Recenter
+        </button>
       )}
 
       {/* Search / Route bar — Velocity Dark glass style. Stays put (stable);
