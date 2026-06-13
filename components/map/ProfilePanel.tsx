@@ -50,7 +50,9 @@ export function ProfilePanel({
   stats,
   onAvoidanceProfileChange,
 }: ProfilePanelProps) {
-  const [snap, setSnap] = useState<number | string | null>(snapPoints[0]);
+  // Open expanded so all settings (voice, Log mode) are reachable/scrollable;
+  // the lower peek snap can't scroll its inner content in vaul.
+  const [snap, setSnap] = useState<number | string | null>(snapPoints[1]);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(profile.displayName);
 
