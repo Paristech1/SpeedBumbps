@@ -212,6 +212,7 @@ export function osrmResultToAppRoute(result: OsrmRouteResult): AppRoute {
     durationSeconds: result.durationSeconds,
     speedBumpCount: 0,
     isSpeedBumpFree: false,
+    bumpsOnRoute: [],
     calculatedAt: new Date(),
   };
 }

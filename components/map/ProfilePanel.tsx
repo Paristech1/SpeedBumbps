@@ -5,12 +5,31 @@
  * display name, stats, and default routing preferences.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 import { Drawer } from 'vaul';
-import { Pencil, Check } from 'lucide-react';
+import { Pencil, Check, Volume2, Play, Download, Copy, ClipboardList, Github } from 'lucide-react';
+import { toast } from 'sonner';
 import type { RouteAvoidanceProfile } from '@/types/speedbumps';
 import type { UserProfile } from '@/types/user-data';
 import { VEHICLE_OPTIONS, MODE_OPTIONS } from './RoutePlanningPanel';
+import {
+  isSpeechSupported,
+  getAvailableVoices,
+  getSelectedVoiceName,
+  setVoiceByName,
+  speak,
+} from '@/lib/voice-guidance';
+import {
+  subscribe as subscribeLogger,
+  isCapturing,
+  getEntryCount,
+  startCapture,
+  stopCapture,
+  downloadBundle,
+  copyBundle,
+  clearEntries,
+  fileGitHubIssue,
+} from '@/lib/app-logger';
 
 interface ProfilePanelProps {
   isOpen: boolean;
@@ -31,9 +50,45 @@ export function ProfilePanel({
   stats,
   onAvoidanceProfileChange,
 }: ProfilePanelProps) {
-  const [snap, setSnap] = useState<number | string | null>(snapPoints[0]);
+  // Open expanded so all settings (voice, Log mode) are reachable/scrollable;
+  // the lower peek snap can't scroll its inner content in vaul.
+  const [snap, setSnap] = useState<number | string | null>(snapPoints[1]);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(profile.displayName);
+
+  // Voice guidance picker — hydrate from the speech engine (voices load async)
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [voiceName, setVoiceName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isSpeechSupported()) return;
+    const refresh = () => {
+      setVoices(getAvailableVoices());
+      setVoiceName(getSelectedVoiceName());
+    };
+    refresh();
+    window.speechSynthesis.addEventListener('voiceschanged', refresh);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', refresh);
+  }, []);
+
+  // Log mode — live capture state from the diagnostics logger
+  const capturing = useSyncExternalStore(subscribeLogger, isCapturing, () => false);
+  const entryCount = useSyncExternalStore(subscribeLogger, getEntryCount, () => 0);
+  const [includePrecise, setIncludePrecise] = useState(false);
+
+  const handleToggleCapture = () => {
+    if (capturing) {
+      stopCapture();
+      toast.success('Log capture stopped — export the bundle below.');
+    } else {
+      startCapture({ includePreciseLocation: includePrecise });
+      toast('Log mode on — reproduce the issue, then Stop and export.', { duration: 5000 });
+    }
+  };
+
+  const handleCopyBundle = async () => {
+    const ok = await copyBundle();
+    toast[ok ? 'success' : 'error'](ok ? 'Diagnostics copied to clipboard' : 'Clipboard unavailable — use Download');
+  };
 
   // Keep the draft in sync when the stored name changes (adjust-state-during-render)
   const [prevName, setPrevName] = useState(profile.displayName);
@@ -179,6 +234,113 @@ export function ProfilePanel({
               <p className="text-xs text-[#89919d] mt-2">
                 Used as the starting selection whenever you plan a route.
               </p>
+            </div>
+
+            {/* Voice guidance */}
+            {isSpeechSupported() && (
+              <div>
+                <div className="flex items-center gap-2 text-xs font-bold text-[#bfc7d4] uppercase tracking-wider mb-2">
+                  <Volume2 className="w-3.5 h-3.5" /> Navigation voice
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={voiceName ?? ''}
+                    onChange={(e) => { setVoiceByName(e.target.value); setVoiceName(e.target.value || getSelectedVoiceName()); }}
+                    className="flex-1 min-w-0 bg-[#282a30] border-none rounded-2xl px-4 py-3 text-sm font-medium text-[#e2e2eb] focus:outline-none focus:ring-2 focus:ring-[#2196F3]/40"
+                    aria-label="Navigation voice"
+                  >
+                    <option value="">Auto (best available)</option>
+                    {voices.map((v) => (
+                      <option key={v.name} value={v.name}>{v.name} — {v.lang}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => speak('Heads up, speed bump ahead. Take it easy.')}
+                    className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-[#2196F3]/20 text-[#9ecaff] text-sm font-bold active:scale-95 transition-all whitespace-nowrap"
+                    aria-label="Test voice"
+                  >
+                    <Play className="w-4 h-4" /> Test
+                  </button>
+                </div>
+                <p className="text-xs text-[#89919d] mt-2">
+                  Pick a clearer voice if the default sounds robotic. Some devices add more voices in their system settings.
+                </p>
+              </div>
+            )}
+
+            {/* Log mode — admin diagnostics */}
+            <div className="rounded-2xl bg-[#1e1f26] p-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#bfc7d4] uppercase tracking-wider mb-2">
+                <ClipboardList className="w-3.5 h-3.5" /> Log mode
+              </div>
+              <p className="text-xs text-[#89919d] mb-3">
+                Capture diagnostic logs to share back for debugging. Coordinates are coarsened and
+                addresses hidden unless you opt in below.
+              </p>
+
+              <label className="flex items-center gap-2 mb-3 text-sm text-[#bfc7d4] select-none">
+                <input
+                  type="checkbox"
+                  checked={includePrecise}
+                  disabled={capturing}
+                  onChange={(e) => setIncludePrecise(e.target.checked)}
+                  className="w-4 h-4 accent-[#2196F3] disabled:opacity-40"
+                />
+                Include precise location
+              </label>
+
+              <button
+                onClick={handleToggleCapture}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-bold active:scale-[0.99] transition-all ${
+                  capturing
+                    ? 'bg-[#93000a] text-[#ffdad6]'
+                    : 'bg-[#2196F3]/20 text-[#9ecaff]'
+                }`}
+              >
+                {capturing ? 'Stop capture' : 'Start capture'}
+                {capturing && (
+                  <span className="ml-1 inline-flex items-center gap-1 text-xs font-semibold text-[#ffdad6]/80">
+                    <span className="w-2 h-2 rounded-full bg-[#ff5449] animate-pulse" /> {entryCount}
+                  </span>
+                )}
+              </button>
+
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={downloadBundle}
+                  disabled={entryCount === 0}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl bg-[#282a30] text-[#e2e2eb] text-sm font-semibold active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Download className="w-4 h-4" /> Download
+                </button>
+                <button
+                  onClick={handleCopyBundle}
+                  disabled={entryCount === 0}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl bg-[#282a30] text-[#e2e2eb] text-sm font-semibold active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Copy className="w-4 h-4" /> Copy
+                </button>
+              </div>
+
+              <button
+                onClick={fileGitHubIssue}
+                disabled={entryCount === 0}
+                className="w-full mt-2 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl bg-[#282a30] text-[#e2e2eb] text-sm font-semibold active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Github className="w-4 h-4" /> File GitHub issue
+              </button>
+              <p className="text-xs text-[#89919d] mt-2">
+                Opens a prefilled issue on paristech1/speedbumbps. Attach the downloaded bundle for the full capture.
+              </p>
+
+              {entryCount > 0 && !capturing && (
+                <button
+                  onClick={clearEntries}
+                  className="w-full mt-2 text-xs text-[#89919d] hover:text-[#e2e2eb] transition-colors"
+                >
+                  Clear {entryCount} captured {entryCount === 1 ? 'entry' : 'entries'}
+                </button>
+              )}
             </div>
           </div>
         </Drawer.Content>

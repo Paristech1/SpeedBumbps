@@ -26,6 +26,7 @@ import { useRouteDeviation } from "@/hooks/useRouteDeviation";
 import { useNavigationCamera } from "@/hooks/useNavigationCamera";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { primeVoice, speak, isSpeechSupported } from "@/lib/voice-guidance";
+import { log } from "@/lib/app-logger";
 import { useSavedRoutes } from "@/hooks/useSavedRoutes";
 import { useUserReports } from "@/hooks/useUserReports";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -122,7 +123,8 @@ function SpeedBumpsMap({
     currentLocation: location?.position ?? null,
     onDeviated: () => {
       if (routing.origin && routing.destination) {
-        if (routing.isNavigating) speak("Recalculating route");
+        log("warn", "navigation", "route deviation — recalculating");
+        if (routing.isNavigating) speak("No worries — finding you a smoother way.");
         routing.calculateRoute(
           routing.origin,
           routing.destination,
@@ -331,7 +333,7 @@ function MapMainInner() {
       const count = importGeoJSON(geojson);
       toast.success(`Successfully imported ${count} place${count !== 1 ? "s" : ""}!`);
     } catch {
-      toast.error("Failed to import file. Please check the format.");
+      toast.error("Couldn't import that file. Expected a GeoJSON (.geojson/.json) export from My Places.");
     }
   }, [importGeoJSON]);
 
@@ -414,11 +416,6 @@ function MapMainInner() {
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <button className="w-10 h-10 flex items-center justify-center rounded-full glass-panel text-[#e2e2eb] hover:bg-[#373940]/40 transition-colors">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-              </svg>
-            </button>
             <button
               onClick={() => handleTabChange(activeTab === "profile" ? "explore" : "profile")}
               className="w-10 h-10 rounded-full border-2 border-[#2196F3]/20 overflow-hidden shadow-2xl shadow-blue-500/10 active:scale-95 transition-transform"
@@ -441,6 +438,7 @@ function MapMainInner() {
           routePoints={selectedRoute.polylinePoints}
           totalDistanceMeters={selectedRoute.distanceMeters}
           totalDurationSeconds={selectedRoute.durationSeconds}
+          speedBumps={selectedRoute.bumpsOnRoute}
         />
       )}
 
@@ -540,26 +538,6 @@ function MapMainInner() {
             </div>
           )}
 
-        </div>
-      )}
-
-      {/* Floating Category Pills (Desktop) */}
-      {!routing.isNavigating && !hasRoute && !isImmersive && (
-        <div className="absolute top-20 right-6 left-[28rem] hidden lg:flex overflow-x-auto hide-scrollbar gap-3 pb-4 z-[1001]">
-          {[
-            { icon: "🍽️", label: "Restaurants" },
-            { icon: "🏨", label: "Hotels" },
-            { icon: "🎡", label: "Attractions" },
-            { icon: "🚌", label: "Transit" },
-          ].map((cat) => (
-            <button
-              key={cat.label}
-              className="glass-panel ghost-border px-5 py-2.5 rounded-full flex items-center gap-2 whitespace-nowrap text-[#e2e2eb] font-semibold text-sm hover:bg-[#9ecaff]/20 transition-all active:scale-95"
-            >
-              <span>{cat.icon}</span>
-              {cat.label}
-            </button>
-          ))}
         </div>
       )}
 
