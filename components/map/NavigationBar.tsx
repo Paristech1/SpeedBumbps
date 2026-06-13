@@ -6,13 +6,13 @@
  * turn icon, instruction, ETA, and arrival card.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import {
   ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight,
   MoveUpRight, MoveUpLeft, MapPin, RotateCw, GitFork, X, Square,
   Volume2, VolumeX,
 } from 'lucide-react';
-import type { RouteStep, LatLng } from '@/types/speedbumps';
+import type { RouteStep, LatLng, SpeedBump } from '@/types/speedbumps';
 import { haversineDistance, formatDistance, formatDuration, routeProgress } from '@/lib/geo-utils';
 import { useVoiceGuidance } from '@/hooks/useVoiceGuidance';
 import { isSpeechSupported, isVoiceMuted, setVoiceMuted } from '@/lib/voice-guidance';
@@ -27,6 +27,8 @@ interface NavigationBarProps {
   routePoints?: LatLng[];
   totalDistanceMeters?: number;
   totalDurationSeconds?: number;
+  /** Speed bumps on the selected route — drives proximity voice alerts. */
+  speedBumps?: SpeedBump[];
 }
 
 export function NavigationBar({
@@ -36,37 +38,38 @@ export function NavigationBar({
   routePoints,
   totalDistanceMeters,
   totalDurationSeconds,
+  speedBumps,
 }: NavigationBarProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [voiceMuted, setVoiceMutedState] = useState(() => isVoiceMuted());
-  const prevLocationRef = useRef<LatLng | null>(null);
 
-  useVoiceGuidance({ steps, currentStepIndex, currentLocation, active: true });
+  // Reset to the first step whenever a new route's steps arrive
+  // (adjust state during render — no effect needed).
+  const [prevSteps, setPrevSteps] = useState(steps);
+  if (steps !== prevSteps) {
+    setPrevSteps(steps);
+    setCurrentStepIndex(0);
+  }
+
+  // Advance to the next step once the driver reaches the current maneuver.
+  // Derived during render; the functional update converges (see React's
+  // "You Might Not Need an Effect").
+  if (
+    currentLocation &&
+    steps.length > 0 &&
+    currentStepIndex < steps.length - 1 &&
+    haversineDistance(currentLocation, steps[currentStepIndex].location) < STEP_ADVANCE_RADIUS_M
+  ) {
+    setCurrentStepIndex((i) => Math.min(i + 1, steps.length - 1));
+  }
+
+  useVoiceGuidance({ steps, currentStepIndex, currentLocation, active: true, speedBumps });
 
   const toggleVoice = () => {
     const next = !voiceMuted;
     setVoiceMutedState(next);
     setVoiceMuted(next); // also cancels any in-flight speech when muting
   };
-
-  // Advance step when user comes within STEP_ADVANCE_RADIUS_M of the current step's location
-  useEffect(() => {
-    if (!currentLocation || steps.length === 0) return;
-    if (currentStepIndex >= steps.length - 1) return;
-
-    const step = steps[currentStepIndex];
-    const dist = haversineDistance(currentLocation, step.location);
-    if (dist < STEP_ADVANCE_RADIUS_M) {
-      setCurrentStepIndex((i) => Math.min(i + 1, steps.length - 1));
-    }
-
-    prevLocationRef.current = currentLocation;
-  }, [currentLocation, currentStepIndex, steps]);
-
-  // Reset step index when steps change (new route)
-  useEffect(() => {
-    setCurrentStepIndex(0);
-  }, [steps]);
 
   if (steps.length === 0) return null;
 

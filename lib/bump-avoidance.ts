@@ -56,7 +56,7 @@ export async function calculateRouteWithBumpAvoidance(
 
   if (bumpsOnRoute.length === 0) {
     return {
-      primaryRoute: { ...defaultRoute, isSpeedBumpFree: true, speedBumpCount: 0 },
+      primaryRoute: { ...defaultRoute, isSpeedBumpFree: true, speedBumpCount: 0, bumpsOnRoute: [] },
       alternativeRoute: undefined,
     };
   }
@@ -73,6 +73,7 @@ export async function calculateRouteWithBumpAvoidance(
       ...altRoute,
       speedBumpCount: bumpsOnAlt.length,
       isSpeedBumpFree: bumpsOnAlt.length === 0,
+      bumpsOnRoute: bumpsOnAlt,
     };
   } catch {
     // Avoidance routing failed — return primary only
@@ -81,6 +82,7 @@ export async function calculateRouteWithBumpAvoidance(
         ...defaultRoute,
         speedBumpCount: bumpsOnRoute.length,
         isSpeedBumpFree: false,
+        bumpsOnRoute,
       },
       alternativeRoute: undefined,
     };
@@ -91,6 +93,7 @@ export async function calculateRouteWithBumpAvoidance(
       ...defaultRoute,
       speedBumpCount: bumpsOnRoute.length,
       isSpeedBumpFree: false,
+      bumpsOnRoute,
     },
     alternativeRoute,
   };

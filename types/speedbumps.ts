@@ -30,6 +30,8 @@ export interface AppRoute {
   durationSeconds: number;
   speedBumpCount: number;
   isSpeedBumpFree: boolean;
+  /** Speed bumps that lie on this route, for proximity voice alerts. */
+  bumpsOnRoute: SpeedBump[];
   calculatedAt: Date;
 }
 

@@ -44,11 +44,17 @@ const DEMO_RESULT: RouteCalculationResult = {
     durationSeconds: 780,
     speedBumpCount: 3,
     isSpeedBumpFree: false,
+    bumpsOnRoute: [
+      { id: "demo-bump-1", location: { lat: 39.946, lng: -75.159 }, severity: 2, isVerified: true, source: "dataset" },
+      { id: "demo-bump-2", location: { lat: 39.948, lng: -75.168 }, severity: 4, isVerified: true, source: "dataset" },
+      { id: "demo-bump-3", location: { lat: 39.949, lng: -75.172 }, severity: 1, isVerified: true, source: "dataset" },
+    ],
     calculatedAt: new Date(),
   },
   alternativeRoute: {
     id: "demo-alt",
     polylinePoints: [],
+    bumpsOnRoute: [],
     steps: [
       {
         instruction: "Head north on S 9th St",
