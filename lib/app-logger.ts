@@ -210,3 +210,84 @@ export async function copyBundle(): Promise<boolean> {
     return false;
   }
 }
+
+// --- GitHub issue auto-filing (prefilled new-issue link; no token/backend) ---
+
+const GITHUB_ISSUE_REPO = 'paristech1/speedbumbps';
+const ISSUE_LABELS = 'diagnostics';
+const MAX_URL_LENGTH = 6000; // stay well under GitHub's ~8KB cap
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+function clockTime(ts: number): string {
+  const d = new Date(ts);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+}
+
+/**
+ * Build a prefilled GitHub "new issue" URL summarising the current capture.
+ * Errors/warnings are listed first; the body is capped so the whole URL stays
+ * within GitHub's limit. The full bundle is shared separately via Download.
+ */
+export function buildIssueUrl(): string {
+  const bundle = buildBundle();
+  const errorCount = bundle.entries.filter((e) => e.level === 'error').length;
+  const warnCount = bundle.entries.filter((e) => e.level === 'warn').length;
+  const path = (bundle.environment.path as string) ?? '/';
+
+  const title = `Diagnostics: ${path} — ${bundle.entryCount} entries (${errorCount} errors)`;
+
+  // Most relevant first: errors, then warns, then info; recent within each.
+  const rank: Record<LogLevel, number> = { error: 0, warn: 1, info: 2 };
+  const ordered = [...bundle.entries].sort(
+    (a, b) => rank[a.level] - rank[b.level] || b.ts - a.ts,
+  );
+
+  const lines: string[] = [];
+  for (const e of ordered.slice(0, 20)) {
+    const msg = e.message.length > 200 ? `${e.message.slice(0, 197)}…` : e.message;
+    lines.push(`[${clockTime(e.ts)}] ${e.level.toUpperCase()} ${e.source}: ${msg}`);
+  }
+
+  const env = bundle.environment;
+  const bodyParts = [
+    '## SpeedBumps diagnostics',
+    '',
+    `- Captured: ${bundle.capturedAt}`,
+    `- Precise location: ${bundle.preciseLocation ? 'yes' : 'no (coordinates coarsened)'}`,
+    `- Entries: ${bundle.entryCount} (errors: ${errorCount}, warnings: ${warnCount})`,
+    `- Path: ${path}`,
+    `- User agent: ${env.userAgent ?? 'unknown'}`,
+    `- Viewport: ${JSON.stringify(env.viewport ?? {})} · online: ${env.online} · tz: ${env.timezone ?? 'unknown'}`,
+    '',
+    '### Recent events',
+    '```',
+    ...lines,
+    '```',
+    '',
+    '_Attach the full `speedbumps-diagnostics-*.json` (Download in Log mode) for the complete capture._',
+  ];
+
+  let body = bodyParts.join('\n');
+  const base = `https://github.com/${GITHUB_ISSUE_REPO}/issues/new`;
+
+  const buildUrl = (b: string) =>
+    `${base}?title=${encodeURIComponent(title)}&labels=${encodeURIComponent(ISSUE_LABELS)}&body=${encodeURIComponent(b)}`;
+
+  // Trim the body until the encoded URL fits under the cap.
+  let url = buildUrl(body);
+  while (url.length > MAX_URL_LENGTH && body.length > 0) {
+    body = body.slice(0, Math.floor(body.length * 0.85));
+    url = buildUrl(`${body}\n…(truncated — see attached bundle)`);
+  }
+  return url;
+}
+
+/** Open a prefilled GitHub issue for the current capture in a new tab. */
+export function fileGitHubIssue(): void {
+  if (typeof window === 'undefined') return;
+  window.open(buildIssueUrl(), '_blank', 'noopener,noreferrer');
+}
+

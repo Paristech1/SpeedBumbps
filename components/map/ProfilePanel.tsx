@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useSyncExternalStore } from 'react';
 import { Drawer } from 'vaul';
-import { Pencil, Check, Volume2, Play, Download, Copy, ClipboardList } from 'lucide-react';
+import { Pencil, Check, Volume2, Play, Download, Copy, ClipboardList, Github } from 'lucide-react';
 import { toast } from 'sonner';
 import type { RouteAvoidanceProfile } from '@/types/speedbumps';
 import type { UserProfile } from '@/types/user-data';
@@ -28,6 +28,7 @@ import {
   downloadBundle,
   copyBundle,
   clearEntries,
+  fileGitHubIssue,
 } from '@/lib/app-logger';
 
 interface ProfilePanelProps {
@@ -318,6 +319,18 @@ export function ProfilePanel({
                   <Copy className="w-4 h-4" /> Copy
                 </button>
               </div>
+
+              <button
+                onClick={fileGitHubIssue}
+                disabled={entryCount === 0}
+                className="w-full mt-2 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl bg-[#282a30] text-[#e2e2eb] text-sm font-semibold active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Github className="w-4 h-4" /> File GitHub issue
+              </button>
+              <p className="text-xs text-[#89919d] mt-2">
+                Opens a prefilled issue on paristech1/speedbumbps. Attach the downloaded bundle for the full capture.
+              </p>
+
               {entryCount > 0 && !capturing && (
                 <button
                   onClick={clearEntries}
