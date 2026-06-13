@@ -14,6 +14,7 @@ import type {
 } from '@/types/speedbumps';
 import { DEFAULT_AVOIDANCE_PROFILE } from '@/types/speedbumps';
 import { calculateRouteWithBumpAvoidance } from '@/lib/bump-avoidance';
+import { log } from '@/lib/app-logger';
 
 type RoutingStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -75,9 +76,11 @@ export function RoutingProvider({ children }: { children: React.ReactNode }) {
       destinationLabel: string,
       profile: RouteAvoidanceProfile = DEFAULT_AVOIDANCE_PROFILE
     ) => {
+      log('info', 'routing', 'calculateRoute start', { origin, destination, profile });
       const key = makeCacheKey(origin, destination, profile);
       const cached = cache.current.get(key);
       if (cached && cached.expiresAt > Date.now()) {
+        log('info', 'routing', 'route served from cache');
         setState((prev) => ({
           ...prev,
           status: 'success',
@@ -106,6 +109,12 @@ export function RoutingProvider({ children }: { children: React.ReactNode }) {
       try {
         const result = await calculateRouteWithBumpAvoidance(origin, destination, profile);
         cache.current.set(key, { result, expiresAt: Date.now() + CACHE_TTL_MS });
+        log('info', 'routing', 'calculateRoute success', {
+          distanceMeters: result.primaryRoute.distanceMeters,
+          durationSeconds: result.primaryRoute.durationSeconds,
+          speedBumpCount: result.primaryRoute.speedBumpCount,
+          hasAlternative: !!result.alternativeRoute,
+        });
         setState((prev) => ({
           ...prev,
           status: 'success',
@@ -113,10 +122,12 @@ export function RoutingProvider({ children }: { children: React.ReactNode }) {
           selectedRouteIndex: 0,
         }));
       } catch (err) {
+        const message = err instanceof Error ? err.message : 'Route calculation failed';
+        log('error', 'routing', 'calculateRoute failed', { message });
         setState((prev) => ({
           ...prev,
           status: 'error',
-          error: err instanceof Error ? err.message : 'Route calculation failed',
+          error: message,
         }));
       }
     },

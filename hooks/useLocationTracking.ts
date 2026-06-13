@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { LatLng } from '@/types/speedbumps';
+import { log } from '@/lib/app-logger';
 
 export interface UserLocation {
   position: LatLng;
@@ -103,6 +104,7 @@ export function useLocationTracking() {
           }));
         },
         (err) => {
+          log('warn', 'geolocation', `watchPosition error (code ${err.code})`, { message: err.message });
           if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
             const message = 'Location permission denied';
             setState((prev) => ({
