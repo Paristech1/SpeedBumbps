@@ -1,183 +1,101 @@
-# 🚗 SpeedBump App
+# SpeedBumps
 
-A navigation app that helps Philadelphia drivers avoid speed bumps, potholes, and road hazards using official city data and AI-powered detection. Starting with Philly's **1,584+ verified traffic calming devices**, SpeedBump aims to become the *"Waze for road conditions"* across 100+ cities.
+A mobile-first web navigator that helps Philadelphia drivers avoid speed bumps. It plots the city's official traffic-calming devices on a map, plans A-to-B routes that detour around them, and gives spoken turn-by-turn guidance — all on free, open services with no accounts and no API keys.
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev/)
-[![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%7C%20Auth-FFCA28?logo=firebase)](https://firebase.google.com/)
-[![Mapbox](https://img.shields.io/badge/Maps-Mapbox%20GL%20JS-000000?logo=mapbox)](https://docs.mapbox.com/)
-[![HERE Routing](https://img.shields.io/badge/Routing-HERE%20API-00AFAA)](https://developer.here.com/documentation/routing-api/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+Live map: `/` (or `/map`). Static UI preview without GPS/routing: `/demo/active-navigation`.
 
----
+## What it does
 
-## 📖 Overview
+- **Bump map** — 1,500+ official Philadelphia speed bumps, humps, cushions and tables rendered as viewport-culled canvas markers. Bumps on your selected route are emphasised; the rest dim.
+- **Bump-aware routing** — the fastest route plus, when it crosses bumps, an alternative with fewer of them. The alternative is found by asking the router for alternates and then re-routing with the offending bumps as excluded locations; it is only offered if it has strictly fewer bumps and fits the profile's detour budget.
+- **Vehicle and strategy profiles** — *Smooth Ride* / *Balanced* / *Fastest* set how much longer a detour may be (≈ +60% / +25% / none). The vehicle (sedan, SUV, lowered, motorcycle, bicycle) nudges that budget, sets the routing costing (bikes and motorcycles get their own), and decides how gentle a user-reported bump must be to count.
+- **Turn-by-turn navigation** — follow-cam with heading arrow, progress trace, live distance to the next maneuver, remaining time/distance, ETA clock, speed, GPS-quality chip, automatic rerouting from your current position when you leave the route, and arrival detection that ends the trip for you.
+- **Voice guidance** — free on-device speech (Web Speech API) with early and "now" announcements, speed-bump heads-ups as you approach one, a voice picker, and a mute toggle. Screen stays awake while navigating.
+- **Planner conveniences** — "Route here" from a map long-press/right-click (reverse-geocoded), recent destinations, Enter-to-pick-top-result, origin/destination swap, and "My Location" as the default origin.
+- **Saved routes and places** — routes are stored locally; routes saved from "My Location" re-run from wherever you are now. Places (POIs) can be saved, categorised, and imported/exported as GeoJSON.
+- **Reports** — report a bump the dataset is missing (GPS or tap-on-map, severity 1–5, note). Reports render on the map and count in routing immediately.
+- **Profile** — on-device display name, default vehicle/strategy, voice choice, and a Log mode that captures diagnostics you can download or file as a GitHub issue.
 
-Philadelphia has 1,584+ speed bumps hiding on daily routes — and your GPS doesn't tell you where they are. **SpeedBump does.** Plan routes that avoid them, protect your car, protect your cargo, and protect your sanity.
+Everything is stored in `localStorage`; there is no backend beyond two small API proxies.
 
-**Target users:** Daily commuters, delivery drivers (DoorDash, Uber Eats, Instacart), rideshare drivers, and anyone who values a smooth ride.
+## Tech stack
 
----
+| Layer | Technology |
+| --- | --- |
+| Framework | Next.js 16 (App Router), React 19, TypeScript |
+| Map | Leaflet 1.9 (canvas renderer), OpenStreetMap raster tiles |
+| Routing | Valhalla public server (primary; `alternates`, `exclude_locations`, per-vehicle costing) with OSRM demo servers as fallback, via `app/api/route` |
+| Geocoding | Nominatim (forward + reverse) via `app/api/geocode`, with an in-process LRU cache |
+| Voice | Web Speech API (`speechSynthesis`) |
+| UI | Tailwind CSS 4, vaul drawers, lucide icons, sonner toasts |
+| Tests | Vitest |
 
-## ✨ Features
-
-### MVP (Phase 1)
-- **Interactive Map** — Display all 1,584 official Philadelphia speed bump locations as markers
-- **Smart Routing** — A-to-B navigation with real-time speed bump avoidance
-- **User Authentication** — Firebase Auth (email + Google sign-in)
-- **Vehicle Profiles** — Sedan, SUV, lowered car, motorcycle, bicycle — avoidance thresholds adjust accordingly
-
-### Coming Soon (Phase 2+)
-- 📳 **Accelerometer-Based Severity Scoring** — Automatically rates bumps 1–5 using your phone's sensor
-- 📸 **Community Submissions** — Photo-based crowdsourced bump reporting with GPS extraction
-- 🤖 **AI Detection** — RoboFlow/YOLO models auto-verify submissions at 80%+ confidence
-- 🎚️ **Route Preference Modes** — Smooth Ride, Fast, or Cargo-Conscious
-- 🏆 **Gamification** — Road Scout badges, neighborhood leaderboards, verification challenges
-- 💰 **Premium Tier ($4.99/mo)** — Ad-free, offline maps, super smooth routes, custom themes
-
----
-
-## 🛠️ Tech Stack
-
-| Category        | Technology                                      |
-| --------------- | ----------------------------------------------- |
-| Framework       | Flutter (React Native cross-platform)           |
-| Map Display     | Mapbox GL JS                                    |
-| Routing         | HERE Routing API (segment avoidance)            |
-| Backend / Auth  | Firebase (Firestore, Auth, Storage, Functions)  |
-| AI / CV         | RoboFlow hosted inference, YOLOv8               |
-| Geospatial      | Turf.js, Firebase GeoFire                       |
-| State Mgmt      | Freezed + Riverpod                              |
-| Analytics       | Firebase Analytics + Sentry                     |
-| Language        | Dart / TypeScript                               |
-
----
-
-## 📊 Data Sources
-
-- **Primary:** [OpenDataPhilly — Traffic Calming Devices](https://opendataphilly.org/datasets/traffic-calming/)
-  - 1,584+ speed bumps, speed cushions, humps, and tables
-  - Fields: Object ID, Speed Bump ID, Street Segment ID, Install Date, GPS Coordinates
-  - REST API: `https://services.arcgis.com/fLeGjb7u4uXqeF9q/arcgis/rest/services/traffic_calming_devices/FeatureServer/0/`
-- **Supporting:** [Street Centerlines](https://opendataphilly.org/datasets/street-centerlines/) — base layer for routing and street segment matching
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Flutter SDK (3.x+)
-- Xcode + iOS Simulator (for iOS builds)
-- CocoaPods (`brew install cocoapods`)
-- Android Studio (for Android builds)
-- Firebase project configured
-
-### Setup
+## Getting started
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/Paristech1/SpeedBumbps.git
-cd SpeedBumbps
-
-# 2. Install dependencies
-flutter pub get
-
-# 3. Generate Freezed/serialization code (required after every clone)
-dart run build_runner build --delete-conflicting-outputs
-
-# 4. Install iOS pods
-cd ios && pod install --repo-update && cd ..
-
-# 5. Run the app
-flutter run
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-> **Note:** Accept Xcode license if prompted: `sudo xcodebuild -license`  
-> **Note:** If CocoaPods fails, try `cd ios && rm Podfile.lock && pod install --repo-update`
+Other scripts:
 
----
+```bash
+npm run build      # production build
+npm run lint       # eslint
+npm test           # vitest (unit tests in tests/)
+```
 
-## 📁 Project Structure
+No environment variables are required. The routing and geocoding proxies call public OpenStreetMap-community servers; be considerate of their usage policies (the geocode proxy caches for 24 h and the client debounces searches).
+
+## Project structure
 
 ```
+app/
+  api/geocode/route.ts     Nominatim proxy: ?q=<address> or ?reverse=<lat>,<lng>
+  api/route/route.ts       Routing proxy: Valhalla → OSRM fallback, normalised to OSRM JSON
+  map/page.tsx             The app (also served at /)
+  demo/active-navigation   Static UI preview
+components/map/            Map chrome: planner, route sheet, navigation HUD, tab drawers, controls
+contexts/                  MapContext (Leaflet instance), RoutingContext (route state + cache), ThemeContext
+hooks/                     Location tracking, follow-cam, deviation, voice, markers, local persistence
 lib/
-├── core/
-│   └── utils/              # exif_extractor, geospatial helpers
-├── features/
-│   ├── auth/               # Firebase Auth datasource, Google Sign-In 7.x
-│   ├── map/                # Map display, routing, geolocator
-│   ├── submission/         # User-submitted bumps, photo upload, voting
-│   └── admin/              # Admin dashboard, submission review
-ios/
-│   ├── Podfile             # platform :ios, '15.0'
-│   └── Flutter/            # xcconfig files (Debug, Release, Profile)
+  bump-avoidance.ts        Candidate scoring + exclusion rounds
+  osrm-service.ts          Route request/parse, polyline decode, step→polyline indexing
+  geo-utils.ts             Haversine, segment distance, route progress, imperial formatting
+  speed-bump-service.ts    Dataset loader + user-reported bumps
+  voice-guidance.ts        Speech singleton, voice selection, spoken distances
+types/                     Domain types (routes, bumps, profiles, user data)
+public/data/phl_speed_bumps.json   The bump dataset
+scripts/snap-bumps-to-roads.mjs    One-off data fix (see below)
+tests/                     Vitest unit tests
 ```
 
----
+## How routing works
 
-## 🗺️ Routing Strategy
+```
+plan(origin, destination, profile)
+  ├─ Valhalla: route + alternates=2 (costing from vehicle)
+  ├─ for each candidate: bumps within 20 m of its geometry (own bbox, padded)
+  ├─ primary = fastest candidate
+  ├─ if primary has bumps and the profile allows a detour:
+  │    ├─ re-route with exclude_locations = bumps on primary (≤ 50)
+  │    └─ if still bumpy and improving, one more round excluding those too
+  └─ alternative = fewest bumps, then fastest, within (1 + budget) × primary duration
+     — offered only if it has strictly fewer bumps than primary
+```
 
-1. Calculate standard route via **HERE Routing API** (`avoid[segments]` parameter)
-2. Check if route intersects speed bump locations (10–50m buffer using **Turf.js**)
-3. If intersections found → add waypoints to force route around bumps
-4. Recalculate and return the smoothest valid route
+During navigation the driver's position is projected onto the route polyline; the current instruction is the first maneuver still ahead of that projection, so guidance keeps up through GPS gaps. Leaving the route by >100 m for 5 s triggers a reroute from the current position (30 s cooldown), preserving the fewer-bumps choice if one was made.
 
----
+## Data
 
-## 🤖 AI / Computer Vision (Post-MVP)
+- **Primary:** [OpenDataPhilly — Traffic Calming Devices](https://opendataphilly.org/datasets/traffic-calming/), flattened to `{ id, lat, lng }` in `public/data/phl_speed_bumps.json`. Severity is not in the source data; every dataset bump is treated as severity 3.
+- **Snapping:** the source points derive from H3 cells and can sit slightly off-street. `scripts/snap-bumps-to-roads.mjs` snaps each point to the nearest road with OSRM and drops duplicates; `.github/workflows/snap-bumps.yml` runs it when the script changes.
+- **User reports** carry a 1–5 severity and are trusted locally.
 
-User-submitted photo flow:
-1. User uploads photo via mobile
-2. Send to **RoboFlow** hosted inference API
-3. Model returns detection confidence + bounding boxes
-4. If confidence > 80% → extract GPS from photo EXIF data
-5. Add to database under `pending` status for community verification
-6. 3+ upvotes → promote to `verified` layer
+## Privacy
 
-Models available:
-- Speed Bumps Detection (1,212 images)
-- Speed Bump by Road Safety (1,415 images)
-- YOLOv8: 90% accuracy, 31.76 FPS, mobile-capable
+Location never leaves the device except as route/geocode coordinates sent to the routing and geocoding proxies. Nothing is stored server-side. Log mode coarsens coordinates unless you opt in to precise locations.
 
----
+## License
 
-## 🔒 Privacy
-
-- ❌ No exact user location history stored (only anonymized route patterns)
-- ✅ Anonymous submission option
-- ✅ EXIF data stripped except GPS before public display
-- ✅ GDPR/CCPA compliant (data deletion on request)
-
----
-
-## 🎯 Roadmap & Success Metrics
-
-| Phase | Timeline   | Goal                         | Key Metric                       |
-| ----- | ---------- | ---------------------------- | -------------------------------- |
-| 0     | Weeks 1–4  | Pre-launch validation        | 500+ email signups               |
-| 1     | Weeks 5–12 | MVP launch                   | 1,000 downloads, 4.0+ stars      |
-| 2     | Weeks 13–20| Accelerometer + community    | 5,000 users, 50K severity points |
-| 3     | Weeks 21–32| Gamification + monetization  | 500 premium subscribers, $2.5K MRR |
-| 4     | Weeks 33–48| Full launch + media          | 25,000 users, $10K MRR           |
-| 5     | Year 2+    | Multi-city expansion         | 100K users, 100 cities           |
-
----
-
-## 📚 Resources
-
-- [OpenDataPhilly](https://opendataphilly.org)
-- [HERE Routing API Docs](https://developer.here.com/documentation/routing-api/)
-- [Mapbox Directions API](https://docs.mapbox.com/api/navigation/directions/)
-- [RoboFlow Universe](https://universe.roboflow.com) — search "speed bump"
-- [YOLOv8 Documentation](https://docs.ultralytics.com/)
-- [FixMyStreet (open source reference)](https://fixmystreet.org)
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! Please open an issue first to discuss what you'd like to change.
-
-## 📄 License
-
-MIT License
+MIT

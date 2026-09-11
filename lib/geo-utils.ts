@@ -155,10 +155,32 @@ export function routeBounds(a: LatLng, b: LatLng): { sw: LatLng; ne: LatLng } {
   };
 }
 
-/** Format distance meters to human-readable string. */
+const METERS_PER_MILE = 1609.344;
+const FEET_PER_METER = 3.28084;
+/** Below this we talk in feet; above it, miles. */
+const FEET_THRESHOLD_MILES = 0.1;
+
+/**
+ * Split a distance into imperial display units — the single source of truth
+ * for both on-screen text and spoken guidance (US audience).
+ * Feet are rounded to a friendly step (10 ft under 200, else 50 ft).
+ */
+export function toImperial(meters: number): { value: number; unit: 'ft' | 'mi' } {
+  const miles = meters / METERS_PER_MILE;
+  if (miles < FEET_THRESHOLD_MILES) {
+    const feet = meters * FEET_PER_METER;
+    const step = feet < 200 ? 10 : 50;
+    return { value: Math.max(step, Math.round(feet / step) * step), unit: 'ft' };
+  }
+  const rounded = miles < 10 ? Math.round(miles * 10) / 10 : Math.round(miles);
+  return { value: rounded, unit: 'mi' };
+}
+
+/** Format distance meters to a human-readable imperial string ("450 ft", "2.3 mi"). */
 export function formatDistance(meters: number): string {
-  if (meters < 1000) return `${Math.round(meters)} m`;
-  return `${(meters / 1609.34).toFixed(1)} mi`;
+  const { value, unit } = toImperial(meters);
+  if (unit === 'ft') return `${value} ft`;
+  return `${value % 1 === 0 ? value : value.toFixed(1)} mi`;
 }
 
 /** Format duration seconds to human-readable string. */

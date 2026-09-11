@@ -106,6 +106,8 @@ export function LeafletMap({
           maxZoom,
           zoomControl: DEFAULT_MAP_CONFIG.zoomControl,
           attributionControl: DEFAULT_MAP_CONFIG.attributionControl,
+          // ~1.5k speed-bump circle markers: one canvas beats thousands of SVG nodes
+          preferCanvas: true,
         });
 
         // Mark as initialized before storing reference

@@ -37,10 +37,26 @@ interface ValhallaTrip {
   status_message: string;
 }
 
+interface ValhallaOptions {
+  /** Points (lng,lat) whose nearest road edges are excluded from the path search. */
+  exclude: [number, number][];
+  /** Number of alternate routes to request (0–3; Valhalla ignores it for >2 locations). */
+  alternates: number;
+  costing: ValhallaCosting;
+}
+
+const VALHALLA_COSTINGS = ['auto', 'motorcycle', 'bicycle'] as const;
+type ValhallaCosting = (typeof VALHALLA_COSTINGS)[number];
+
+/** Public Valhalla server caps exclude_locations (service_limits.max_exclude_locations). */
+const MAX_EXCLUDE_LOCATIONS = 50;
+const MAX_ALTERNATES = 3;
+
 async function fetchValhalla(
   originLng: number, originLat: number,
   destLng: number, destLat: number,
   waypointCoords: [number, number][],
+  options: ValhallaOptions,
 ): Promise<OsrmLikeResponse> {
   const locations = [
     { lon: originLng, lat: originLat },
@@ -48,24 +64,40 @@ async function fetchValhalla(
     { lon: destLng, lat: destLat },
   ];
 
+  const body: Record<string, unknown> = {
+    locations,
+    costing: options.costing,
+    directions_options: { units: 'kilometers' },
+  };
+  if (options.alternates > 0 && locations.length === 2) {
+    body.alternates = Math.min(MAX_ALTERNATES, options.alternates);
+  }
+  if (options.exclude.length > 0) {
+    body.exclude_locations = options.exclude
+      .slice(0, MAX_EXCLUDE_LOCATIONS)
+      .map(([lng, lat]) => ({ lon: lng, lat }));
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), SERVER_TIMEOUT_MS);
 
   const res = await fetch(VALHALLA_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'User-Agent': 'SpeedBumps-App/1.0' },
-    body: JSON.stringify({
-      locations,
-      costing: 'auto',
-      directions_options: { units: 'kilometers' },
-    }),
+    body: JSON.stringify(body),
     signal: controller.signal,
   });
   clearTimeout(timeoutId);
 
   if (!res.ok) throw new Error(`Valhalla ${res.status}`);
-  const data = await res.json() as { trip: ValhallaTrip };
-  return valhallaToOsrm(data.trip);
+  const data = await res.json() as { trip: ValhallaTrip; alternates?: Array<{ trip: ValhallaTrip }> };
+  const primary = valhallaToOsrm(data.trip);
+  for (const alt of data.alternates ?? []) {
+    if (alt?.trip?.legs?.length) {
+      primary.routes.push(...valhallaToOsrm(alt.trip).routes);
+    }
+  }
+  return primary;
 }
 
 /** Decode a Google-format encoded polyline to [lat, lng] pairs. */
@@ -260,23 +292,54 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Need at least 2 coordinate pairs' }, { status: 400 });
   }
 
+  if (parts.some(([lng, lat]) => !Number.isFinite(lng) || !Number.isFinite(lat))) {
+    return NextResponse.json({ error: 'Malformed coords parameter' }, { status: 400 });
+  }
+
   const [originLng, originLat] = parts[0];
   const [destLng, destLat] = parts[parts.length - 1];
   const waypointCoords = parts.slice(1, -1);
 
+  // Optional Valhalla-only options (ignored by the OSRM fallback)
+  const excludeParam = request.nextUrl.searchParams.get('exclude') ?? '';
+  const exclude = excludeParam
+    ? excludeParam
+        .split(';')
+        .map((c) => c.split(',').map(Number) as [number, number])
+        .filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat))
+    : [];
+  const alternates = Math.max(0, Math.min(MAX_ALTERNATES, Number(request.nextUrl.searchParams.get('alternates') ?? 0) || 0));
+  const costingParam = request.nextUrl.searchParams.get('costing') ?? 'auto';
+  const costing: ValhallaCosting = (VALHALLA_COSTINGS as readonly string[]).includes(costingParam)
+    ? (costingParam as ValhallaCosting)
+    : 'auto';
+
   // Try Valhalla first (fastest and most reliable)
   try {
-    const result = await fetchValhalla(originLng, originLat, destLng, destLat, waypointCoords);
+    const result = await fetchValhalla(originLng, originLat, destLng, destLat, waypointCoords, {
+      exclude,
+      alternates,
+      costing,
+    });
     return NextResponse.json(result);
-  } catch {
+  } catch (err) {
+    // An exclusion request that Valhalla can't satisfy (e.g. "No path") must
+    // not fall through to OSRM: OSRM would ignore the exclusions and hand back
+    // the very route the caller is trying to avoid.
+    if (exclude.length > 0) {
+      const message = err instanceof Error ? err.message : String(err);
+      return NextResponse.json({ error: `No route avoiding those locations: ${message}` }, { status: 422 });
+    }
     // fall through to OSRM
   }
 
-  // Try OSRM servers as fallback
+  // Try OSRM servers as fallback (no exclusion support — client scores what it gets)
+  const OSRM_FORWARDABLE = new Set(['overview', 'geometries', 'steps', 'alternatives']);
   const forwardParams = new URLSearchParams();
   for (const [key, value] of request.nextUrl.searchParams.entries()) {
-    if (key !== 'coords') forwardParams.set(key, value);
+    if (OSRM_FORWARDABLE.has(key)) forwardParams.set(key, value);
   }
+  if (alternates > 0 && waypointCoords.length === 0) forwardParams.set('alternatives', 'true');
 
   try {
     const result = await fetchOsrm(coords, forwardParams);

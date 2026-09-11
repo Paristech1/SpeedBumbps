@@ -3,7 +3,7 @@
  * All persisted to localStorage (no backend).
  */
 
-import type { LatLng, RouteAvoidanceProfile } from './speedbumps';
+import type { LatLng, RouteAvoidanceProfile, GeocodingResult } from './speedbumps';
 
 export interface SavedRoute {
   id: string;
@@ -11,6 +11,11 @@ export interface SavedRoute {
   destination: LatLng;
   originLabel: string;
   destinationLabel: string;
+  /**
+   * The route was planned from "My Location". When re-run, the live GPS
+   * position replaces the stored origin coordinate.
+   */
+  originIsCurrentLocation?: boolean;
   profile: RouteAvoidanceProfile;
   /** Snapshot of the selected route's stats at save time. */
   summary: {
@@ -36,8 +41,14 @@ export interface UserProfile {
   updatedAt: number;
 }
 
+/** A destination the user picked in the planner, for quick re-selection. */
+export interface RecentDestination extends GeocodingResult {
+  usedAt: number;
+}
+
 export type TabId = 'explore' | 'saved' | 'reports' | 'profile';
 
 export const SAVED_ROUTES_STORAGE_KEY = 'speedbumps-saved-routes';
+export const RECENT_SEARCHES_STORAGE_KEY = 'speedbumps-recent-searches';
 export const USER_REPORTS_STORAGE_KEY = 'speedbumps-user-reports';
 export const USER_PROFILE_STORAGE_KEY = 'speedbumps-profile';

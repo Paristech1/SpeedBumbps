@@ -2,22 +2,30 @@
 
 /**
  * Active navigation guidance bar — Velocity Dark "HUD" style.
- * Matches the active_navigation stitch: gradient blue header with
- * turn icon, instruction, ETA, and arrival card.
+ * Gradient blue header with the upcoming maneuver, live distance to it,
+ * and an arrival card with remaining time/distance, ETA clock and speed.
+ *
+ * Step tracking is progress-based: the driver's position is projected onto
+ * the route polyline and the "current" step is the first maneuver still ahead
+ * of that projection. This survives GPS gaps and fast passes that a
+ * radius-around-the-maneuver check would miss.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight,
   MoveUpRight, MoveUpLeft, MapPin, RotateCw, GitFork, X, Square,
-  Volume2, VolumeX,
+  Volume2, VolumeX, Flag,
 } from 'lucide-react';
 import type { RouteStep, LatLng, SpeedBump } from '@/types/speedbumps';
 import { haversineDistance, formatDistance, formatDuration, routeProgress } from '@/lib/geo-utils';
 import { useVoiceGuidance } from '@/hooks/useVoiceGuidance';
 import { isSpeechSupported, isVoiceMuted, setVoiceMuted } from '@/lib/voice-guidance';
 
-const STEP_ADVANCE_RADIUS_M = 30;
+/** Within this many metres of the route end (on the last step) we call it arrived. */
+const ARRIVAL_RADIUS_M = 30;
+/** How long the "Arrived" state shows before navigation ends itself. */
+const ARRIVAL_AUTO_STOP_MS = 5000;
 
 interface NavigationBarProps {
   steps: RouteStep[];
@@ -29,6 +37,18 @@ interface NavigationBarProps {
   totalDurationSeconds?: number;
   /** Speed bumps on the selected route — drives proximity voice alerts. */
   speedBumps?: SpeedBump[];
+  /** GPS accuracy in metres, for the precision chip. */
+  gpsAccuracy?: number | null;
+  /** Current ground speed in metres per second. */
+  speedMps?: number | null;
+}
+
+/** First step whose maneuver is still ahead of the driver's segment; else the last step. */
+function upcomingStepIndex(steps: RouteStep[], segmentIndex: number): number {
+  for (let i = 0; i < steps.length; i++) {
+    if (steps[i].polylineIndex > segmentIndex) return i;
+  }
+  return steps.length - 1;
 }
 
 export function NavigationBar({
@@ -39,31 +59,56 @@ export function NavigationBar({
   totalDistanceMeters,
   totalDurationSeconds,
   speedBumps,
+  gpsAccuracy,
+  speedMps,
 }: NavigationBarProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [voiceMuted, setVoiceMutedState] = useState(() => isVoiceMuted());
+  const [arrived, setArrived] = useState(false);
+  // Wall clock for the ETA readout; ticks every 30 s so the time stays honest
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
 
-  // Reset to the first step whenever a new route's steps arrive
-  // (adjust state during render — no effect needed).
+  // Reset whenever a new route's steps arrive (adjust state during render).
   const [prevSteps, setPrevSteps] = useState(steps);
   if (steps !== prevSteps) {
     setPrevSteps(steps);
     setCurrentStepIndex(0);
+    setArrived(false);
   }
 
-  // Advance to the next step once the driver reaches the current maneuver.
-  // Derived during render; the functional update converges (see React's
-  // "You Might Not Need an Effect").
-  if (
-    currentLocation &&
-    steps.length > 0 &&
-    currentStepIndex < steps.length - 1 &&
-    haversineDistance(currentLocation, steps[currentStepIndex].location) < STEP_ADVANCE_RADIUS_M
-  ) {
-    setCurrentStepIndex((i) => Math.min(i + 1, steps.length - 1));
+  const hasGeometry = !!routePoints && routePoints.length >= 2;
+  const progress = currentLocation && hasGeometry ? routeProgress(routePoints, currentLocation) : null;
+
+  // Advance the step from route progress; never move backwards on GPS jitter.
+  if (progress && steps.length > 0) {
+    const next = upcomingStepIndex(steps, progress.segmentIndex);
+    if (next > currentStepIndex) setCurrentStepIndex(next);
   }
 
-  useVoiceGuidance({ steps, currentStepIndex, currentLocation, active: true, speedBumps });
+  const isLastStep = currentStepIndex === steps.length - 1;
+  const hasArrived =
+    arrived || (isLastStep && !!progress && progress.remainingMeters <= ARRIVAL_RADIUS_M);
+  if (hasArrived && !arrived) setArrived(true);
+
+  // Arrived: hold the card briefly, then end navigation on the driver's behalf.
+  useEffect(() => {
+    if (!arrived) return;
+    const timer = setTimeout(onEndNavigation, ARRIVAL_AUTO_STOP_MS);
+    return () => clearTimeout(timer);
+  }, [arrived, onEndNavigation]);
+
+  useVoiceGuidance({
+    steps,
+    currentStepIndex,
+    currentLocation,
+    active: true,
+    speedBumps,
+    hasArrived,
+  });
 
   const toggleVoice = () => {
     const next = !voiceMuted;
@@ -75,54 +120,60 @@ export function NavigationBar({
 
   const currentStep = steps[currentStepIndex];
 
+  // Live distance to the upcoming maneuver
+  const distanceToManeuver = currentLocation
+    ? haversineDistance(currentLocation, currentStep.location)
+    : null;
+
   // Remaining distance/duration — continuous from GPS position when we have the
   // full route geometry; otherwise fall back to summing the remaining steps.
-  const stepRemainingDistance = steps
-    .slice(currentStepIndex)
-    .reduce((sum, s) => sum + s.distanceMeters, 0);
-  const stepRemainingDuration = steps
-    .slice(currentStepIndex)
-    .reduce((sum, s) => sum + s.durationSeconds, 0);
-
-  let remainingDistance = stepRemainingDistance;
-  let remainingDuration = stepRemainingDuration;
-  if (
-    currentLocation &&
-    routePoints &&
-    routePoints.length >= 2 &&
-    totalDistanceMeters &&
-    totalDistanceMeters > 0 &&
-    totalDurationSeconds
-  ) {
-    const { remainingMeters } = routeProgress(routePoints, currentLocation);
-    remainingDistance = remainingMeters;
-    remainingDuration = totalDurationSeconds * (remainingMeters / totalDistanceMeters);
+  let remainingDistance = steps.slice(currentStepIndex).reduce((sum, s) => sum + s.distanceMeters, 0);
+  let remainingDuration = steps.slice(currentStepIndex).reduce((sum, s) => sum + s.durationSeconds, 0);
+  if (progress && totalDistanceMeters && totalDistanceMeters > 0 && totalDurationSeconds) {
+    remainingDistance = progress.remainingMeters;
+    remainingDuration = totalDurationSeconds * (progress.remainingMeters / totalDistanceMeters);
+  }
+  if (hasArrived) {
+    remainingDistance = 0;
+    remainingDuration = 0;
   }
 
-  const isLastStep = currentStepIndex === steps.length - 1;
-  const remainingMinutes = Math.max(1, Math.ceil(remainingDuration / 60));
+  const remainingMinutes = Math.max(hasArrived ? 0 : 1, Math.ceil(remainingDuration / 60));
+  const etaClock = new Date(now + remainingDuration * 1000).toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  const speedMph = speedMps != null ? Math.round(speedMps * 2.23694) : null;
+
+  const gps = gpsTier(gpsAccuracy ?? null);
 
   return (
     <>
       {/* Top Navigation Banner — Velocity Dark gradient header */}
       <header className="fixed top-0 left-0 w-full z-[1100] bg-gradient-to-r from-[#1565C0] to-[#2196F3] shadow-2xl">
         <div className="flex items-center justify-between px-6 py-5">
-          <div className="flex items-center gap-5">
-            <div className="bg-white/20 p-3 rounded-2xl">
-              <TurnIcon instruction={currentStep.instruction} />
+          <div className="flex items-center gap-5 min-w-0">
+            <div className="bg-white/20 p-3 rounded-2xl shrink-0">
+              {hasArrived ? <Flag className="w-6 h-6 text-white" /> : <TurnIcon instruction={currentStep.instruction} />}
             </div>
-            <div>
-              <h1 className="font-[var(--font-headline)] font-bold text-xl text-white tracking-tight leading-tight">
-                {currentStep.instruction}
+            <div className="min-w-0">
+              <h1 className="font-[var(--font-headline)] font-bold text-xl text-white tracking-tight leading-tight truncate">
+                {hasArrived ? "You've arrived" : currentStep.instruction}
               </h1>
               <p className="font-[var(--font-body)] font-medium text-white/80 text-sm tracking-wider uppercase">
-                {isLastStep
-                  ? 'Arriving at destination'
-                  : `In ${formatDistance(currentStep.distanceMeters)}`}
+                {hasArrived
+                  ? 'Ending navigation…'
+                  : distanceToManeuver != null
+                    ? isLastStep
+                      ? `Destination in ${formatDistance(distanceToManeuver)}`
+                      : `In ${formatDistance(distanceToManeuver)}`
+                    : isLastStep
+                      ? 'Arriving at destination'
+                      : 'Waiting for GPS…'}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 shrink-0">
             <div className="text-right border-l border-white/20 pl-6 hidden sm:block">
               <span className="font-[var(--font-headline)] font-black text-3xl text-white block">
                 {remainingMinutes}
@@ -160,21 +211,31 @@ export function NavigationBar({
 
       {/* Bottom Arrival Card — Glassmorphic */}
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-[1100]">
-        <div className="glass-panel p-6 rounded-2xl shadow-2xl ghost-border flex items-center justify-between">
-          <div className="flex flex-col">
+        <div className="glass-panel p-6 rounded-2xl shadow-2xl ghost-border flex items-center justify-between gap-4">
+          <div className="flex flex-col min-w-0">
             <span className="font-[var(--font-body)] text-xs font-bold text-white/50 uppercase tracking-[0.15em] mb-1">
-              Remaining
+              {hasArrived ? 'Arrived' : 'Remaining'}
             </span>
-            <h2 className="font-[var(--font-headline)] font-bold text-2xl text-[#e2e2eb]">
-              {formatDuration(remainingDuration)} · {formatDistance(remainingDistance)}
+            <h2 className="font-[var(--font-headline)] font-bold text-2xl text-[#e2e2eb] truncate">
+              {hasArrived
+                ? 'Smooth all the way'
+                : `${formatDuration(remainingDuration)} · ${formatDistance(remainingDistance)}`}
             </h2>
+            {!hasArrived && (
+              <span className="text-xs font-semibold text-[#9ecaff] mt-1">
+                ETA {etaClock}
+                {speedMph != null && <span className="text-white/50"> · {speedMph} mph</span>}
+              </span>
+            )}
           </div>
           <button
             onClick={onEndNavigation}
-            className="bg-[#93000a] hover:bg-[#ffb4ab]/20 transition-all active:scale-95 px-8 py-3 rounded-full flex items-center gap-2 group"
+            className="bg-[#93000a] hover:bg-[#ffb4ab]/20 transition-all active:scale-95 px-8 py-3 rounded-full flex items-center gap-2 group shrink-0"
           >
             <Square className="w-5 h-5 text-[#ffdad6] fill-current" />
-            <span className="font-[var(--font-headline)] font-bold text-[#ffdad6] tracking-tight">Stop</span>
+            <span className="font-[var(--font-headline)] font-bold text-[#ffdad6] tracking-tight">
+              {hasArrived ? 'Done' : 'Stop'}
+            </span>
           </button>
         </div>
       </div>
@@ -182,12 +243,19 @@ export function NavigationBar({
       {/* Map indicator chips */}
       <div className="fixed bottom-32 left-6 z-[1100] flex flex-col gap-2">
         <div className="flex items-center gap-2 px-3 py-2 rounded-full glass-panel ghost-border">
-          <div className="w-2 h-2 rounded-full bg-[#3ce36a]" />
-          <span className="font-[var(--font-body)] text-[10px] font-bold text-white/70 uppercase">GPS High Precision</span>
+          <div className={`w-2 h-2 rounded-full ${gps.dotClass}`} />
+          <span className="font-[var(--font-body)] text-[10px] font-bold text-white/70 uppercase">{gps.label}</span>
         </div>
       </div>
     </>
   );
+}
+
+function gpsTier(accuracy: number | null): { label: string; dotClass: string } {
+  if (accuracy == null) return { label: 'GPS Searching', dotClass: 'bg-[#89919d] animate-pulse' };
+  if (accuracy <= 10) return { label: 'GPS High Precision', dotClass: 'bg-[#3ce36a]' };
+  if (accuracy <= 30) return { label: `GPS Good · ${Math.round(accuracy)} m`, dotClass: 'bg-[#9ecaff]' };
+  return { label: `GPS Weak · ${Math.round(accuracy)} m`, dotClass: 'bg-[#FF6B00]' };
 }
 
 function TurnIcon({ instruction }: { instruction: string }) {

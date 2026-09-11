@@ -15,7 +15,19 @@ export interface UserLocation {
   position: LatLng;
   accuracy: number; // meters
   heading: number | null; // degrees clockwise from north; null when stationary/unknown
+  speed: number | null; // meters per second; null when unknown
   timestamp: number;
+}
+
+function toUserLocation(position: GeolocationPosition): UserLocation {
+  const { coords } = position;
+  return {
+    position: { lat: coords.latitude, lng: coords.longitude },
+    accuracy: coords.accuracy,
+    heading: Number.isFinite(coords.heading) ? (coords.heading as number) : null,
+    speed: coords.speed != null && Number.isFinite(coords.speed) && coords.speed >= 0 ? coords.speed : null,
+    timestamp: position.timestamp,
+  };
 }
 
 interface LocationState {
@@ -52,9 +64,24 @@ const RELAXED_OPTIONS: PositionOptions = {
   timeout: 60000,
 };
 
+/**
+ * Turn-by-turn needs real GPS: fresh fixes, heading and speed. Only used while
+ * navigating, since it costs battery and is slow to acquire indoors.
+ */
+const NAVIGATION_OPTIONS: PositionOptions = {
+  enableHighAccuracy: true,
+  maximumAge: 1000,
+  timeout: 20000,
+};
+
 const MAX_TIMEOUT_RETRIES = 2;
 
-export function useLocationTracking() {
+interface UseLocationTrackingOptions {
+  /** Request high-accuracy GPS fixes (navigation mode). */
+  highAccuracy?: boolean;
+}
+
+export function useLocationTracking({ highAccuracy = false }: UseLocationTrackingOptions = {}) {
   const [state, setState] = useState<LocationState>({
     location: null,
     isTracking: false,
@@ -65,7 +92,7 @@ export function useLocationTracking() {
   /** Avoid infinite retry loops on persistent TIMEOUT */
   const timeoutRetryCountRef = useRef(0);
 
-  const startTracking = useCallback(() => {
+  const startTracking = useCallback((useHighAccuracy: boolean = false) => {
     if (!navigator.geolocation) {
       setState((prev) => ({ ...prev, error: 'Geolocation not supported', hasPermission: false }));
       return;
@@ -73,6 +100,7 @@ export function useLocationTracking() {
 
     setState((prev) => ({ ...prev, isTracking: true, error: null }));
     timeoutRetryCountRef.current = 0;
+    const baseOptions = useHighAccuracy ? NAVIGATION_OPTIONS : RELAXED_OPTIONS;
 
     const clearWatch = () => {
       if (watchIdRef.current !== null) {
@@ -88,17 +116,7 @@ export function useLocationTracking() {
           timeoutRetryCountRef.current = 0;
           setState((prev) => ({
             ...prev,
-            location: {
-              position: {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude,
-              },
-              accuracy: position.coords.accuracy,
-              heading: Number.isFinite(position.coords.heading)
-                ? (position.coords.heading as number)
-                : null,
-              timestamp: position.timestamp,
-            },
+            location: toUserLocation(position),
             hasPermission: true,
             error: null,
           }));
@@ -126,25 +144,15 @@ export function useLocationTracking() {
                   timeoutRetryCountRef.current = 0;
                   setState((prev) => ({
                     ...prev,
-                    location: {
-                      position: {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                      },
-                      accuracy: position.coords.accuracy,
-                      heading: Number.isFinite(position.coords.heading)
-                        ? (position.coords.heading as number)
-                        : null,
-                      timestamp: position.timestamp,
-                    },
+                    location: toUserLocation(position),
                     hasPermission: true,
                     error: null,
                   }));
-                  attachWatch(RELAXED_OPTIONS);
+                  attachWatch(baseOptions);
                 },
                 () => {
                   attachWatch({
-                    ...RELAXED_OPTIONS,
+                    ...baseOptions,
                     maximumAge: 300000,
                     timeout: 120000,
                   });
@@ -169,7 +177,7 @@ export function useLocationTracking() {
       );
     };
 
-    attachWatch(RELAXED_OPTIONS);
+    attachWatch(baseOptions);
   }, []);
 
   const stopTracking = useCallback(() => {
@@ -180,18 +188,20 @@ export function useLocationTracking() {
     setState((prev) => ({ ...prev, isTracking: false }));
   }, []);
 
-  // Auto-start on mount (defer so we don't set state synchronously inside the effect body)
+  // Auto-start on mount and re-attach whenever the accuracy mode changes
+  // (defer so we don't set state synchronously inside the effect body)
   useEffect(() => {
     const id = requestAnimationFrame(() => {
-      startTracking();
+      startTracking(highAccuracy);
     });
     return () => {
       cancelAnimationFrame(id);
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
       }
     };
-  }, [startTracking]);
+  }, [startTracking, highAccuracy]);
 
   return { ...state, startTracking, stopTracking };
 }

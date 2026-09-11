@@ -3,10 +3,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { LatLng, SpeedBump } from '@/types/speedbumps';
 import { USER_REPORTS_STORAGE_KEY, type UserReport } from '@/types/user-data';
-import { setUserReportedBumps } from '@/lib/speed-bump-service';
+import { setUserReportedBumps, USER_REPORTS_CHANGED_EVENT } from '@/lib/speed-bump-service';
 
-/** Fired on window whenever the set of user-reported bumps changes. */
-export const USER_REPORTS_CHANGED_EVENT = 'speedbumps:user-reports-changed';
+export { USER_REPORTS_CHANGED_EVENT };
 
 /**
  * User reports are trusted locally (isVerified: true) so they count

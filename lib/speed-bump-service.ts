@@ -14,6 +14,9 @@ interface RawSpeedBump {
   lng: number;
 }
 
+/** Fired on window whenever the set of user-reported bumps changes. */
+export const USER_REPORTS_CHANGED_EVENT = 'speedbumps:user-reports-changed';
+
 let cachedBumps: SpeedBump[] | null = null;
 let userBumps: SpeedBump[] = [];
 

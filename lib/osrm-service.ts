@@ -4,6 +4,7 @@
  */
 
 import type { LatLng, RouteStep, AppRoute } from '@/types/speedbumps';
+import { haversineDistance } from './geo-utils';
 
 const OSRM_PROXY_URL = '/api/route';
 
@@ -112,21 +113,31 @@ export function decodePolyline(encoded: string): LatLng[] {
   return points;
 }
 
+export type RoutingCosting = 'auto' | 'motorcycle' | 'bicycle';
+
+export interface RouteRequestOptions {
+  /** Intermediate via points (forces the path through them). */
+  waypoints?: LatLng[];
+  /** Points whose nearest roads should be excluded from the path (Valhalla only). */
+  exclude?: LatLng[];
+  /** How many alternate routes to request in addition to the primary (0–3). */
+  alternates?: number;
+  costing?: RoutingCosting;
+}
+
 /**
- * Fetch a route from OSRM.
- * Coordinates are lng,lat format (OSRM convention).
+ * Fetch one or more candidate routes from the routing proxy.
+ * Returns the primary route first, followed by any alternates the server produced.
  */
-export async function getOsrmRoute(
+export async function getRouteCandidates(
   origin: LatLng,
   destination: LatLng,
-  waypoints?: LatLng[]
-): Promise<OsrmRouteResult> {
+  options: RouteRequestOptions = {}
+): Promise<OsrmRouteResult[]> {
   const coordParts: string[] = [];
   coordParts.push(`${origin.lng},${origin.lat}`);
-  if (waypoints && waypoints.length > 0) {
-    for (const wp of waypoints) {
-      coordParts.push(`${wp.lng},${wp.lat}`);
-    }
+  for (const wp of options.waypoints ?? []) {
+    coordParts.push(`${wp.lng},${wp.lat}`);
   }
   coordParts.push(`${destination.lng},${destination.lat}`);
 
@@ -135,24 +146,51 @@ export async function getOsrmRoute(
   url.searchParams.set('overview', 'full');
   url.searchParams.set('geometries', 'polyline');
   url.searchParams.set('steps', 'true');
+  if (options.alternates && options.alternates > 0) {
+    url.searchParams.set('alternates', String(options.alternates));
+  }
+  if (options.exclude && options.exclude.length > 0) {
+    url.searchParams.set('exclude', options.exclude.map((p) => `${p.lng},${p.lat}`).join(';'));
+  }
+  if (options.costing && options.costing !== 'auto') {
+    url.searchParams.set('costing', options.costing);
+  }
 
   const response = await fetch(url.toString());
   if (!response.ok) {
-    throw new Error(`OSRM request failed: ${response.status}`);
+    throw new Error(`Routing request failed: ${response.status}`);
   }
 
   const json = await response.json();
   const code = json.code as string ?? '';
   if (code !== 'Ok') {
-    throw new Error(`OSRM error: ${code}`);
+    throw new Error(`Routing error: ${code}`);
   }
 
   const routes = json.routes as unknown[] ?? [];
   if (routes.length === 0) {
-    throw new Error('No routes returned from OSRM');
+    throw new Error('No routes returned');
   }
 
-  const route = routes[0] as Record<string, unknown>;
+  return routes
+    .map((r) => parseOsrmRoute(r as Record<string, unknown>))
+    .filter((r) => r.polylinePoints.length >= 2);
+}
+
+/**
+ * Fetch a single route (primary only). Kept for callers that only need one path.
+ */
+export async function getOsrmRoute(
+  origin: LatLng,
+  destination: LatLng,
+  waypoints?: LatLng[]
+): Promise<OsrmRouteResult> {
+  const [first] = await getRouteCandidates(origin, destination, { waypoints });
+  if (!first) throw new Error('No routes returned');
+  return first;
+}
+
+function parseOsrmRoute(route: Record<string, unknown>): OsrmRouteResult {
   const geometry = (route.geometry as string) ?? '';
   const distance = (route.distance as number) ?? 0;
   const duration = (route.duration as number) ?? 0;
@@ -173,7 +211,7 @@ export async function getOsrmRoute(
       const instruction = buildInstruction(maneuverType, maneuverModifier, streetName);
       const stepDistance = (stepMap.distance as number) ?? 0;
       const stepDuration = (stepMap.duration as number) ?? 0;
-      const loc = stepMap.location as number[] | null;
+      const loc = (stepMap.location ?? maneuver.location) as number[] | null;
       const sLng = loc && loc.length > 0 ? loc[0] : 0;
       const sLat = loc && loc.length > 1 ? loc[1] : 0;
       steps.push({
@@ -181,6 +219,7 @@ export async function getOsrmRoute(
         distanceMeters: stepDistance,
         durationSeconds: Math.round(stepDuration),
         location: { lat: sLat, lng: sLng },
+        polylineIndex: 0,
       });
     }
   }
@@ -191,8 +230,11 @@ export async function getOsrmRoute(
       distanceMeters: distance,
       durationSeconds: Math.round(duration),
       location: polylinePoints[polylinePoints.length - 1],
+      polylineIndex: polylinePoints.length - 1,
     });
   }
+
+  assignStepPolylineIndices(steps, polylinePoints);
 
   return {
     polylinePoints,
@@ -200,6 +242,29 @@ export async function getOsrmRoute(
     durationSeconds: Math.round(duration),
     steps,
   };
+}
+
+/**
+ * Map each maneuver onto the route polyline. Indices are monotonic: a step's
+ * maneuver can never sit before the previous step's, which keeps
+ * progress-based step tracking stable even when maneuvers are close together.
+ */
+export function assignStepPolylineIndices(steps: RouteStep[], polylinePoints: LatLng[]): void {
+  if (polylinePoints.length === 0) return;
+  let searchFrom = 0;
+  for (const step of steps) {
+    let bestIdx = searchFrom;
+    let bestDist = Infinity;
+    for (let i = searchFrom; i < polylinePoints.length; i++) {
+      const d = haversineDistance(step.location, polylinePoints[i]);
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    }
+    step.polylineIndex = bestIdx;
+    searchFrom = bestIdx;
+  }
 }
 
 /** Convert an OsrmRouteResult to an AppRoute domain entity. */

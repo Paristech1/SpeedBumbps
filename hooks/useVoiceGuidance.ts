@@ -3,7 +3,7 @@
 /**
  * Spoken turn-by-turn announcements during active navigation.
  * Trigger tiers adapted from OsmAnd's voice-prompt algorithm:
- *   early ("In 300 meters, turn right…") ≤ EARLY_ANNOUNCE_M
+ *   early ("In a quarter mile, turn right…") ≤ EARLY_ANNOUNCE_M
  *   now   ("Turn right onto …")          ≤ NOW_ANNOUNCE_M
  * Each (step, tier) is announced once; state resets on a new route.
  *
@@ -27,11 +27,15 @@ interface UseVoiceGuidanceOptions {
   active: boolean;
   /** Speed bumps that lie on the selected route, for proximity alerts. */
   speedBumps?: SpeedBump[];
+  /** Driver has reached the destination — speak the arrival line once. */
+  hasArrived?: boolean;
 }
 
-function announcementText(step: RouteStep, isLastStep: boolean): string {
+const ARRIVAL_TEXT = "You've arrived — smooth all the way. Nice driving!";
+
+function announcementText(step: RouteStep, isLastStep: boolean, tier: 'early' | 'now'): string {
   if (isLastStep && step.instruction.toLowerCase().startsWith('arrive')) {
-    return "You've arrived — smooth all the way. Nice driving!";
+    return tier === 'early' ? "you'll arrive at your destination" : 'Your destination is just ahead.';
   }
   return step.instruction;
 }
@@ -48,11 +52,20 @@ export function useVoiceGuidance({
   currentLocation,
   active,
   speedBumps,
+  hasArrived = false,
 }: UseVoiceGuidanceOptions) {
   const spokenRef = useRef<Set<string>>(new Set());
   const hasIntroducedRef = useRef(false);
   const introducedStepsRef = useRef<RouteStep[] | null>(null);
   const announcedBumpsRef = useRef<Set<string>>(new Set());
+  const arrivalSpokenRef = useRef(false);
+
+  // Arrival — once per route
+  useEffect(() => {
+    if (!active || !hasArrived || arrivalSpokenRef.current) return;
+    arrivalSpokenRef.current = true;
+    speak(ARRIVAL_TEXT);
+  }, [active, hasArrived]);
 
   // New route (or reroute): forget what was announced and introduce it.
   // The full intro only on the first route of the session — reroutes just
@@ -65,6 +78,7 @@ export function useVoiceGuidance({
     // origin, so mark its tiers spoken or "now" would cancel the intro.
     spokenRef.current = new Set(['0:start', '0:early', '0:now']);
     announcedBumpsRef.current = new Set();
+    arrivalSpokenRef.current = false;
     if (hasIntroducedRef.current) {
       speak(steps[0].instruction);
     } else {
@@ -75,7 +89,7 @@ export function useVoiceGuidance({
 
   // Distance-based announcement tiers
   useEffect(() => {
-    if (!active || !currentLocation || steps.length === 0) return;
+    if (!active || hasArrived || !currentLocation || steps.length === 0) return;
     const step = steps[currentStepIndex];
     if (!step) return;
 
@@ -90,13 +104,13 @@ export function useVoiceGuidance({
       if (!spoken.has(nowKey)) {
         spoken.add(nowKey);
         spoken.add(earlyKey); // too late for the early tier
-        speak(announcementText(step, isLastStep));
+        speak(announcementText(step, isLastStep, 'now'));
       }
     } else if (distance <= EARLY_ANNOUNCE_M && !spoken.has(earlyKey)) {
       spoken.add(earlyKey);
-      speak(`In ${speechDistance(distance)}, ${announcementText(step, isLastStep)}`);
+      speak(`In ${speechDistance(distance)}, ${announcementText(step, isLastStep, 'early')}`);
     }
-  }, [active, currentLocation, currentStepIndex, steps]);
+  }, [active, hasArrived, currentLocation, currentStepIndex, steps]);
 
   // Speed-bump proximity alerts — fire once per bump as the driver nears it.
   useEffect(() => {

@@ -43,8 +43,14 @@ export function RouteResultCard({
   onSnapChange,
 }: RouteResultCardProps) {
   const { primaryRoute, alternativeRoute } = result;
-  const selectedRoute = selectedRouteIndex === 1 && alternativeRoute ? alternativeRoute : primaryRoute;
-  const hasAlternative = !!alternativeRoute;
+  // Only offer the alternative when it actually improves on the fastest route
+  const hasAlternative = !!alternativeRoute && alternativeRoute.speedBumpCount < primaryRoute.speedBumpCount;
+  const selectedRoute = selectedRouteIndex === 1 && hasAlternative ? alternativeRoute! : primaryRoute;
+
+  const altExtraMinutes = hasAlternative
+    ? Math.max(0, Math.round((alternativeRoute!.durationSeconds - primaryRoute.durationSeconds) / 60))
+    : 0;
+  const altFewerBumps = hasAlternative ? primaryRoute.speedBumpCount - alternativeRoute!.speedBumpCount : 0;
 
   const bumpBadge = selectedRoute.isSpeedBumpFree ? (
     <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-[#00a844]/20 text-[#3ce36a] uppercase tracking-wider">
@@ -101,14 +107,14 @@ export function RouteResultCard({
             <div className="flex gap-3 px-6 mb-4 shrink-0" data-vaul-no-drag>
               <RouteTabButton
                 label="Fastest"
-                subLabel={`${formatDuration(primaryRoute.durationSeconds)} · ${primaryRoute.speedBumpCount > 0 ? `${primaryRoute.speedBumpCount} bumps` : 'Bump-free'}`}
+                subLabel={`${formatDuration(primaryRoute.durationSeconds)} · ${primaryRoute.speedBumpCount} bump${primaryRoute.speedBumpCount !== 1 ? 's' : ''}`}
                 isSelected={selectedRouteIndex === 0}
-                color={primaryRoute.isSpeedBumpFree ? 'green' : 'blue'}
+                color="blue"
                 onClick={() => selectedRouteIndex !== 0 && onToggleRoute()}
               />
               <RouteTabButton
-                label={alternativeRoute!.isSpeedBumpFree ? 'Bump-free' : 'Smoother'}
-                subLabel={`${formatDuration(alternativeRoute!.durationSeconds)} · ${alternativeRoute!.speedBumpCount > 0 ? `${alternativeRoute!.speedBumpCount} bumps` : 'Bump-free'}`}
+                label={alternativeRoute!.isSpeedBumpFree ? 'Bump-free' : 'Fewer bumps'}
+                subLabel={`${altExtraMinutes > 0 ? `+${altExtraMinutes} min` : 'Same time'} · −${altFewerBumps} bump${altFewerBumps !== 1 ? 's' : ''}`}
                 isSelected={selectedRouteIndex === 1}
                 color={alternativeRoute!.isSpeedBumpFree ? 'green' : 'blue'}
                 onClick={() => selectedRouteIndex !== 1 && onToggleRoute()}

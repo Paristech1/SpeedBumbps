@@ -30,10 +30,13 @@ import { log } from "@/lib/app-logger";
 import { useSavedRoutes } from "@/hooks/useSavedRoutes";
 import { useUserReports } from "@/hooks/useUserReports";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useRecentSearches } from "@/hooks/useRecentSearches";
 import { RoutingProvider, useRouting, useSelectedRoute } from "@/contexts/RoutingContext";
 import { useLeafletMap } from "@/hooks/useLeafletMap";
+import { reverseGeocode, coordinateLabel } from "@/lib/nominatim-service";
+import type { PlanRouteRequest } from "./RoutePlanningPanel";
 import type { POICategory } from "@/types/poi";
-import type { RouteAvoidanceProfile, LatLng } from "@/types/speedbumps";
+import type { LatLng, GeocodingResult } from "@/types/speedbumps";
 import type { SavedRoute, TabId } from "@/types/user-data";
 import { Navigation, X, Loader2, Pencil, LocateFixed } from "lucide-react";
 import { toast } from "sonner";
@@ -55,8 +58,8 @@ function SpeedBumpsMap({
   const routing = useRouting();
   const selectedRoute = useSelectedRoute();
 
-  // Speed bump markers (viewport-based, canvas renderer)
-  useSpeedBumpMarkers(map);
+  // Speed bump markers (viewport-based, canvas renderer); on-route bumps emphasised
+  useSpeedBumpMarkers(map, { onRouteBumps: selectedRoute?.bumpsOnRoute ?? null });
 
   // Route polyline rendering — follow-cam owns the camera during navigation
   useRoutePolyline({
@@ -122,17 +125,13 @@ function SpeedBumpsMap({
     routePoints: selectedRoute?.polylinePoints ?? null,
     currentLocation: location?.position ?? null,
     onDeviated: () => {
-      if (routing.origin && routing.destination) {
-        log("warn", "navigation", "route deviation — recalculating");
-        if (routing.isNavigating) speak("No worries — finding you a smoother way.");
-        routing.calculateRoute(
-          routing.origin,
-          routing.destination,
-          routing.originLabel ?? "Origin",
-          routing.destinationLabel ?? "Destination",
-          routing.avoidanceProfile
-        );
-      }
+      if (!routing.destination) return;
+      // Reroute from where the driver actually is, not the original origin
+      const from = location?.position ?? routing.origin;
+      if (!from) return;
+      log("warn", "navigation", "route deviation — recalculating from current position");
+      if (routing.isNavigating) speak("No worries — finding you a smoother way.");
+      routing.rerouteFrom(from);
     },
   });
 
@@ -162,10 +161,16 @@ function MapMainInner() {
   const [viewportH, setViewportH] = useState(0);
   const [isSelectingReportLocation, setIsSelectingReportLocation] = useState(false);
   const [reportPickedCoords, setReportPickedCoords] = useState<LatLng | null>(null);
+  // Whether the active route was planned from "My Location" (saved routes re-run from live GPS)
+  const [originIsCurrentLocation, setOriginIsCurrentLocation] = useState(false);
+  // Destination preset by "Route here" on the map
+  const [routeHereDestination, setRouteHereDestination] = useState<GeocodingResult | null>(null);
 
   const routing = useRouting();
+  const { recents, addRecent, removeRecent } = useRecentSearches();
   const selectedRoute = useSelectedRoute();
-  const { location, isTracking } = useLocationTracking();
+  // High-accuracy GPS only while navigating (heading, speed, fresh fixes)
+  const { location, isTracking } = useLocationTracking({ highAccuracy: routing.isNavigating });
   const { savedRoutes, saveRoute, deleteRoute, isRouteSaved } = useSavedRoutes();
   const { reports, addReport, deleteReport } = useUserReports();
   const { profile, updateProfile, isLoaded: isProfileLoaded } = useUserProfile();
@@ -181,17 +186,35 @@ function MapMainInner() {
   );
 
   const handlePlanRoute = useCallback(
-    async (
-      origin: LatLng,
-      destination: LatLng,
-      originLabel: string,
-      destinationLabel: string,
-      profile: RouteAvoidanceProfile
-    ) => {
+    async (request: PlanRouteRequest) => {
+      const { origin, destination, originLabel, destinationLabel, profile, originIsCurrentLocation, destinationResult } = request;
+      setOriginIsCurrentLocation(originIsCurrentLocation);
+      setRouteHereDestination(null);
+      // "My Location" swapped into the destination slot isn't a place worth remembering
+      if (destinationResult.shortName !== "My Location") addRecent(destinationResult);
       await routing.calculateRoute(origin, destination, originLabel, destinationLabel, profile);
     },
-    [routing]
+    [routing, addRecent]
   );
+
+  // "Route here" from the map: reverse-geocode the point, then open the planner with it preset
+  const handleRouteHere = useCallback(async (lat: number, lng: number) => {
+    const point = { lat, lng };
+    let destination: GeocodingResult = {
+      displayName: coordinateLabel(point),
+      shortName: "Dropped pin",
+      location: point,
+    };
+    try {
+      const result = await reverseGeocode(point);
+      // Keep the exact tapped point; only borrow the address text
+      if (result) destination = { ...result, location: point };
+    } catch {
+      // keep the coordinate label
+    }
+    setRouteHereDestination(destination);
+    setIsRoutePlanningOpen(true);
+  }, []);
 
   // Track viewport height for converting route-sheet snap points to px
   useEffect(() => {
@@ -249,15 +272,22 @@ function MapMainInner() {
   const handleRunSavedRoute = useCallback(
     (route: SavedRoute) => {
       setActiveTab("explore");
+      // Routes saved from "My Location" start from wherever the driver is now
+      const fromLive = !!route.originIsCurrentLocation;
+      const origin = fromLive && location ? location.position : route.origin;
+      if (fromLive && !location) {
+        toast("No GPS fix yet — using the location this route was saved from.");
+      }
+      setOriginIsCurrentLocation(fromLive);
       routing.calculateRoute(
-        route.origin,
+        origin,
         route.destination,
-        route.originLabel,
+        fromLive ? "My Location" : route.originLabel,
         route.destinationLabel,
         route.profile
       );
     },
-    [routing]
+    [routing, location]
   );
 
   const handleSaveRoute = useCallback(() => {
@@ -271,6 +301,7 @@ function MapMainInner() {
       destination: routing.destination,
       originLabel: routing.originLabel ?? "Origin",
       destinationLabel: routing.destinationLabel ?? "Destination",
+      originIsCurrentLocation,
       profile: routing.avoidanceProfile,
       summary: {
         durationSeconds: selectedRoute.durationSeconds,
@@ -280,7 +311,7 @@ function MapMainInner() {
       },
     });
     toast.success("Route saved");
-  }, [routing, selectedRoute, isRouteSaved, saveRoute]);
+  }, [routing, selectedRoute, isRouteSaved, saveRoute, originIsCurrentLocation]);
 
   const handleAddMarker = useCallback((lat: number, lng: number) => { addMarker(lat, lng); }, [addMarker]);
   const handleContextMenuMeasurement = useCallback(() => { setIsMeasurementOpen(true); }, []);
@@ -349,6 +380,10 @@ function MapMainInner() {
 
   // Start tap = the iOS user gesture that unlocks speechSynthesis
   const handleStartNavigation = useCallback(() => {
+    if (!location) {
+      toast.error("Waiting for a GPS fix — turn-by-turn needs your location.");
+      return;
+    }
     primeVoice();
     if (isSpeechSupported()) {
       try {
@@ -363,7 +398,7 @@ function MapMainInner() {
       }
     }
     routing.startNavigation();
-  }, [routing]);
+  }, [routing, location]);
 
   // Keep map controls above whichever sheet is open
   const routeSheetVisible = hasRoute && !routing.isNavigating;
@@ -439,6 +474,8 @@ function MapMainInner() {
           totalDistanceMeters={selectedRoute.distanceMeters}
           totalDurationSeconds={selectedRoute.durationSeconds}
           speedBumps={selectedRoute.bumpsOnRoute}
+          gpsAccuracy={location?.accuracy ?? null}
+          speedMps={location?.speed ?? null}
         />
       )}
 
@@ -575,6 +612,7 @@ function MapMainInner() {
         onAddMarker={handleAddMarker}
         onStartMeasurement={handleContextMenuMeasurement}
         onAddPOI={handleContextMenuAddPOI}
+        onRouteHere={handleRouteHere}
       />
 
       {/* POI Panel */}
@@ -604,11 +642,14 @@ function MapMainInner() {
       {/* Route Planning Panel */}
       <RoutePlanningPanel
         isOpen={isRoutePlanningOpen}
-        onClose={() => setIsRoutePlanningOpen(false)}
+        onClose={() => { setIsRoutePlanningOpen(false); setRouteHereDestination(null); }}
         userLocation={location?.position}
         onPlanRoute={handlePlanRoute}
         initialDestLabel={routing.destinationLabel}
         initialProfile={routing.avoidanceProfile}
+        initialDestination={routeHereDestination}
+        recentDestinations={recents}
+        onRemoveRecent={removeRecent}
       />
 
       {/* Route Result Card — hidden during active navigation */}

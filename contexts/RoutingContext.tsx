@@ -2,11 +2,11 @@
 
 /**
  * Routing state management.
- * Replaces Flutter's routingProvider (Riverpod StateNotifier).
- * Includes 15-minute result cache keyed by origin+destination+profile.
+ * Includes a 15-minute result cache keyed by origin+destination+profile;
+ * the cache is dropped whenever the user's reported bumps change.
  */
 
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import type {
   LatLng,
   RouteCalculationResult,
@@ -14,6 +14,7 @@ import type {
 } from '@/types/speedbumps';
 import { DEFAULT_AVOIDANCE_PROFILE } from '@/types/speedbumps';
 import { calculateRouteWithBumpAvoidance } from '@/lib/bump-avoidance';
+import { USER_REPORTS_CHANGED_EVENT } from '@/lib/speed-bump-service';
 import { log } from '@/lib/app-logger';
 
 type RoutingStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -27,6 +28,8 @@ interface RoutingState {
   destination?: LatLng;
   destinationLabel?: string;
   selectedRouteIndex: 0 | 1; // 0=primary, 1=alternative
+  /** Sticky user choice: pick the fewer-bumps route whenever one is offered. */
+  preferFewerBumps: boolean;
   avoidanceProfile: RouteAvoidanceProfile;
   isNavigating: boolean;
 }
@@ -39,6 +42,8 @@ interface RoutingContextValue extends RoutingState {
     destinationLabel: string,
     profile?: RouteAvoidanceProfile
   ) => Promise<void>;
+  /** Recalculate the active route from a new position (e.g. after leaving the route). */
+  rerouteFrom: (current: LatLng) => Promise<void>;
   clearRoute: () => void;
   toggleRoute: () => void;
   setAvoidanceProfile: (profile: RouteAvoidanceProfile) => void;
@@ -59,14 +64,30 @@ function makeCacheKey(origin: LatLng, dest: LatLng, profile: RouteAvoidanceProfi
 
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
+function pickIndex(result: RouteCalculationResult, preferFewerBumps: boolean): 0 | 1 {
+  return preferFewerBumps && result.alternativeRoute ? 1 : 0;
+}
+
 export function RoutingProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<RoutingState>({
     status: 'idle',
     selectedRouteIndex: 0,
+    preferFewerBumps: false,
     avoidanceProfile: DEFAULT_AVOIDANCE_PROFILE,
     isNavigating: false,
   });
   const cache = useRef<Map<string, CacheEntry>>(new Map());
+  // Monotonic request id so a slow, superseded request can't overwrite a newer result
+  const requestSeq = useRef(0);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  // A new or deleted user report changes what counts as a bump — drop cached routes
+  useEffect(() => {
+    const invalidate = () => cache.current.clear();
+    window.addEventListener(USER_REPORTS_CHANGED_EVENT, invalidate);
+    return () => window.removeEventListener(USER_REPORTS_CHANGED_EVENT, invalidate);
+  }, []);
 
   const calculateRoute = useCallback(
     async (
@@ -74,9 +95,10 @@ export function RoutingProvider({ children }: { children: React.ReactNode }) {
       destination: LatLng,
       originLabel: string,
       destinationLabel: string,
-      profile: RouteAvoidanceProfile = DEFAULT_AVOIDANCE_PROFILE
+      profile: RouteAvoidanceProfile = stateRef.current.avoidanceProfile
     ) => {
       log('info', 'routing', 'calculateRoute start', { origin, destination, profile });
+      const seq = ++requestSeq.current;
       const key = makeCacheKey(origin, destination, profile);
       const cached = cache.current.get(key);
       if (cached && cached.expiresAt > Date.now()) {
@@ -85,11 +107,12 @@ export function RoutingProvider({ children }: { children: React.ReactNode }) {
           ...prev,
           status: 'success',
           result: cached.result,
+          error: undefined,
           origin,
           originLabel,
           destination,
           destinationLabel,
-          selectedRouteIndex: 0,
+          selectedRouteIndex: pickIndex(cached.result, prev.preferFewerBumps),
           avoidanceProfile: profile,
         }));
         return;
@@ -108,20 +131,23 @@ export function RoutingProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const result = await calculateRouteWithBumpAvoidance(origin, destination, profile);
+        if (seq !== requestSeq.current) return; // superseded
         cache.current.set(key, { result, expiresAt: Date.now() + CACHE_TTL_MS });
         log('info', 'routing', 'calculateRoute success', {
           distanceMeters: result.primaryRoute.distanceMeters,
           durationSeconds: result.primaryRoute.durationSeconds,
           speedBumpCount: result.primaryRoute.speedBumpCount,
           hasAlternative: !!result.alternativeRoute,
+          altSpeedBumpCount: result.alternativeRoute?.speedBumpCount,
         });
         setState((prev) => ({
           ...prev,
           status: 'success',
           result,
-          selectedRouteIndex: 0,
+          selectedRouteIndex: pickIndex(result, prev.preferFewerBumps),
         }));
       } catch (err) {
+        if (seq !== requestSeq.current) return;
         const message = err instanceof Error ? err.message : 'Route calculation failed';
         log('error', 'routing', 'calculateRoute failed', { message });
         setState((prev) => ({
@@ -134,20 +160,37 @@ export function RoutingProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const rerouteFrom = useCallback(
+    async (current: LatLng) => {
+      const { destination, destinationLabel, avoidanceProfile } = stateRef.current;
+      if (!destination) return;
+      await calculateRoute(
+        current,
+        destination,
+        'Current location',
+        destinationLabel ?? 'Destination',
+        avoidanceProfile
+      );
+    },
+    [calculateRoute]
+  );
+
   const clearRoute = useCallback(() => {
-    setState({
+    requestSeq.current++; // cancel any in-flight calculation
+    setState((prev) => ({
       status: 'idle',
       selectedRouteIndex: 0,
-      avoidanceProfile: DEFAULT_AVOIDANCE_PROFILE,
+      preferFewerBumps: prev.preferFewerBumps,
+      avoidanceProfile: prev.avoidanceProfile, // keep the user's profile default
       isNavigating: false,
-    });
+    }));
   }, []);
 
   const toggleRoute = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      selectedRouteIndex: prev.selectedRouteIndex === 0 ? 1 : 0,
-    }));
+    setState((prev) => {
+      const next: 0 | 1 = prev.selectedRouteIndex === 0 ? 1 : 0;
+      return { ...prev, selectedRouteIndex: next, preferFewerBumps: next === 1 };
+    });
   }, []);
 
   const setAvoidanceProfile = useCallback((profile: RouteAvoidanceProfile) => {
@@ -164,7 +207,16 @@ export function RoutingProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <RoutingContext.Provider
-      value={{ ...state, calculateRoute, clearRoute, toggleRoute, setAvoidanceProfile, startNavigation, stopNavigation }}
+      value={{
+        ...state,
+        calculateRoute,
+        rerouteFrom,
+        clearRoute,
+        toggleRoute,
+        setAvoidanceProfile,
+        startNavigation,
+        stopNavigation,
+      }}
     >
       {children}
     </RoutingContext.Provider>

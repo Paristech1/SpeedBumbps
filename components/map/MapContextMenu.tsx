@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { Copy, MapPin, Ruler, Check, Star } from "lucide-react";
+import { Copy, MapPin, Ruler, Check, Star, Navigation } from "lucide-react";
 import { formatDecimalDegrees } from "@/lib/utils/coordinates";
 import type { ContextMenuPosition } from "@/hooks/useMapContextMenu";
 
@@ -12,6 +12,8 @@ interface MapContextMenuProps {
   onAddMarker: (lat: number, lng: number) => void;
   onStartMeasurement: () => void;
   onAddPOI?: (lat: number, lng: number) => void;
+  /** Plan a route to this point. */
+  onRouteHere?: (lat: number, lng: number) => void;
 }
 
 interface MenuItemProps {
@@ -58,7 +60,7 @@ MenuItem.displayName = "MenuItem";
 
 // Menu dimensions for position calculation (approximate)
 const MENU_WIDTH = 220;
-const MENU_HEIGHT = 180;
+const MENU_HEIGHT = 240;
 const MENU_PADDING = 8;
 
 /**
@@ -79,6 +81,7 @@ export const MapContextMenu = memo(function MapContextMenu({
   onAddMarker,
   onStartMeasurement,
   onAddPOI,
+  onRouteHere,
 }: MapContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   // Track which position was copied (null means not copied)
@@ -184,6 +187,12 @@ export const MapContextMenu = memo(function MapContextMenu({
     onClose();
   }, [position, onAddPOI, onClose]);
 
+  const handleRouteHere = useCallback(() => {
+    if (!position || !onRouteHere) return;
+    onRouteHere(position.latlng.lat, position.latlng.lng);
+    onClose();
+  }, [position, onRouteHere, onClose]);
+
   /**
    * Handle click outside to close
    */
@@ -222,6 +231,19 @@ export const MapContextMenu = memo(function MapContextMenu({
       role="menu"
       aria-label="Map context menu"
     >
+      {/* Route here — the primary action */}
+      {onRouteHere && (
+        <>
+          <MenuItem
+            icon={<Navigation className="h-4 w-4" />}
+            label="Route here"
+            sublabel="Plan a bump-aware route to this spot"
+            onClick={handleRouteHere}
+          />
+          <div className="my-1.5 border-t border-gray-200 dark:border-gray-700" />
+        </>
+      )}
+
       {/* Coordinates */}
       <MenuItem
         icon={<Copy className="h-4 w-4" />}

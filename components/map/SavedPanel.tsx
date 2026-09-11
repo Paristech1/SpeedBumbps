@@ -137,9 +137,12 @@ function SavedRouteRow({ route, onRun, onDelete }: { route: SavedRoute; onRun: (
         <div className="flex items-center gap-2 min-w-0">
           <Navigation className="w-4 h-4 text-[#44d8f1] shrink-0" />
           <span className="text-sm font-semibold text-[#e2e2eb] truncate">
-            {route.originLabel} → {route.destinationLabel}
+            {route.originIsCurrentLocation ? 'Your location' : route.originLabel} → {route.destinationLabel}
           </span>
         </div>
+        {route.originIsCurrentLocation && (
+          <div className="text-[11px] text-[#89919d] mt-0.5">Starts from wherever you are now</div>
+        )}
         <div className="flex items-center gap-2 mt-2 flex-wrap">
           <span className="text-xs font-bold text-[#44d8f1]">{formatDuration(summary.durationSeconds)}</span>
           <span className="text-xs text-[#bfc7d4]">{formatDistance(summary.distanceMeters)}</span>

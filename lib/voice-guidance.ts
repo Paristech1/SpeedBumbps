@@ -15,6 +15,8 @@
  * The user can override the pick (persisted) from the Profile panel.
  */
 
+import { toImperial } from './geo-utils';
+
 const VOICE_MUTED_STORAGE_KEY = 'speedbumps-voice-muted';
 const VOICE_NAME_STORAGE_KEY = 'speedbumps-voice-name';
 
@@ -186,15 +188,14 @@ export function cancelSpeech(): void {
   window.speechSynthesis.cancel();
 }
 
-/** Speech-friendly distance phrasing (same unit split as formatDistance). */
+/** Speech-friendly imperial distance phrasing (same unit split as formatDistance). */
 export function speechDistance(meters: number): string {
-  if (meters < 1000) {
-    const rounded = Math.max(50, Math.round(meters / 50) * 50);
-    return `${rounded} meters`;
-  }
-  const miles = meters / 1609.34;
-  if (miles < 0.35) return 'a quarter mile';
-  if (miles < 0.7) return 'half a mile';
-  if (miles < 1.4) return 'one mile';
-  return `${Math.round(miles)} miles`;
+  const { value, unit } = toImperial(meters);
+  if (unit === 'ft') return `${value} feet`;
+  if (value < 0.35) return 'a quarter mile';
+  if (value < 0.6) return 'half a mile';
+  if (value < 0.85) return 'three quarters of a mile';
+  if (value < 1.25) return 'one mile';
+  if (value < 10) return `${value.toFixed(1).replace(/\.0$/, '')} miles`;
+  return `${Math.round(value)} miles`;
 }
