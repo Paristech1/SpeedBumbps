@@ -7,7 +7,10 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { MapPin, Navigation, X, Loader2, ArrowUpDown, History, Trash2 } from 'lucide-react';
+import { sheetVariants, scrimVariants, fadeScaleVariants } from '@/lib/motion';
+import { Skeleton } from '@/components/ui/skeleton';
 import { searchAddress } from '@/lib/nominatim-service';
 import type { GeocodingResult, LatLng, RouteAvoidanceProfile, VehicleProfile, RoutePreferenceMode } from '@/types/speedbumps';
 import type { RecentDestination } from '@/types/user-data';
@@ -269,30 +272,46 @@ export function RoutePlanningPanel({
     destResults.length === 0 &&
     recentDestinations.length > 0;
 
-  if (!isOpen) return null;
-
   return (
-    <div className="absolute inset-0 z-[1100] flex items-end pointer-events-none">
-      <div
-        className="pointer-events-auto w-full max-w-2xl mx-auto bg-[#1A1D27] rounded-t-[24px] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] max-h-[90vh] overflow-y-auto hide-scrollbar"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Drag Handle */}
-        <div className="w-12 h-1.5 bg-[#89919d]/70 rounded-full mx-auto mt-3 mb-6" />
-
-        {/* Header */}
-        <div className="flex justify-between items-center px-6 mb-8">
-          <h2 className="font-[var(--font-headline)] text-2xl font-bold tracking-tight text-[#e2e2eb]">Plan Route</h2>
-          <button
+    <AnimatePresence>
+      {isOpen && (
+        <div className="absolute inset-0 z-[1100] flex items-end pointer-events-none">
+          {/* Backdrop scrim */}
+          <motion.div
+            key="planner-scrim"
+            variants={scrimVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-[#33343b] transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5 text-[#bfc7d4]" />
-          </button>
-        </div>
+            className="absolute inset-0 bg-black/50 pointer-events-auto backdrop-blur-[2px]"
+          />
 
-        <div className="px-6 pb-6 space-y-8">
+          <motion.div
+            key="planner-sheet"
+            variants={sheetVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="relative pointer-events-auto w-full max-w-2xl mx-auto bg-sb-surface-container-low rounded-t-[24px] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] max-h-[90vh] overflow-y-auto hide-scrollbar pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drag Handle */}
+            <div className="w-12 h-1.5 bg-[#89919d]/70 rounded-full mx-auto mt-3 mb-6" />
+
+            {/* Header */}
+            <div className="flex justify-between items-center px-6 mb-8">
+              <h2 className="font-[var(--font-headline)] text-2xl font-bold tracking-tight text-[#e2e2eb]">Plan Route</h2>
+              <button
+                onClick={onClose}
+                className="p-2 rounded-full hover:bg-[#33343b] transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-[#bfc7d4]" />
+              </button>
+            </div>
+
+            <div className="px-6 pb-6 space-y-8">
           {/* Search Fields */}
           <div className="flex gap-3">
             <div className="flex-1 min-w-0 space-y-4">
@@ -436,11 +455,28 @@ export function RoutePlanningPanel({
             </button>
           </div>
 
-          {searchError && (
-            <div className="-mt-4 px-4 py-2 bg-[#93000a]/30 text-[#ffb4ab] text-xs rounded-xl">
-              {searchError}
-            </div>
-          )}
+          <AnimatePresence>
+            {searchError && (
+              <motion.div
+                key="search-error"
+                variants={fadeScaleVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="-mt-4 px-4 py-2.5 bg-[#93000a]/30 text-[#ffb4ab] text-xs rounded-xl flex items-start justify-between gap-2"
+              >
+                <span className="flex-1">{searchError}</span>
+                <button
+                  type="button"
+                  onClick={() => setSearchError(null)}
+                  className="p-0.5 rounded-full hover:bg-[#ffb4ab]/10 shrink-0"
+                  aria-label="Dismiss search error"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Vehicle Profile */}
           <div>
@@ -514,8 +550,10 @@ export function RoutePlanningPanel({
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
           </button>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -550,7 +588,17 @@ function AddressDropdown({
         </button>
       ))}
       {isLoading && results.length === 0 && (
-        <div className="px-4 py-3 text-sm text-[#89919d]">Searching…</div>
+        <div className="px-4 py-2 space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-start gap-3 py-2">
+              <Skeleton className="w-4 h-4 rounded mt-0.5 shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-3/4" />
+                <Skeleton className="h-3 w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { Drawer } from 'vaul';
 import { Trash2, TriangleAlert, Crosshair, MapPin, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { EmptyState } from '@/components/ui/empty-state';
 import type { LatLng } from '@/types/speedbumps';
 import type { UserReport } from '@/types/user-data';
 
@@ -100,7 +101,7 @@ export function ReportsPanel({
       <Drawer.Portal>
         <Drawer.Content
           aria-describedby={undefined}
-          className="fixed bottom-0 left-0 right-0 !z-[1055] h-full flex flex-col rounded-t-[24px] bg-[#191b22] shadow-[0_-20px_60px_rgba(0,0,0,0.5)] outline-none"
+          className="fixed bottom-0 left-0 right-0 !z-[1055] h-full flex flex-col rounded-t-[24px] bg-sb-surface-container-low shadow-[0_-20px_60px_rgba(0,0,0,0.5)] border-t border-sb-outline-variant/30 outline-none pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
           <Drawer.Title className="sr-only">Reports</Drawer.Title>
           <div className="mx-auto mt-4 mb-4 h-1.5 w-12 shrink-0 rounded-full bg-[#89919d]/70" />
@@ -140,15 +141,12 @@ export function ReportsPanel({
               </div>
               <div className="flex-1 overflow-y-auto hide-scrollbar px-4 pb-32 space-y-2">
                 {reports.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center text-center px-8 py-16 gap-3">
-                    <div className="w-16 h-16 rounded-full bg-[#1e1f26] flex items-center justify-center">
-                      <TriangleAlert className="w-8 h-8 text-[#404752]" />
-                    </div>
-                    <div className="text-base font-[var(--font-headline)] font-bold text-[#e2e2eb]">No reports yet</div>
-                    <p className="text-sm text-[#bfc7d4] max-w-xs">
-                      Spot a bump the map doesn&apos;t know about? Report it and it will show on the map and count in route planning.
-                    </p>
-                  </div>
+                  <EmptyState
+                    icon={<TriangleAlert className="w-8 h-8" />}
+                    title="No reports yet"
+                    hint="Spot a bump the map doesn't know about? Report it and it will show on the map and count in route planning."
+                    action={{ label: 'Report a bump', onClick: () => setView('add') }}
+                  />
                 ) : (
                   reports.map((report) => (
                     <div key={report.id} className="flex items-center gap-3 p-4 rounded-2xl bg-[#1e1f26] hover:bg-[#282a30] transition-colors">

@@ -1,5 +1,6 @@
 import { MapProvider } from "@/contexts/MapContext";
 import { MapMain, MapErrorBoundary, MapLoadingSpinner } from "@/components/map";
+import { MotionProvider } from "@/components/providers/MotionProvider";
 
 /**
  * Map page component (Server Component)
@@ -25,12 +26,14 @@ import { MapMain, MapErrorBoundary, MapLoadingSpinner } from "@/components/map";
 export default function MapPage() {
   return (
     <div className="relative w-full h-screen">
-      <MapErrorBoundary>
-        <MapProvider>
-          <MapMain />
-          <MapLoadingSpinner />
-        </MapProvider>
-      </MapErrorBoundary>
+      <MotionProvider>
+        <MapErrorBoundary>
+          <MapProvider>
+            <MapMain />
+            <MapLoadingSpinner />
+          </MapProvider>
+        </MapErrorBoundary>
+      </MotionProvider>
     </div>
   );
 }

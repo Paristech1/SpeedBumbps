@@ -8,6 +8,7 @@
  */
 
 import { Drawer } from 'vaul';
+import { motion } from 'framer-motion';
 import {
   X, Navigation, Bookmark, List,
   ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight,
@@ -15,6 +16,8 @@ import {
 } from 'lucide-react';
 import type { RouteCalculationResult } from '@/types/speedbumps';
 import { formatDistance, formatDuration } from '@/lib/geo-utils';
+import { listContainerVariants, listItemVariants } from '@/lib/motion';
+import { EmptyState } from '@/components/ui/empty-state';
 
 /** Visible sheet height at each snap: peek / default / expanded. */
 export const ROUTE_SHEET_SNAP_POINTS: (number | string)[] = ['164px', '340px', 0.85];
@@ -76,7 +79,7 @@ export function RouteResultCard({
       <Drawer.Portal>
         <Drawer.Content
           aria-describedby={undefined}
-          className="fixed bottom-0 left-0 right-0 !z-[1070] h-full flex flex-col rounded-t-[24px] bg-[#1A1D27] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] outline-none"
+          className="fixed bottom-0 left-0 right-0 !z-[1070] h-full flex flex-col rounded-t-[24px] bg-sb-surface-container-low shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-sb-outline-variant/30 outline-none pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
           <Drawer.Title className="sr-only">Route preview</Drawer.Title>
 
@@ -171,10 +174,22 @@ export function RouteResultCard({
               {selectedRoute.steps.length} steps
             </span>
           </div>
-          <div className="flex-1 overflow-y-auto hide-scrollbar px-4 pb-10 space-y-2">
-            {selectedRoute.steps.map((step, i) => (
-              <div
+          <motion.div
+            variants={listContainerVariants}
+            initial="hidden"
+            animate="visible"
+            className="flex-1 overflow-y-auto hide-scrollbar px-4 pb-10 space-y-2"
+          >
+            {selectedRoute.steps.length === 0 ? (
+              <EmptyState
+                icon={<List className="w-8 h-8" />}
+                title="No turn-by-turn steps"
+                hint="This route has distance and duration but no detailed directions were returned."
+              />
+            ) : selectedRoute.steps.map((step, i) => (
+              <motion.div
                 key={i}
+                variants={listItemVariants}
                 className={`flex items-start gap-4 p-4 rounded-2xl ${
                   i === 0
                     ? 'bg-[#9ecaff]/10'
@@ -196,9 +211,9 @@ export function RouteResultCard({
                     {formatDistance(step.distanceMeters)} · {formatDuration(step.durationSeconds)}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>

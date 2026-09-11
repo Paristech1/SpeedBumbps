@@ -143,11 +143,22 @@
   --color-map-background: var(--map-background);
   --color-map-border: var(--map-border);
 
-  /* Font families */
-  --font-headline: "Space Grotesk", sans-serif;
-  --font-body: "Manrope", sans-serif;
-  --font-sans: var(--font-body);
+  /* Font families — Next.js injects --font-headline / --font-body on <body> */
+  --font-sans: var(--font-body), "Manrope", sans-serif;
   --font-mono: var(--font-geist-mono);
+
+  /* Unified component radii */
+  --radius-sheet: 24px;
+  --radius-card: 16px;
+  --radius-chip: 9999px;
+
+  /* Z-index ladder */
+  --z-map-controls: 1000;
+  --z-hud: 1050;
+  --z-bottom-nav: 1060;
+  --z-sheet: 1100;
+  --z-scrim: 1090;
+  --z-popover: 1200;
 
   /* Shadcn mappings */
   --color-sidebar-ring: var(--sidebar-ring);
@@ -269,6 +280,50 @@
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 8px var(--sb-primary-container), 0 0 24px rgba(33, 150, 243, 0.2); }
   50% { box-shadow: 0 0 16px var(--sb-primary-container), 0 0 40px rgba(33, 150, 243, 0.4); }
+}
+
+@keyframes route-dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.route-polyline-enter {
+  animation: fade-in-polyline 0.3s ease-out forwards;
+}
+
+@keyframes fade-in-polyline {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-effect::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.06) 20%,
+    rgba(255, 255, 255, 0.12) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 1.8s infinite;
+  content: "";
 }
 
 .animate-blob { animation: blob 7s ease-in-out infinite; }

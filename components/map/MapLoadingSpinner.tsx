@@ -1,32 +1,12 @@
 "use client";
 
 import { useContext } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { MapContext } from "@/contexts/MapContext";
 
 /**
  * MapLoadingSpinner component - Loading overlay during map initialization
- *
- * This component displays a loading spinner while the map is initializing.
- * It automatically fades out when the map is ready.
- *
- * Features:
- * - Centered loading spinner with backdrop
- * - Smooth fade-out transition when ready
- * - Modern animated ring design
- * - Gradient colors matching theme
- * - Informative loading text
- *
- * @example
- * ```tsx
- * <div className="relative w-full h-screen">
- *   <MapProvider>
- *     <LeafletMap>
- *       <LeafletTileLayer url={tileUrl} />
- *     </LeafletMap>
- *     <MapLoadingSpinner />
- *   </MapProvider>
- * </div>
- * ```
+ * Velocity Dark glass styling with smooth exit fade.
  */
 export function MapLoadingSpinner() {
   const context = useContext(MapContext);
@@ -37,25 +17,30 @@ export function MapLoadingSpinner() {
 
   const { isReady } = context;
 
-  // Don't render if map is ready
-  if (isReady) {
-    return null;
-  }
-
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm z-40 animate-in fade-in-0">
-      <div className="flex flex-col items-center gap-4">
-        {/* Animated spinner */}
-        <div className="relative w-16 h-16">
-          <div className="absolute inset-0 border-4 border-zinc-200 dark:border-zinc-700 rounded-full" />
-          <div className="absolute inset-0 border-4 border-transparent border-t-blue-500 border-l-blue-500 rounded-full animate-spin" />
-        </div>
+    <AnimatePresence>
+      {!isReady && (
+        <motion.div
+          key="map-loader"
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="absolute inset-0 flex items-center justify-center bg-sb-background/85 backdrop-blur-md z-40"
+        >
+          <div className="flex flex-col items-center gap-4">
+            {/* Animated spinner */}
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 border-4 border-sb-surface-container-highest rounded-full" />
+              <div className="absolute inset-0 border-4 border-transparent border-t-[#2196F3] border-l-[#00BCD4] rounded-full animate-spin" />
+            </div>
 
-        {/* Loading text */}
-        <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400 animate-pulse">
-          Loading map...
-        </p>
-      </div>
-    </div>
+            {/* Loading text */}
+            <p className="text-sm font-semibold tracking-wide text-sb-on-surface-variant animate-pulse font-[var(--font-headline)]">
+              Loading Philly Navigator…
+            </p>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

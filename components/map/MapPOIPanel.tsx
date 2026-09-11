@@ -710,10 +710,10 @@ export const MapPOIPanel = memo(function MapPOIPanel({
       >
         <Drawer.Portal>
           <Drawer.Content
-            className="fixed flex flex-col bg-white dark:bg-gray-900 rounded-t-[10px] bottom-0 left-0 right-0 h-full max-h-[97%] !z-[1100] shadow-[0_-10px_40px_rgba(0,0,0,0.2)]"
+            className="fixed flex flex-col bg-sb-surface-container-low rounded-t-[24px] bottom-0 left-0 right-0 h-full max-h-[97%] !z-[1100] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-sb-outline-variant/30"
             aria-describedby={undefined}
           >
-            <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-gray-300 dark:bg-gray-600" />
+            <div className="mx-auto mt-4 h-1.5 w-12 rounded-full bg-sb-outline/70" />
             <div className="flex-1 overflow-hidden">
               <Drawer.Title className="sr-only">{categoryName}</Drawer.Title>
               {content}
@@ -727,7 +727,7 @@ export const MapPOIPanel = memo(function MapPOIPanel({
   // Desktop: Side Panel
   return (
     <div
-      className={`absolute top-0 left-0 h-full w-96 bg-white dark:bg-gray-900 shadow-2xl z-[1000] transform transition-transform duration-300 ${
+      className={`absolute top-0 left-0 h-full w-96 bg-sb-surface-container-low/95 backdrop-blur-xl shadow-2xl z-[1000] border-r border-sb-outline-variant/30 transform transition-transform duration-300 ${
         isOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
@@ -736,10 +736,10 @@ export const MapPOIPanel = memo(function MapPOIPanel({
         onClick={() => {
           onClose();
         }}
-        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 shadow-lg transition-colors"
+        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-sb-surface-container-highest/80 hover:bg-sb-surface-container-highest shadow-lg transition-colors"
         aria-label="Close"
       >
-        <X className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+        <X className="h-5 w-5 text-sb-on-surface" />
       </button>
 
       {content}

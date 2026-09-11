@@ -95,6 +95,7 @@ export function useRoutePolyline({
         color,
         weight: STROKE_WIDTH,
         opacity: 1,
+        className: 'route-glow route-polyline-enter',
       }).addTo(map);
 
       // Origin marker (green circle)

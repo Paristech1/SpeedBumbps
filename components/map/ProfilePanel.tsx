@@ -19,6 +19,7 @@ import {
   setVoiceByName,
   speak,
 } from '@/lib/voice-guidance';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   subscribe as subscribeLogger,
   isCapturing,
@@ -38,6 +39,7 @@ interface ProfilePanelProps {
   onUpdateProfile: (partial: Partial<UserProfile>) => void;
   stats: { places: number; routes: number; reports: number };
   onAvoidanceProfileChange: (profile: RouteAvoidanceProfile) => void;
+  isLoaded?: boolean;
 }
 
 const snapPoints = [0.6, 0.92];
@@ -49,6 +51,7 @@ export function ProfilePanel({
   onUpdateProfile,
   stats,
   onAvoidanceProfileChange,
+  isLoaded = true,
 }: ProfilePanelProps) {
   // Open expanded so all settings (voice, Log mode) are reachable/scrollable;
   // the lower peek snap can't scroll its inner content in vaul.
@@ -126,7 +129,7 @@ export function ProfilePanel({
       <Drawer.Portal>
         <Drawer.Content
           aria-describedby={undefined}
-          className="fixed bottom-0 left-0 right-0 !z-[1055] h-full flex flex-col rounded-t-[24px] bg-[#191b22] shadow-[0_-20px_60px_rgba(0,0,0,0.5)] outline-none"
+          className="fixed bottom-0 left-0 right-0 !z-[1055] h-full flex flex-col rounded-t-[24px] bg-sb-surface-container-low shadow-[0_-20px_60px_rgba(0,0,0,0.5)] border-t border-sb-outline-variant/30 outline-none pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
           <Drawer.Title className="sr-only">Profile</Drawer.Title>
           <div className="mx-auto mt-4 mb-4 h-1.5 w-12 shrink-0 rounded-full bg-[#89919d]/70" />
@@ -183,9 +186,19 @@ export function ProfilePanel({
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-3">
-              <StatTile value={stats.places} label="Places" />
-              <StatTile value={stats.routes} label="Routes" />
-              <StatTile value={stats.reports} label="Reports" />
+              {isLoaded ? (
+                <>
+                  <StatTile value={stats.places} label="Places" />
+                  <StatTile value={stats.routes} label="Routes" />
+                  <StatTile value={stats.reports} label="Reports" />
+                </>
+              ) : (
+                <>
+                  <Skeleton className="h-16 rounded-2xl" />
+                  <Skeleton className="h-16 rounded-2xl" />
+                  <Skeleton className="h-16 rounded-2xl" />
+                </>
+              )}
             </div>
 
             {/* Default vehicle */}
@@ -243,24 +256,33 @@ export function ProfilePanel({
                   <Volume2 className="w-3.5 h-3.5" /> Navigation voice
                 </div>
                 <div className="flex items-center gap-2">
-                  <select
-                    value={voiceName ?? ''}
-                    onChange={(e) => { setVoiceByName(e.target.value); setVoiceName(e.target.value || getSelectedVoiceName()); }}
-                    className="flex-1 min-w-0 bg-[#282a30] border-none rounded-2xl px-4 py-3 text-sm font-medium text-[#e2e2eb] focus:outline-none focus:ring-2 focus:ring-[#2196F3]/40"
-                    aria-label="Navigation voice"
-                  >
-                    <option value="">Auto (best available)</option>
-                    {voices.map((v) => (
-                      <option key={v.name} value={v.name}>{v.name} — {v.lang}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => speak('Heads up, speed bump ahead. Take it easy.')}
-                    className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-[#2196F3]/20 text-[#9ecaff] text-sm font-bold active:scale-95 transition-all whitespace-nowrap"
-                    aria-label="Test voice"
-                  >
-                    <Play className="w-4 h-4" /> Test
-                  </button>
+                  {voices.length === 0 ? (
+                    <>
+                      <Skeleton className="flex-1 h-12 rounded-2xl" />
+                      <Skeleton className="w-24 h-12 rounded-2xl shrink-0" />
+                    </>
+                  ) : (
+                    <>
+                      <select
+                        value={voiceName ?? ''}
+                        onChange={(e) => { setVoiceByName(e.target.value); setVoiceName(e.target.value || getSelectedVoiceName()); }}
+                        className="flex-1 min-w-0 bg-[#282a30] border-none rounded-2xl px-4 py-3 text-sm font-medium text-[#e2e2eb] focus:outline-none focus:ring-2 focus:ring-[#2196F3]/40"
+                        aria-label="Navigation voice"
+                      >
+                        <option value="">Auto (best available)</option>
+                        {voices.map((v) => (
+                          <option key={v.name} value={v.name}>{v.name} — {v.lang}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => speak('Heads up, speed bump ahead. Take it easy.')}
+                        className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-[#2196F3]/20 text-[#9ecaff] text-sm font-bold active:scale-95 transition-all whitespace-nowrap"
+                        aria-label="Test voice"
+                      >
+                        <Play className="w-4 h-4" /> Test
+                      </button>
+                    </>
+                  )}
                 </div>
                 <p className="text-xs text-[#89919d] mt-2">
                   Pick a clearer voice if the default sounds robotic. Some devices add more voices in their system settings.

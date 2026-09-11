@@ -1,8 +1,11 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Copy, MapPin, Ruler, Check, Star, Navigation } from "lucide-react";
+import { toast } from "sonner";
 import { formatDecimalDegrees } from "@/lib/utils/coordinates";
+import { fadeScaleVariants } from "@/lib/motion";
 import type { ContextMenuPosition } from "@/hooks/useMapContextMenu";
 
 interface MapContextMenuProps {
@@ -37,17 +40,17 @@ const MenuItem = memo(function MenuItem({
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-3 w-full px-2 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-lg group"
+      className="flex items-center gap-3 w-full px-2.5 py-1.5 text-left hover:bg-sb-surface-container-high transition-colors rounded-lg group"
     >
-      <span className="flex-shrink-0 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200">
-        {showCopied ? <Check className="h-4 w-4 text-green-500" /> : icon}
+      <span className="flex-shrink-0 text-sb-on-surface-variant group-hover:text-sb-primary">
+        {showCopied ? <Check className="h-4 w-4 text-sb-tertiary" /> : icon}
       </span>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
+        <div className="text-sm font-medium text-sb-on-surface">
           {showCopied ? "Copied!" : label}
         </div>
         {sublabel && !showCopied && (
-          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+          <div className="text-xs text-sb-outline truncate">
             {sublabel}
           </div>
         )}
@@ -133,12 +136,12 @@ export const MapContextMenu = memo(function MapContextMenu({
     try {
       await navigator.clipboard.writeText(coordsText);
       setCopiedPosition(positionKey);
+      toast.success("Coordinates copied to clipboard");
       setTimeout(() => {
         setCopiedPosition(null);
         onClose();
       }, 1000);
-    } catch (error) {
-      console.error("Failed to copy coordinates:", error);
+    } catch {
       // Fallback: create a temporary input element
       try {
         const input = document.createElement("input");
@@ -151,12 +154,13 @@ export const MapContextMenu = memo(function MapContextMenu({
         document.execCommand("copy");
         document.body.removeChild(input);
         setCopiedPosition(positionKey);
+        toast.success("Coordinates copied to clipboard");
         setTimeout(() => {
           setCopiedPosition(null);
           onClose();
         }, 1000);
       } catch {
-        console.error("Fallback copy also failed");
+        toast.error("Failed to copy coordinates");
       }
     }
   }, [position, positionKey, coordsText, onClose]);
@@ -216,77 +220,82 @@ export const MapContextMenu = memo(function MapContextMenu({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen || !position) {
-    return null;
-  }
-
   return (
-    <div
-      ref={menuRef}
-      className="absolute z-[1100] min-w-[200px] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1.5 px-1.5 animate-in fade-in-0 zoom-in-95 duration-150"
-      style={{
-        left: displayPosition.x,
-        top: displayPosition.y,
-      }}
-      role="menu"
-      aria-label="Map context menu"
-    >
-      {/* Route here — the primary action */}
-      {onRouteHere && (
-        <>
+    <AnimatePresence>
+      {isOpen && position && (
+        <motion.div
+          key="context-menu"
+          ref={menuRef}
+          variants={fadeScaleVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          className="absolute z-[1200] min-w-[210px] bg-sb-surface-container-high/95 backdrop-blur-md rounded-2xl shadow-2xl border border-sb-outline-variant/30 py-2 px-2"
+          style={{
+            left: displayPosition.x,
+            top: displayPosition.y,
+          }}
+          role="menu"
+          aria-label="Map context menu"
+        >
+          {/* Route here — the primary action */}
+          {onRouteHere && (
+            <>
+              <MenuItem
+                icon={<Navigation className="h-4 w-4 text-sb-secondary" />}
+                label="Route here"
+                sublabel="Plan a bump-aware route to this spot"
+                onClick={handleRouteHere}
+              />
+              <div className="my-1.5 border-t border-sb-outline-variant/20" />
+            </>
+          )}
+
+          {/* Coordinates */}
           <MenuItem
-            icon={<Navigation className="h-4 w-4" />}
-            label="Route here"
-            sublabel="Plan a bump-aware route to this spot"
-            onClick={handleRouteHere}
+            icon={<Copy className="h-4 w-4" />}
+            label="Copy Coordinates"
+            sublabel={coordsText}
+            onClick={handleCopyCoordinates}
+            showCopied={copied}
           />
-          <div className="my-1.5 border-t border-gray-200 dark:border-gray-700" />
-        </>
-      )}
 
-      {/* Coordinates */}
-      <MenuItem
-        icon={<Copy className="h-4 w-4" />}
-        label="Copy Coordinates"
-        sublabel={coordsText}
-        onClick={handleCopyCoordinates}
-        showCopied={copied}
-      />
-
-      {/* Divider */}
-      <div className="my-1.5 border-t border-gray-200 dark:border-gray-700" />
-
-      {/* Add Marker */}
-      <MenuItem
-        icon={<MapPin className="h-4 w-4" />}
-        label="Add Marker"
-        sublabel="Place a marker here"
-        onClick={handleAddMarker}
-      />
-
-      {/* Measurement */}
-      <MenuItem
-        icon={<Ruler className="h-4 w-4" />}
-        label="Measure"
-        sublabel="Start distance measurement"
-        onClick={handleStartMeasurement}
-      />
-
-      {/* Add to My Places (if handler provided) */}
-      {onAddPOI && (
-        <>
           {/* Divider */}
-          <div className="my-1.5 border-t border-gray-200 dark:border-gray-700" />
+          <div className="my-1.5 border-t border-sb-outline-variant/20" />
 
+          {/* Add Marker */}
           <MenuItem
-            icon={<Star className="h-4 w-4" />}
-            label="Add to My Places"
-            sublabel="Save this location"
-            onClick={handleAddPOI}
+            icon={<MapPin className="h-4 w-4" />}
+            label="Add Marker"
+            sublabel="Place a marker here"
+            onClick={handleAddMarker}
           />
-        </>
+
+          {/* Measurement */}
+          <MenuItem
+            icon={<Ruler className="h-4 w-4" />}
+            label="Measure"
+            sublabel="Start distance measurement"
+            onClick={handleStartMeasurement}
+          />
+
+          {/* Add to My Places (if handler provided) */}
+          {onAddPOI && (
+            <>
+              {/* Divider */}
+              <div className="my-1.5 border-t border-sb-outline-variant/20" />
+
+              <MenuItem
+                icon={<Star className="h-4 w-4 text-sb-warning-orange" />}
+                label="Add to My Places"
+                sublabel="Save this location"
+                onClick={handleAddPOI}
+              />
+            </>
+          )}
+        </motion.div>
       )}
-    </div>
+    </AnimatePresence>
   );
 });
 

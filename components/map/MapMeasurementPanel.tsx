@@ -81,34 +81,22 @@ export function MapMeasurementPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="absolute bottom-20 sm:bottom-6 left-0 right-0 z-[1000] pointer-events-none">
+    <div className="absolute bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.5rem))] sm:bottom-6 left-0 right-0 z-[1000] pointer-events-none">
       <div className="flex justify-center pb-4 px-4">
-        <div className="flex flex-col gap-1 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 pointer-events-auto">
+        <div className="flex flex-col gap-1 bg-sb-surface-container-high/95 backdrop-blur-md rounded-2xl shadow-2xl border border-sb-outline-variant/30 pointer-events-auto">
           {/* Top: Mode Tabs */}
-          <div className="flex items-center gap-1 p-1 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-1 p-1.5 border-b border-sb-outline-variant/20">
             <button
               onClick={() => handleModeSelect("distance")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
                 mode === "distance"
-                  ? "bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-500 dark:ring-blue-400"
-                  : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                  ? "bg-sb-primary/20 ring-2 ring-sb-primary text-sb-primary"
+                  : "text-sb-on-surface-variant hover:bg-sb-surface-container-highest"
               }`}
               title="Distance"
             >
-              <Ruler
-                className={`h-4 w-4 ${
-                  mode === "distance"
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-gray-600 dark:text-gray-400"
-                }`}
-              />
-              <span
-                className={`text-xs font-medium ${
-                  mode === "distance"
-                    ? "text-blue-700 dark:text-blue-300"
-                    : "text-gray-700 dark:text-gray-300"
-                }`}
-              >
+              <Ruler className="h-4 w-4" />
+              <span className="text-xs font-semibold font-[var(--font-headline)]">
                 Distance
               </span>
             </button>
@@ -117,25 +105,13 @@ export function MapMeasurementPanel({
               onClick={() => handleModeSelect("area")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
                 mode === "area"
-                  ? "bg-green-50 dark:bg-green-900/30 ring-2 ring-green-500 dark:ring-green-400"
-                  : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                  ? "bg-sb-tertiary/20 ring-2 ring-sb-tertiary text-sb-tertiary"
+                  : "text-sb-on-surface-variant hover:bg-sb-surface-container-highest"
               }`}
               title="Area"
             >
-              <MapPin
-                className={`h-4 w-4 ${
-                  mode === "area"
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-gray-600 dark:text-gray-400"
-                }`}
-              />
-              <span
-                className={`text-xs font-medium ${
-                  mode === "area"
-                    ? "text-green-700 dark:text-green-300"
-                    : "text-gray-700 dark:text-gray-300"
-                }`}
-              >
+              <MapPin className="h-4 w-4" />
+              <span className="text-xs font-semibold font-[var(--font-headline)]">
                 Area
               </span>
             </button>
@@ -145,15 +121,15 @@ export function MapMeasurementPanel({
             {/* Close button */}
             <button
               onClick={handleClose}
-              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-sb-surface-container-highest rounded-lg transition-colors text-sb-outline hover:text-sb-on-surface"
               aria-label="Close measurement tools"
             >
-              <X className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Bottom: Content */}
-          <div className="flex items-center gap-2 px-3 py-2">
+          <div className="flex items-center gap-2 px-3 py-2 text-sb-on-surface">
             {!mode ? (
               /* No mode selected - show last measurement or prompt */
               <>
@@ -161,8 +137,8 @@ export function MapMeasurementPanel({
                   <div
                     className={`flex items-center gap-2 ${
                       lastMeasurement.type === "distance"
-                        ? "text-blue-700 dark:text-blue-300"
-                        : "text-green-700 dark:text-green-300"
+                        ? "text-sb-primary"
+                        : "text-sb-tertiary"
                     }`}
                   >
                     <span className="text-xs font-medium">
@@ -177,7 +153,7 @@ export function MapMeasurementPanel({
                     </span>
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-sb-outline">
                     Select a measurement mode
                   </p>
                 )}

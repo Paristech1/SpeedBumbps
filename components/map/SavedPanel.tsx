@@ -13,6 +13,7 @@ import type { SavedRoute } from '@/types/user-data';
 import { getCategoryById } from '@/constants/poi-categories';
 import { formatDistance, formatDuration } from '@/lib/geo-utils';
 import { VEHICLE_OPTIONS, MODE_OPTIONS } from './RoutePlanningPanel';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface SavedPanelProps {
   isOpen: boolean;
@@ -53,7 +54,7 @@ export function SavedPanel({
       <Drawer.Portal>
         <Drawer.Content
           aria-describedby={undefined}
-          className="fixed bottom-0 left-0 right-0 !z-[1055] h-full flex flex-col rounded-t-[24px] bg-[#191b22] shadow-[0_-20px_60px_rgba(0,0,0,0.5)] outline-none"
+          className="fixed bottom-0 left-0 right-0 !z-[1055] h-full flex flex-col rounded-t-[24px] bg-sb-surface-container-low shadow-[0_-20px_60px_rgba(0,0,0,0.5)] border-t border-sb-outline-variant/30 outline-none pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
           <Drawer.Title className="sr-only">Saved</Drawer.Title>
           <div className="mx-auto mt-4 mb-4 h-1.5 w-12 shrink-0 rounded-full bg-[#89919d]/70" />
@@ -200,16 +201,6 @@ function SavedPlaceRow({ poi, onFlyTo, onDelete }: { poi: POI; onFlyTo: () => vo
       >
         <Trash2 className="w-4 h-4" />
       </button>
-    </div>
-  );
-}
-
-function EmptyState({ icon, title, hint }: { icon: React.ReactNode; title: string; hint: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center text-center px-8 py-16 gap-3">
-      <div className="w-16 h-16 rounded-full bg-[#1e1f26] flex items-center justify-center">{icon}</div>
-      <div className="text-base font-[var(--font-headline)] font-bold text-[#e2e2eb]">{title}</div>
-      <p className="text-sm text-[#bfc7d4] max-w-xs">{hint}</p>
     </div>
   );
 }

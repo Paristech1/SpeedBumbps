@@ -7,6 +7,7 @@ import { TILE_PROVIDERS } from "@/constants/tile-providers";
 interface MapTileSwitcherProps {
   selectedProviderId: string;
   onProviderChange: (providerId: string) => void;
+  bottomOffset?: number;
 }
 
 /**
@@ -15,6 +16,7 @@ interface MapTileSwitcherProps {
 export function MapTileSwitcher({
   selectedProviderId,
   onProviderChange,
+  bottomOffset = 128,
 }: MapTileSwitcherProps) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -40,7 +42,8 @@ export function MapTileSwitcher({
 
   return (
     <div
-      className="absolute bottom-32 sm:bottom-32 left-6 flex flex-col sm:flex-row items-start sm:items-center gap-2 z-[1000]"
+      className="absolute left-6 flex flex-col sm:flex-row items-start sm:items-center gap-2 z-[1000] transition-all duration-300"
+      style={{ bottom: `max(${bottomOffset}px, calc(env(safe-area-inset-bottom) + 5.5rem))` }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

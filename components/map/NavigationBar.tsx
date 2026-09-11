@@ -12,11 +12,14 @@
  */
 
 import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight,
   MoveUpRight, MoveUpLeft, MapPin, RotateCw, GitFork, X, Square,
   Volume2, VolumeX, Flag,
 } from 'lucide-react';
+import { hudTopVariants, hudBottomVariants, fadeScaleVariants } from '@/lib/motion';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { RouteStep, LatLng, SpeedBump } from '@/types/speedbumps';
 import { haversineDistance, formatDistance, formatDuration, routeProgress } from '@/lib/geo-utils';
 import { useVoiceGuidance } from '@/hooks/useVoiceGuidance';
@@ -146,31 +149,58 @@ export function NavigationBar({
   const speedMph = speedMps != null ? Math.round(speedMps * 2.23694) : null;
 
   const gps = gpsTier(gpsAccuracy ?? null);
+  const waitingForGps = !hasArrived && distanceToManeuver == null;
 
   return (
     <>
       {/* Top Navigation Banner — Velocity Dark gradient header */}
-      <header className="fixed top-0 left-0 w-full z-[1100] bg-gradient-to-r from-[#1565C0] to-[#2196F3] shadow-2xl">
+      <motion.header
+        variants={hudTopVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        className="fixed top-0 left-0 w-full z-[1050] bg-gradient-to-r from-[#1565C0] to-[#2196F3] shadow-2xl pt-[env(safe-area-inset-top)]"
+      >
         <div className="flex items-center justify-between px-6 py-5">
           <div className="flex items-center gap-5 min-w-0">
             <div className="bg-white/20 p-3 rounded-2xl shrink-0">
               {hasArrived ? <Flag className="w-6 h-6 text-white" /> : <TurnIcon instruction={currentStep.instruction} />}
             </div>
-            <div className="min-w-0">
-              <h1 className="font-[var(--font-headline)] font-bold text-xl text-white tracking-tight leading-tight truncate">
-                {hasArrived ? "You've arrived" : currentStep.instruction}
-              </h1>
-              <p className="font-[var(--font-body)] font-medium text-white/80 text-sm tracking-wider uppercase">
-                {hasArrived
-                  ? 'Ending navigation…'
-                  : distanceToManeuver != null
-                    ? isLastStep
-                      ? `Destination in ${formatDistance(distanceToManeuver)}`
-                      : `In ${formatDistance(distanceToManeuver)}`
-                    : isLastStep
-                      ? 'Arriving at destination'
-                      : 'Waiting for GPS…'}
-              </p>
+            <div className="min-w-0 flex-1">
+              {waitingForGps ? (
+                <div className="space-y-2 py-0.5">
+                  <Skeleton className="h-5 w-48 max-w-full bg-white/20" />
+                  <Skeleton className="h-3.5 w-28 max-w-full bg-white/15" />
+                  <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest pt-0.5">
+                    Acquiring GPS signal…
+                  </p>
+                </div>
+              ) : (
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={hasArrived ? 'arrived' : `step-${currentStepIndex}`}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.16 }}
+                  >
+                    <h1 className="font-[var(--font-headline)] font-bold text-xl text-white tracking-tight leading-tight truncate">
+                      {hasArrived ? "You've arrived" : currentStep.instruction}
+                    </h1>
+                    <p className="font-[var(--font-body)] font-medium text-white/80 text-sm tracking-wider uppercase">
+                      {hasArrived
+                        ? 'Ending navigation…'
+                        : distanceToManeuver != null
+                          ? isLastStep
+                            ? `Destination in ${formatDistance(distanceToManeuver)}`
+                            : `In ${formatDistance(distanceToManeuver)}`
+                          : isLastStep
+                            ? 'Arriving at destination'
+                            : 'Waiting for GPS…'}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-6 shrink-0">
@@ -207,10 +237,16 @@ export function NavigationBar({
             </button>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Bottom Arrival Card — Glassmorphic */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-[1100]">
+      <motion.div
+        variants={hudBottomVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        className="fixed bottom-[max(2rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-[92%] max-w-md z-[1050]"
+      >
         <div className="glass-panel p-6 rounded-2xl shadow-2xl ghost-border flex items-center justify-between gap-4">
           <div className="flex flex-col min-w-0">
             <span className="font-[var(--font-body)] text-xs font-bold text-white/50 uppercase tracking-[0.15em] mb-1">
@@ -238,15 +274,21 @@ export function NavigationBar({
             </span>
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Map indicator chips */}
-      <div className="fixed bottom-32 left-6 z-[1100] flex flex-col gap-2">
+      <motion.div
+        variants={fadeScaleVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        className="fixed bottom-[max(8rem,calc(env(safe-area-inset-bottom)+5.5rem))] left-6 z-[1050] flex flex-col gap-2"
+      >
         <div className="flex items-center gap-2 px-3 py-2 rounded-full glass-panel ghost-border">
           <div className={`w-2 h-2 rounded-full ${gps.dotClass}`} />
           <span className="font-[var(--font-body)] text-[10px] font-bold text-white/70 uppercase">{gps.label}</span>
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { LeafletMap } from "./LeafletMap";
 import { LeafletTileLayer } from "./LeafletTileLayer";
 import { MapTileSwitcher } from "./MapTileSwitcher";
@@ -15,6 +16,8 @@ import { BottomNavBar } from "./BottomNavBar";
 import { SavedPanel } from "./SavedPanel";
 import { ReportsPanel } from "./ReportsPanel";
 import { ProfilePanel } from "./ProfilePanel";
+import { hudTopVariants, fadeScaleVariants } from "@/lib/motion";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useMapTileProvider } from "@/hooks/useMapTileProvider";
 import { useMapContextMenu } from "@/hooks/useMapContextMenu";
 import { useMapMarkers } from "@/hooks/useMapMarkers";
@@ -38,7 +41,7 @@ import type { PlanRouteRequest } from "./RoutePlanningPanel";
 import type { POICategory } from "@/types/poi";
 import type { LatLng, GeocodingResult } from "@/types/speedbumps";
 import type { SavedRoute, TabId } from "@/types/user-data";
-import { Navigation, X, Loader2, Pencil, LocateFixed } from "lucide-react";
+import { Navigation, X, Pencil, LocateFixed } from "lucide-react";
 import { toast } from "sonner";
 
 /**
@@ -170,7 +173,11 @@ function MapMainInner() {
   const { recents, addRecent, removeRecent } = useRecentSearches();
   const selectedRoute = useSelectedRoute();
   // High-accuracy GPS only while navigating (heading, speed, fresh fixes)
-  const { location, isTracking } = useLocationTracking({ highAccuracy: routing.isNavigating });
+  const { location, isTracking, error: locationError, startTracking } = useLocationTracking({ highAccuracy: routing.isNavigating });
+  const [routeErrorDismissed, setRouteErrorDismissed] = useState(false);
+  useEffect(() => {
+    setRouteErrorDismissed(false);
+  }, [routing.error]);
   const { savedRoutes, saveRoute, deleteRoute, isRouteSaved } = useSavedRoutes();
   const { reports, addReport, deleteReport } = useUserReports();
   const { profile, updateProfile, isLoaded: isProfileLoaded } = useUserProfile();
@@ -435,34 +442,38 @@ function MapMainInner() {
       </LeafletMap>
 
       {/* === TOP NAV BAR — startup splash only, fades once the app is in use === */}
-      {!routing.isNavigating && (
-        <nav
-          className={`fixed top-0 w-full z-[1002] flex justify-between items-center px-6 py-4 bg-transparent transition-all duration-700 ${
-            showBrand && !isImmersive ? "opacity-100" : "opacity-0 -translate-y-4 pointer-events-none"
-          }`}
-          aria-hidden={!showBrand || isImmersive}
-        >
-          <div className="flex items-center gap-3">
-            <svg className="w-7 h-7 text-[#2196F3]" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-            </svg>
-            <h1 className="font-[var(--font-headline)] font-bold tracking-tight text-2xl text-slate-100">
-              SpeedBumps
-            </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => handleTabChange(activeTab === "profile" ? "explore" : "profile")}
-              className="w-10 h-10 rounded-full border-2 border-[#2196F3]/20 overflow-hidden shadow-2xl shadow-blue-500/10 active:scale-95 transition-transform"
-              aria-label="Open profile"
-            >
-              <div className="w-full h-full bg-gradient-to-br from-[#2196F3] to-[#00BCD4] flex items-center justify-center text-white font-bold text-sm">
-                {profile.displayName.charAt(0).toUpperCase() || "P"}
-              </div>
-            </button>
-          </div>
-        </nav>
-      )}
+      <AnimatePresence>
+        {!routing.isNavigating && showBrand && !isImmersive && (
+          <motion.nav
+            key="brand-nav"
+            variants={hudTopVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="fixed top-0 w-full z-[1002] flex justify-between items-center px-6 py-4 bg-transparent pt-[env(safe-area-inset-top)]"
+          >
+            <div className="flex items-center gap-3">
+              <svg className="w-7 h-7 text-[#2196F3]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+              <h1 className="font-[var(--font-headline)] font-bold tracking-tight text-2xl text-slate-100">
+                SpeedBumps
+              </h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => handleTabChange(activeTab === "profile" ? "explore" : "profile")}
+                className="w-10 h-10 rounded-full border-2 border-[#2196F3]/20 overflow-hidden shadow-2xl shadow-blue-500/10 active:scale-95 transition-transform"
+                aria-label="Open profile"
+              >
+                <div className="w-full h-full bg-gradient-to-br from-[#2196F3] to-[#00BCD4] flex items-center justify-center text-white font-bold text-sm">
+                  {profile.displayName.charAt(0).toUpperCase() || "P"}
+                </div>
+              </button>
+            </div>
+          </motion.nav>
+        )}
+      </AnimatePresence>
 
       {/* Active navigation bar — replaces top bar when navigating */}
       {routing.isNavigating && selectedRoute && (
@@ -493,105 +504,163 @@ function MapMainInner() {
 
       {/* Search / Route bar — Velocity Dark glass style. Stays put (stable);
           hidden only in opt-in immersive mode */}
-      {!routing.isNavigating && (
-        <div
-          className={`absolute left-0 right-0 sm:left-6 sm:right-auto top-20 z-[1001] px-4 sm:px-0 transition-all duration-500 ${
-            isImmersive ? "opacity-0 -translate-y-4 pointer-events-none" : "opacity-100"
-          }`}
-          aria-hidden={isImmersive}
-        >
-          <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 glass-panel ghost-border px-5 py-4 shadow-2xl rounded-full w-full sm:w-[380px]">
-            {hasRoute ? (
-              <>
-                <button
-                  onClick={() => setIsRoutePlanningOpen(true)}
-                  className="flex items-center gap-2 flex-1 text-left min-w-0"
-                  aria-label="Edit route"
-                >
-                  <Navigation className="w-5 h-5 text-[#44d8f1] shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-[#e2e2eb] truncate">
-                      {routing.originLabel} → {routing.destinationLabel}
+      <AnimatePresence>
+        {!routing.isNavigating && !isImmersive && (
+          <motion.div
+            key="search-route-bar"
+            variants={hudTopVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="absolute left-0 right-0 sm:left-6 sm:right-auto top-[calc(5rem+env(safe-area-inset-top))] z-[1050] px-4 sm:px-0"
+          >
+            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 glass-panel ghost-border px-5 py-4 shadow-2xl rounded-full w-full sm:w-[380px]">
+              {hasRoute ? (
+                <>
+                  <button
+                    onClick={() => setIsRoutePlanningOpen(true)}
+                    className="flex items-center gap-2 flex-1 text-left min-w-0"
+                    aria-label="Edit route"
+                  >
+                    <Navigation className="w-5 h-5 text-[#44d8f1] shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-[#e2e2eb] truncate">
+                        {routing.originLabel} → {routing.destinationLabel}
+                      </div>
                     </div>
+                  </button>
+                  <button
+                    onClick={() => setIsRoutePlanningOpen(true)}
+                    className="p-1.5 hover:bg-[#373940] rounded-full shrink-0 transition-colors"
+                    aria-label="Edit route"
+                  >
+                    <Pencil className="w-3.5 h-3.5 text-[#89919d]" />
+                  </button>
+                  <button
+                    onClick={() => { routing.clearRoute(); setIsRoutePlanningOpen(false); }}
+                    className="p-1.5 hover:bg-[#373940] rounded-full shrink-0 transition-colors"
+                    aria-label="Clear route"
+                  >
+                    <X className="w-4 h-4 text-[#89919d]" />
+                  </button>
+                </>
+              ) : routing.status === "loading" ? (
+                <div className="flex items-center gap-3 flex-1 min-w-0 py-0.5">
+                  <Skeleton className="w-5 h-5 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-3.5 w-36" />
+                    <Skeleton className="h-3 w-52 max-w-full" />
                   </div>
-                </button>
+                </div>
+              ) : (
                 <button
                   onClick={() => setIsRoutePlanningOpen(true)}
-                  className="p-1.5 hover:bg-[#373940] rounded-full shrink-0 transition-colors"
-                  aria-label="Edit route"
+                  className="flex items-center gap-3 flex-1 text-left"
+                  aria-label="Plan route"
                 >
-                  <Pencil className="w-3.5 h-3.5 text-[#89919d]" />
+                  <svg className="w-5 h-5 text-[#9ecaff] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                  </svg>
+                  <span className="text-sm font-medium text-[#bfc7d4] flex-1">
+                    Where to in Philly?
+                  </span>
+                  <svg className="w-5 h-5 text-[#bfc7d4] shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                  </svg>
                 </button>
-                <button
-                  onClick={() => { routing.clearRoute(); setIsRoutePlanningOpen(false); }}
-                  className="p-1.5 hover:bg-[#373940] rounded-full shrink-0 transition-colors"
-                  aria-label="Clear route"
-                >
-                  <X className="w-4 h-4 text-[#89919d]" />
-                </button>
-              </>
-            ) : routing.status === "loading" ? (
-              <>
-                <Loader2 className="w-5 h-5 text-[#2196F3] animate-spin shrink-0" />
-                <span className="text-sm font-medium text-[#bfc7d4] flex-1">Calculating route...</span>
-              </>
-            ) : (
+              )}
+            </div>
+            {/* Inline avatar — takes over profile access after the brand splash retires */}
+            {!showBrand && (
               <button
-                onClick={() => setIsRoutePlanningOpen(true)}
-                className="flex items-center gap-3 flex-1 text-left"
-                aria-label="Plan route"
+                onClick={() => handleTabChange(activeTab === "profile" ? "explore" : "profile")}
+                className="w-11 h-11 shrink-0 rounded-full border-2 border-[#2196F3]/20 overflow-hidden shadow-2xl shadow-blue-500/10 active:scale-95 transition-transform animate-in fade-in duration-500"
+                aria-label="Open profile"
               >
-                <svg className="w-5 h-5 text-[#9ecaff] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="m21 21-4.35-4.35" />
-                </svg>
-                <span className="text-sm font-medium text-[#bfc7d4] flex-1">
-                  Where to in Philly?
-                </span>
-                <svg className="w-5 h-5 text-[#bfc7d4] shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                  <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-                </svg>
+                <div className="w-full h-full bg-gradient-to-br from-[#2196F3] to-[#00BCD4] flex items-center justify-center text-white font-bold text-sm">
+                  {profile.displayName.charAt(0).toUpperCase() || "P"}
+                </div>
               </button>
             )}
-          </div>
-          {/* Inline avatar — takes over profile access after the brand splash retires */}
-          {!showBrand && (
-            <button
-              onClick={() => handleTabChange(activeTab === "profile" ? "explore" : "profile")}
-              className="w-11 h-11 shrink-0 rounded-full border-2 border-[#2196F3]/20 overflow-hidden shadow-2xl shadow-blue-500/10 active:scale-95 transition-transform animate-in fade-in duration-500"
-              aria-label="Open profile"
-            >
-              <div className="w-full h-full bg-gradient-to-br from-[#2196F3] to-[#00BCD4] flex items-center justify-center text-white font-bold text-sm">
-                {profile.displayName.charAt(0).toUpperCase() || "P"}
-              </div>
-            </button>
-          )}
-          </div>
-          {routing.status === "error" && routing.error && (
-            <div className="mt-2 px-4 py-2 bg-[#93000a]/30 text-[#ffb4ab] text-sm rounded-xl shadow ghost-border">
-              {routing.error}
             </div>
-          )}
-
-        </div>
-      )}
+            <AnimatePresence>
+              {routing.status === "error" && routing.error && !routeErrorDismissed && (
+                <motion.div
+                  key="route-error"
+                  variants={fadeScaleVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="mt-2 px-4 py-2.5 bg-[#93000a]/30 text-[#ffb4ab] text-sm rounded-xl shadow ghost-border flex items-start justify-between gap-2"
+                >
+                  <span className="flex-1">{routing.error}</span>
+                  <button
+                    type="button"
+                    onClick={() => setRouteErrorDismissed(true)}
+                    className="p-0.5 rounded-full hover:bg-[#ffb4ab]/10 shrink-0"
+                    aria-label="Dismiss route error"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Location tracking badge — Velocity Dark style */}
-      {!isTracking && !isImmersive && (
-        <div className="absolute top-16 right-4 z-[1001] px-3 py-1.5 glass-panel ghost-border text-[#FF6B00] text-xs font-bold rounded-full shadow uppercase tracking-wider">
-          Location off
-        </div>
-      )}
-      {isTracking && location && location.accuracy > 20 && !isImmersive && (
-        <div className="absolute top-16 right-4 z-[1001] px-3 py-1.5 glass-panel ghost-border text-[#FF6B00] text-xs font-bold rounded-full shadow uppercase tracking-wider">
-          GPS: {Math.round(location.accuracy)}m
-        </div>
-      )}
+      <AnimatePresence>
+        {!isImmersive && locationError && (
+          <motion.button
+            key="location-error"
+            type="button"
+            variants={fadeScaleVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onClick={() => startTracking(routing.isNavigating)}
+            className="absolute top-[calc(4rem+env(safe-area-inset-top))] right-4 z-[1050] px-3 py-1.5 glass-panel ghost-border text-sb-error text-xs font-bold rounded-full shadow uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-transform"
+          >
+            <LocateFixed className="w-3 h-3" />
+            GPS error — tap to retry
+          </motion.button>
+        )}
+        {!isImmersive && !locationError && !isTracking && (
+          <motion.div
+            key="location-off"
+            variants={fadeScaleVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="absolute top-[calc(4rem+env(safe-area-inset-top))] right-4 z-[1050] px-3 py-1.5 glass-panel ghost-border text-sb-warning-orange text-xs font-bold rounded-full shadow uppercase tracking-wider"
+          >
+            Location off
+          </motion.div>
+        )}
+        {!isImmersive && !locationError && isTracking && location && location.accuracy > 20 && (
+          <motion.div
+            key="location-weak"
+            variants={fadeScaleVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="absolute top-[calc(4rem+env(safe-area-inset-top))] right-4 z-[1050] px-3 py-1.5 glass-panel ghost-border text-sb-warning-orange text-xs font-bold rounded-full shadow uppercase tracking-wider"
+          >
+            GPS: {Math.round(location.accuracy)}m
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Tile Switcher */}
-      <MapTileSwitcher selectedProviderId={currentProviderId} onProviderChange={setProviderId} />
+      <MapTileSwitcher
+        selectedProviderId={currentProviderId}
+        onProviderChange={setProviderId}
+        bottomOffset={controlsBottom}
+      />
 
       {/* Map Controls */}
       <MapControls
@@ -701,6 +770,7 @@ function MapMainInner() {
         onUpdateProfile={updateProfile}
         stats={{ places: pois.length, routes: savedRoutes.length, reports: reports.length }}
         onAvoidanceProfileChange={routing.setAvoidanceProfile}
+        isLoaded={isProfileLoaded}
       />
 
       {/* === BOTTOM NAVIGATION BAR (Velocity Dark shared component) === */}
