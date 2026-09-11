@@ -32,12 +32,6 @@ export function MapTileSwitcher({
       image: "/map-satellite.png",
       provider: TILE_PROVIDERS.find((p) => p.id === "satellite"),
     },
-    {
-      id: "dark",
-      label: "Dark",
-      image: "/map-dark.png",
-      provider: TILE_PROVIDERS.find((p) => p.id === "dark"),
-    },
   ];
 
   const selectedLayer =
