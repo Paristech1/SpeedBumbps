@@ -51,10 +51,17 @@ export interface RouteAvoidanceProfile {
   vehicle: VehicleProfile;
 }
 
+export type GeocodingKind = 'place' | 'address' | 'street' | 'area';
+
 export interface GeocodingResult {
   displayName: string;
   shortName: string;
   location: LatLng;
+  /** What the result is — drives the icon in search suggestions. */
+  kind?: GeocodingKind;
+  /** Human label for businesses/amenities, e.g. "Grocery store". */
+  category?: string;
+  houseNumber?: string;
 }
 
 /**

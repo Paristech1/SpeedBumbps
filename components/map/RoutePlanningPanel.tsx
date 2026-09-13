@@ -8,10 +8,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MapPin, Navigation, X, Loader2, ArrowUpDown, History, Trash2 } from 'lucide-react';
+import { MapPin, Navigation, X, Loader2, ArrowUpDown, History, Trash2, Store, Home, Route as RouteIcon } from 'lucide-react';
 import { sheetVariants, scrimVariants, fadeScaleVariants } from '@/lib/motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { searchAddress } from '@/lib/nominatim-service';
+import { haversineDistance, formatDistance } from '@/lib/geo-utils';
 import type { GeocodingResult, LatLng, RouteAvoidanceProfile, VehicleProfile, RoutePreferenceMode } from '@/types/speedbumps';
 import type { RecentDestination } from '@/types/user-data';
 
@@ -57,6 +58,19 @@ export const MODE_OPTIONS: { id: RoutePreferenceMode; label: string; description
 ];
 
 const MY_LOCATION_LABEL = 'My Location';
+const SEARCH_DEBOUNCE_MS = 250;
+
+function isAbortError(err: unknown): boolean {
+  return err instanceof DOMException && err.name === 'AbortError';
+}
+
+/** Arrow-key movement through a suggestion list; -1 means nothing highlighted. */
+function nextActiveIndex(key: string, current: number, count: number): number | null {
+  if (count === 0) return null;
+  if (key === 'ArrowDown') return current + 1 >= count ? 0 : current + 1;
+  if (key === 'ArrowUp') return current <= 0 ? count - 1 : current - 1;
+  return null;
+}
 
 export function RoutePlanningPanel({
   isOpen,
@@ -82,6 +96,11 @@ export function RoutePlanningPanel({
   const [mode, setMode] = useState<RoutePreferenceMode>('balanced');
   const [destFocused, setDestFocused] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [originActive, setOriginActive] = useState(-1);
+  const [destActive, setDestActive] = useState(-1);
+  // GPS updates constantly — read it through a ref so it doesn't re-trigger searches
+  const userLocationRef = useRef(userLocation);
+  userLocationRef.current = userLocation;
   const destInputRef = useRef<HTMLInputElement>(null);
   const originInputRef = useRef<HTMLInputElement>(null);
   // Tracks whether the current destQuery is the pre-filled hint (no autocomplete until user edits)
@@ -124,45 +143,57 @@ export function RoutePlanningPanel({
   useEffect(() => {
     if (useMyLocation || !originQuery.trim()) {
       setOriginResults([]);
+      setOriginLoading(false);
       return;
     }
     setOriginLoading(true);
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const results = await searchAddress(originQuery);
+        const results = await searchAddress(originQuery, { near: userLocationRef.current, signal: controller.signal });
         setOriginResults(results);
+        setOriginActive(-1);
         setSearchError(null);
       } catch (err) {
+        if (isAbortError(err)) return;
         setOriginResults([]);
         setSearchError(err instanceof Error ? err.message : 'Search failed');
-      } finally {
-        setOriginLoading(false);
       }
-    }, 400);
-    return () => clearTimeout(timer);
+      setOriginLoading(false);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [originQuery, useMyLocation]);
 
   // Debounced destination search — suppressed while destQuery is the pre-filled hint
   useEffect(() => {
     if (!destQuery.trim() || destIsPrefillRef.current) {
       setDestResults([]);
+      setDestLoading(false);
       return;
     }
     // Don't clear existing results immediately — keep them visible while the next search loads
     setDestLoading(true);
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const results = await searchAddress(destQuery);
+        const results = await searchAddress(destQuery, { near: userLocationRef.current, signal: controller.signal });
         setDestResults(results);
+        setDestActive(-1);
         setSearchError(null);
       } catch (err) {
+        if (isAbortError(err)) return;
         setDestResults([]);
         setSearchError(err instanceof Error ? err.message : 'Search failed');
-      } finally {
-        setDestLoading(false);
       }
-    }, 600);
-    return () => clearTimeout(timer);
+      setDestLoading(false);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [destQuery]);
 
   const handlePlanRoute = useCallback(() => {
@@ -191,7 +222,7 @@ export function RoutePlanningPanel({
   const commitDestFromKeyboard = useCallback(async () => {
     if (selectedDest) return;
     if (destResults.length > 0) {
-      setSelectedDest(destResults[0]);
+      setSelectedDest(destResults[Math.max(destActive, 0)]);
       setDestQuery('');
       setDestResults([]);
       return;
@@ -200,7 +231,7 @@ export function RoutePlanningPanel({
     if (!q) return;
     setDestLoading(true);
     try {
-      const results = await searchAddress(q);
+      const results = await searchAddress(q, { near: userLocationRef.current });
       if (results.length > 0) {
         setSelectedDest(results[0]);
         setDestQuery('');
@@ -213,12 +244,12 @@ export function RoutePlanningPanel({
     } finally {
       setDestLoading(false);
     }
-  }, [selectedDest, destResults, destQuery]);
+  }, [selectedDest, destResults, destActive, destQuery]);
 
   const commitOriginFromKeyboard = useCallback(async () => {
     if (selectedOrigin) return;
     if (originResults.length > 0) {
-      setSelectedOrigin(originResults[0]);
+      setSelectedOrigin(originResults[Math.max(originActive, 0)]);
       setOriginQuery('');
       setOriginResults([]);
       return;
@@ -227,7 +258,7 @@ export function RoutePlanningPanel({
     if (!q) return;
     setOriginLoading(true);
     try {
-      const results = await searchAddress(q);
+      const results = await searchAddress(q, { near: userLocationRef.current });
       if (results.length > 0) {
         setSelectedOrigin(results[0]);
         setOriginQuery('');
@@ -240,7 +271,7 @@ export function RoutePlanningPanel({
     } finally {
       setOriginLoading(false);
     }
-  }, [selectedOrigin, originResults, originQuery]);
+  }, [selectedOrigin, originResults, originActive, originQuery]);
 
   /** Swap origin and destination. "My Location" becomes a concrete point when swapped. */
   const handleSwap = useCallback(() => {
@@ -351,12 +382,16 @@ export function RoutePlanningPanel({
                       setOriginQuery(e.target.value);
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
+                      const next = nextActiveIndex(e.key, originActive, originResults.length);
+                      if (next !== null) {
+                        e.preventDefault();
+                        setOriginActive(next);
+                      } else if (e.key === 'Enter') {
                         e.preventDefault();
                         commitOriginFromKeyboard();
                       }
                     }}
-                    placeholder="Enter starting address"
+                    placeholder="Address, store, or place"
                     className="w-full h-14 bg-[#282a30] border-none rounded-2xl pl-12 pr-10 font-medium text-[#e2e2eb] placeholder:text-[#89919d] focus:ring-2 focus:ring-[#9ecaff]"
                   />
                   {originLoading && (
@@ -375,6 +410,8 @@ export function RoutePlanningPanel({
                     <AddressDropdown
                       results={originResults}
                       isLoading={originLoading}
+                      activeIndex={originActive}
+                      userLocation={userLocation}
                       onSelect={(r) => { setSelectedOrigin(r); setOriginQuery(''); setOriginResults([]); }}
                     />
                   )}
@@ -404,14 +441,18 @@ export function RoutePlanningPanel({
                   onFocus={() => setDestFocused(true)}
                   onBlur={() => setTimeout(() => setDestFocused(false), 150)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    const next = selectedDest ? null : nextActiveIndex(e.key, destActive, destResults.length);
+                    if (next !== null) {
+                      e.preventDefault();
+                      setDestActive(next);
+                    } else if (e.key === 'Enter') {
                       e.preventDefault();
                       if (selectedDest && canPlanRoute) handlePlanRoute();
                       else commitDestFromKeyboard();
                     }
                   }}
                   enterKeyHint="search"
-                  placeholder="Where to in Philly?"
+                  placeholder="Search an address, store, or place"
                   className="w-full h-14 bg-[#282a30] border-none rounded-2xl pl-12 pr-10 font-medium text-[#e2e2eb] placeholder:text-[#89919d]/50 focus:ring-2 focus:ring-[#9ecaff]"
                 />
                 {destLoading && (
@@ -430,6 +471,8 @@ export function RoutePlanningPanel({
                   <AddressDropdown
                     results={destResults}
                     isLoading={destLoading}
+                    activeIndex={destActive}
+                    userLocation={userLocation}
                     onSelect={(r) => { setSelectedDest(r); setDestQuery(''); setDestResults([]); }}
                   />
                 )}
@@ -557,36 +600,71 @@ export function RoutePlanningPanel({
   );
 }
 
+const KIND_ICONS = {
+  place: Store,
+  address: Home,
+  street: RouteIcon,
+  area: MapPin,
+} as const;
+
 function AddressDropdown({
   results,
   isLoading,
+  activeIndex,
+  userLocation,
   onSelect,
 }: {
   results: GeocodingResult[];
   isLoading: boolean;
+  activeIndex: number;
+  userLocation?: LatLng | null;
   onSelect: (r: GeocodingResult) => void;
 }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (activeIndex < 0) return;
+    listRef.current?.children[activeIndex]?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex]);
+
   if (results.length === 0 && !isLoading) return null;
   return (
-    <div className="absolute left-0 right-0 top-full mt-1 bg-[#1e1f26] border border-[#404752]/20 rounded-2xl shadow-lg z-50 max-h-48 overflow-y-auto hide-scrollbar">
-      {results.map((r, i) => (
-        <button
-          key={i}
-          // onMouseDown + preventDefault keeps input focused and prevents blur
-          // firing before onClick on mobile, which would dismiss the dropdown
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onSelect(r)}
-          className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[#373940] transition-colors"
-        >
-          <MapPin className="w-4 h-4 text-[#89919d] mt-0.5 shrink-0" />
-          <div className="min-w-0">
-            <div className="text-sm font-medium text-[#e2e2eb] truncate">
-              {r.shortName}
+    <div
+      ref={listRef}
+      role="listbox"
+      className="absolute left-0 right-0 top-full mt-1 bg-[#1e1f26] border border-[#404752]/20 rounded-2xl shadow-lg z-50 max-h-72 overflow-y-auto hide-scrollbar"
+    >
+      {results.map((r, i) => {
+        const Icon = KIND_ICONS[r.kind ?? 'area'];
+        const distance = userLocation ? formatDistance(haversineDistance(userLocation, r.location)) : null;
+        return (
+          <button
+            key={`${r.shortName}-${r.location.lat}-${r.location.lng}`}
+            role="option"
+            aria-selected={i === activeIndex}
+            // onMouseDown + preventDefault keeps input focused and prevents blur
+            // firing before onClick on mobile, which would dismiss the dropdown
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onSelect(r)}
+            className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[#373940] transition-colors ${
+              i === activeIndex ? 'bg-[#373940]' : ''
+            }`}
+          >
+            <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${r.kind === 'place' ? 'text-[#9ecaff]' : 'text-[#89919d]'}`} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm font-medium text-[#e2e2eb] truncate">{r.shortName}</span>
+                {r.category && (
+                  <span className="text-[11px] text-[#9ecaff]/80 whitespace-nowrap">{r.category}</span>
+                )}
+              </div>
+              {r.displayName && <div className="text-xs text-[#89919d] truncate">{r.displayName}</div>}
             </div>
-            <div className="text-xs text-[#89919d] truncate">{r.displayName}</div>
-          </div>
-        </button>
-      ))}
+            {distance && (
+              <span className="text-[11px] text-[#89919d] whitespace-nowrap mt-0.5 tabular-nums">{distance}</span>
+            )}
+          </button>
+        );
+      })}
       {isLoading && results.length === 0 && (
         <div className="px-4 py-2 space-y-2">
           {[0, 1, 2].map((i) => (
