@@ -15,6 +15,91 @@ export function leadingHouseNumber(query: string): string | null {
   return match ? match[1].toLowerCase() : null;
 }
 
+// Apartment/unit designators confuse both geocoders ("1600 n broad st apt 2")
+const UNIT_PATTERN = /,?\s*\b(?:apt|apartment|unit|suite|ste|rm|room|floor|fl)\b\.?\s*[\w-]+|,?\s*#\s*[\w-]+/gi;
+
+/** Strip unit designators and tidy whitespace before sending a query upstream. */
+export function cleanQuery(query: string): string {
+  return query
+    .replace(UNIT_PATTERN, '')
+    .replace(/\s+,/g, ',')
+    .replace(/,\s*,/g, ',')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s,]+|[\s,]+$/g, '');
+}
+
+const STREET_ABBREVIATIONS: Record<string, string> = {
+  n: 'north', s: 'south', e: 'east', w: 'west',
+  st: 'street', str: 'street', ave: 'avenue', av: 'avenue',
+  blvd: 'boulevard', rd: 'road', dr: 'drive', ln: 'lane', pl: 'place',
+  ct: 'court', pkwy: 'parkway', hwy: 'highway', ter: 'terrace', sq: 'square',
+  jfk: 'john f kennedy',
+};
+
+const DIRECTIONALS = new Set(['north', 'south', 'east', 'west']);
+
+/** Lowercase street tokens with common abbreviations expanded. */
+export function normalizeStreet(street: string): string[] {
+  return street
+    .toLowerCase()
+    .replace(/\./g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .flatMap((token) => (STREET_ABBREVIATIONS[token] ?? token).split(' '));
+}
+
+/** Street tokens the user typed: text before the first comma, minus the house number. */
+function queryStreetTokens(query: string): string[] {
+  const firstPart = cleanQuery(query).split(',')[0];
+  return normalizeStreet(firstPart.replace(/^\s*\d+[a-z]?\b/i, ''));
+}
+
+/**
+ * How well a result's street matches what was typed:
+ * 2 = same street ("n broad st" ~ "North Broad Street"),
+ * 1 = still typing it ("1500 mark" ~ "Market Street"),
+ * 0 = different street ("south st" vs "South 21st Street").
+ */
+function streetMatchLevel(typed: string[], street: string | undefined): 0 | 1 | 2 {
+  if (!street || typed.length === 0) return 0;
+  const full = normalizeStreet(street);
+  // Let "haddon ave" match "South Haddon Avenue" when no direction was typed
+  const candidates = DIRECTIONALS.has(full[0]) && !DIRECTIONALS.has(typed[0]) ? [full, full.slice(1)] : [full];
+
+  let best: 0 | 1 | 2 = 0;
+  for (const tokens of candidates) {
+    if (typed.length > tokens.length) continue;
+    const last = typed.length - 1;
+    if (!typed.slice(0, last).every((t, i) => t === tokens[i])) continue;
+    if (typed[last] === tokens[last] && typed.length === tokens.length) return 2;
+    if (tokens[last].startsWith(typed[last])) best = 1;
+  }
+  return best;
+}
+
+/** Right street outranks right house number on the wrong street. */
+function addressScore(result: GeocodingResult, houseNumber: string, typed: string[]): number {
+  const street = result.street ?? (result.kind === 'street' ? result.shortName : undefined);
+  const houseMatches = result.houseNumber?.toLowerCase() === houseNumber;
+  return streetMatchLevel(typed, street) * 2 + (houseMatches ? 1 : 0);
+}
+
+/**
+ * True when some result already has the typed house number on the typed
+ * (or still-being-typed) street — i.e. Nominatim is unlikely to add anything.
+ * Always true for queries without a house number.
+ */
+export function hasHouseOnTypedStreet(query: string, results: GeocodingResult[]): boolean {
+  const number = leadingHouseNumber(query);
+  if (!number) return true;
+  const typed = queryStreetTokens(query);
+  return results.some((result) => {
+    const street = result.street ?? (result.kind === 'street' ? result.shortName : undefined);
+    return result.houseNumber?.toLowerCase() === number && streetMatchLevel(typed, street) > 0;
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Photon (komoot) — typo-tolerant, prefix-friendly, includes shops/amenities
 // ---------------------------------------------------------------------------
@@ -104,6 +189,7 @@ export function photonToResult(feature: PhotonFeature): GeocodingResult | null {
     kind,
     category: kind === 'place' ? categoryLabel(p.osm_key, p.osm_value) : undefined,
     houseNumber: p.housenumber,
+    street: p.street ?? (kind === 'street' ? p.name : undefined),
   };
 }
 
@@ -148,6 +234,7 @@ export function nominatimToResult(item: NominatimResult): GeocodingResult {
     },
     kind: houseNumber ? 'address' : undefined,
     houseNumber,
+    street: road,
   };
 }
 
@@ -164,26 +251,38 @@ function isDuplicate(a: GeocodingResult, b: GeocodingResult): boolean {
 
 /**
  * Combine Photon and Nominatim results. When the query starts with a house
- * number, exact house-number matches float to the top (Photon first, then
- * Nominatim's interpolated addresses); otherwise Photon's relevance order wins.
+ * number, results are ranked by street match first, then house number, so
+ * "1234 south st" prefers 1234 South Street over 1234 South 21st Street.
+ * Ties keep provider order (Photon, then Nominatim); non-address queries
+ * keep Photon's relevance order.
  */
 export function mergeSearchResults(
   query: string,
   photon: GeocodingResult[],
   nominatim: GeocodingResult[],
   limit = MAX_SEARCH_RESULTS,
+  near?: LatLng | null,
 ): GeocodingResult[] {
   const number = leadingHouseNumber(query);
-  const matches = (r: GeocodingResult) => !!number && r.houseNumber?.toLowerCase() === number;
-
-  const ordered = number
-    ? [
-        ...photon.filter(matches),
-        ...nominatim.filter(matches),
-        ...photon.filter((r) => !matches(r)),
-        ...nominatim.filter((r) => !matches(r)),
-      ]
-    : [...photon, ...nominatim];
+  let ordered = [...photon, ...nominatim];
+  if (number) {
+    const typed = queryStreetTokens(query);
+    ordered = ordered
+      .map((result, index) => ({ result, index, score: addressScore(result, number, typed) }))
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        if (near) {
+          return haversineDistance(near, a.result.location) - haversineDistance(near, b.result.location);
+        }
+        return a.index - b.index;
+      })
+      .map(({ result }) => result);
+  } else if (near) {
+    // Chain / POI queries: Photon relevance can miss nearby-first; bias by distance.
+    ordered = [...ordered].sort(
+      (a, b) => haversineDistance(near, a.location) - haversineDistance(near, b.location),
+    );
+  }
 
   const merged: GeocodingResult[] = [];
   for (const result of ordered) {

@@ -62,6 +62,8 @@ export interface GeocodingResult {
   /** Human label for businesses/amenities, e.g. "Grocery store". */
   category?: string;
   houseNumber?: string;
+  /** Street name without the house number, used to rank address matches. */
+  street?: string;
 }
 
 /**

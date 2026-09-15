@@ -98,6 +98,10 @@ export function RoutePlanningPanel({
   const [searchError, setSearchError] = useState<string | null>(null);
   const [originActive, setOriginActive] = useState(-1);
   const [destActive, setDestActive] = useState(-1);
+  // The query the current results belong to — results stay visible while the next search loads,
+  // so Enter must not pick a suggestion for text the user has since changed
+  const [originResultsFor, setOriginResultsFor] = useState('');
+  const [destResultsFor, setDestResultsFor] = useState('');
   // GPS updates constantly — read it through a ref so it doesn't re-trigger searches
   const userLocationRef = useRef(userLocation);
   userLocationRef.current = userLocation;
@@ -152,11 +156,13 @@ export function RoutePlanningPanel({
       try {
         const results = await searchAddress(originQuery, { near: userLocationRef.current, signal: controller.signal });
         setOriginResults(results);
+        setOriginResultsFor(originQuery.trim());
         setOriginActive(-1);
         setSearchError(null);
       } catch (err) {
         if (isAbortError(err)) return;
         setOriginResults([]);
+        setOriginResultsFor('');
         setSearchError(err instanceof Error ? err.message : 'Search failed');
       }
       setOriginLoading(false);
@@ -181,11 +187,13 @@ export function RoutePlanningPanel({
       try {
         const results = await searchAddress(destQuery, { near: userLocationRef.current, signal: controller.signal });
         setDestResults(results);
+        setDestResultsFor(destQuery.trim());
         setDestActive(-1);
         setSearchError(null);
       } catch (err) {
         if (isAbortError(err)) return;
         setDestResults([]);
+        setDestResultsFor('');
         setSearchError(err instanceof Error ? err.message : 'Search failed');
       }
       setDestLoading(false);
@@ -221,14 +229,14 @@ export function RoutePlanningPanel({
    */
   const commitDestFromKeyboard = useCallback(async () => {
     if (selectedDest) return;
-    if (destResults.length > 0) {
+    const q = destQuery.trim();
+    if (!q) return;
+    if (destResults.length > 0 && destResultsFor === q) {
       setSelectedDest(destResults[Math.max(destActive, 0)]);
       setDestQuery('');
       setDestResults([]);
       return;
     }
-    const q = destQuery.trim();
-    if (!q) return;
     setDestLoading(true);
     try {
       const results = await searchAddress(q, { near: userLocationRef.current });
@@ -237,25 +245,25 @@ export function RoutePlanningPanel({
         setDestQuery('');
         setDestResults([]);
       } else {
-        setSearchError(`No matches for "${q}" in Philadelphia`);
+        setSearchError(`No matches for "${q}" — check the spelling or add a city or ZIP`);
       }
     } catch (err) {
       setSearchError(err instanceof Error ? err.message : 'Search failed');
     } finally {
       setDestLoading(false);
     }
-  }, [selectedDest, destResults, destActive, destQuery]);
+  }, [selectedDest, destResults, destResultsFor, destActive, destQuery]);
 
   const commitOriginFromKeyboard = useCallback(async () => {
     if (selectedOrigin) return;
-    if (originResults.length > 0) {
+    const q = originQuery.trim();
+    if (!q) return;
+    if (originResults.length > 0 && originResultsFor === q) {
       setSelectedOrigin(originResults[Math.max(originActive, 0)]);
       setOriginQuery('');
       setOriginResults([]);
       return;
     }
-    const q = originQuery.trim();
-    if (!q) return;
     setOriginLoading(true);
     try {
       const results = await searchAddress(q, { near: userLocationRef.current });
@@ -264,14 +272,14 @@ export function RoutePlanningPanel({
         setOriginQuery('');
         setOriginResults([]);
       } else {
-        setSearchError(`No matches for "${q}" in Philadelphia`);
+        setSearchError(`No matches for "${q}" — check the spelling or add a city or ZIP`);
       }
     } catch (err) {
       setSearchError(err instanceof Error ? err.message : 'Search failed');
     } finally {
       setOriginLoading(false);
     }
-  }, [selectedOrigin, originResults, originActive, originQuery]);
+  }, [selectedOrigin, originResults, originResultsFor, originActive, originQuery]);
 
   /** Swap origin and destination. "My Location" becomes a concrete point when swapped. */
   const handleSwap = useCallback(() => {
@@ -291,6 +299,12 @@ export function RoutePlanningPanel({
     setDestResults([]);
     destIsPrefillRef.current = false;
   }, [useMyLocation, userLocation, selectedOrigin, selectedDest]);
+
+  const NO_MATCHES_HINT = 'No matches yet — try adding a city or ZIP';
+  const originNoMatches =
+    !originLoading && originQuery.trim() !== '' && originResults.length === 0 && originResultsFor === originQuery.trim();
+  const destNoMatches =
+    !destLoading && destQuery.trim() !== '' && destResults.length === 0 && destResultsFor === destQuery.trim();
 
   const canSwap = !!selectedDest || (!useMyLocation && !!selectedOrigin);
   const canPlanRoute =
@@ -406,10 +420,11 @@ export function RoutePlanningPanel({
                       <X className="w-4 h-4" />
                     </button>
                   )}
-                  {originResults.length > 0 && !selectedOrigin && (
+                  {(originResults.length > 0 || originNoMatches) && !selectedOrigin && (
                     <AddressDropdown
                       results={originResults}
                       isLoading={originLoading}
+                      emptyMessage={originNoMatches ? NO_MATCHES_HINT : undefined}
                       activeIndex={originActive}
                       userLocation={userLocation}
                       onSelect={(r) => { setSelectedOrigin(r); setOriginQuery(''); setOriginResults([]); }}
@@ -467,10 +482,11 @@ export function RoutePlanningPanel({
                     <X className="w-4 h-4" />
                   </button>
                 )}
-                {(destResults.length > 0 || destLoading) && !selectedDest && (
+                {(destResults.length > 0 || destLoading || destNoMatches) && !selectedDest && (
                   <AddressDropdown
                     results={destResults}
                     isLoading={destLoading}
+                    emptyMessage={destNoMatches ? NO_MATCHES_HINT : undefined}
                     activeIndex={destActive}
                     userLocation={userLocation}
                     onSelect={(r) => { setSelectedDest(r); setDestQuery(''); setDestResults([]); }}
@@ -612,12 +628,15 @@ function AddressDropdown({
   isLoading,
   activeIndex,
   userLocation,
+  emptyMessage,
   onSelect,
 }: {
   results: GeocodingResult[];
   isLoading: boolean;
   activeIndex: number;
   userLocation?: LatLng | null;
+  /** Shown when a finished search came back empty. */
+  emptyMessage?: string;
   onSelect: (r: GeocodingResult) => void;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
@@ -626,7 +645,14 @@ function AddressDropdown({
     listRef.current?.children[activeIndex]?.scrollIntoView({ block: 'nearest' });
   }, [activeIndex]);
 
-  if (results.length === 0 && !isLoading) return null;
+  if (results.length === 0 && !isLoading && !emptyMessage) return null;
+  if (results.length === 0 && !isLoading) {
+    return (
+      <div className="absolute left-0 right-0 top-full mt-1 bg-[#1e1f26] border border-[#404752]/20 rounded-2xl shadow-lg z-50 px-4 py-3 text-sm text-[#89919d]">
+        {emptyMessage}
+      </div>
+    );
+  }
   return (
     <div
       ref={listRef}

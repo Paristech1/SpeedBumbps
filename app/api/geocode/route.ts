@@ -6,6 +6,9 @@
  *     and partial addresses ("wawa", "trader joes", "1500 mark").
  *   - Nominatim: only queried when the text starts with a house number, since
  *     it interpolates addresses Photon doesn't have ("4500 frankford av").
+ *     If Photon already has the typed house on the typed street we only give
+ *     Nominatim a short grace period; otherwise we wait for it. Calls are
+ *     spaced ~1/s per its usage policy, and skipped if the client gave up.
  * Photon falls back to Nominatim if it's down. Results are cached in-process
  * (LRU, 24 h) and marked cacheable for the CDN.
  *
@@ -18,6 +21,8 @@ import type { GeocodingResult, LatLng } from '@/types/speedbumps';
 import {
   MAX_SEARCH_RESULTS,
   biasCacheKey,
+  cleanQuery,
+  hasHouseOnTypedStreet,
   leadingHouseNumber,
   mergeSearchResults,
   nominatimToResult,
@@ -26,15 +31,49 @@ import {
   type PhotonFeature,
 } from '@/lib/search-results';
 
-// Philadelphia bounding box (Nominatim viewbox order: left,top,right,bottom)
-const PHILLY_VIEWBOX = '-75.28,40.14,-74.96,39.87';
 // Greater Philly metro (Photon bbox order: minLon,minLat,maxLon,maxLat) — hard filter
 const METRO_BBOX = '-75.55,39.70,-74.70,40.35';
+// Same area in Nominatim viewbox order (left,top,right,bottom) — a preference, not a filter
+const METRO_VIEWBOX = '-75.55,40.35,-74.70,39.70';
 const PHILLY_CENTER: LatLng = { lat: 39.9526, lng: -75.1652 };
 
 const USER_AGENT = 'SpeedBumps-App/1.0 (https://github.com/paristech1/speedbumbps)';
 const UPSTREAM_HEADERS = { 'User-Agent': USER_AGENT, Accept: 'application/json' };
-const UPSTREAM_TIMEOUT_MS = 4000;
+const PHOTON_TIMEOUT_MS = 4000;
+// Nominatim is often slow but is the only source for many exact addresses
+const NOMINATIM_TIMEOUT_MS = 8000;
+// How long to wait for Nominatim when Photon already found the address
+const NOMINATIM_GRACE_MS = 400;
+const NOMINATIM_MIN_INTERVAL_MS = 1100;
+
+let nominatimQueue: Promise<void> = Promise.resolve();
+let lastNominatimAt = 0;
+
+/** Wait for a Nominatim slot (~1 request/second). Rejects if the client already disconnected. */
+function nominatimSlot(signal?: AbortSignal): Promise<void> {
+  const slot = nominatimQueue.then(async () => {
+    signal?.throwIfAborted();
+    const wait = lastNominatimAt + NOMINATIM_MIN_INTERVAL_MS - Date.now();
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    signal?.throwIfAborted();
+    lastNominatimAt = Date.now();
+  });
+  nominatimQueue = slot.catch(() => {});
+  return slot;
+}
+
+type Settled<T> = { ok: true; value: T } | { ok: false; error: unknown };
+
+function settle<T>(promise: Promise<T>): Promise<Settled<T>> {
+  return promise.then(
+    (value) => ({ ok: true as const, value }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
+}
+
+function errorStatus(error: unknown): number {
+  return error instanceof UpstreamError ? error.status : 502;
+}
 
 const CACHE_MAX_ENTRIES = 500;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -84,49 +123,53 @@ class UpstreamError extends Error {
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const reverse = params.get('reverse');
-  if (reverse) return handleReverse(reverse);
+  if (reverse) return handleReverse(reverse, request.signal);
 
-  const query = params.get('q');
-  if (!query || !query.trim()) {
+  const query = cleanQuery(params.get('q') ?? '').slice(0, 200);
+  if (!query) {
     return NextResponse.json([]);
   }
-  return handleSearch(query.trim().slice(0, 200), parseLatLng(params.get('near')));
+  return handleSearch(query, parseLatLng(params.get('near')), request.signal);
 }
 
-async function handleSearch(query: string, near: LatLng | null) {
+async function handleSearch(query: string, near: LatLng | null, signal: AbortSignal) {
   const key = `${query.toLowerCase()}|${biasCacheKey(near)}`;
   const cached = searchCache.get(key);
   if (cached) return jsonCached(cached);
 
   const wantsAddress = leadingHouseNumber(query) !== null;
-  const [photon, nominatim] = await Promise.allSettled([
-    fetchPhoton(query, near ?? PHILLY_CENTER),
-    wantsAddress ? fetchNominatim(query) : Promise.resolve([]),
-  ]);
+  const photonPromise = settle(fetchPhoton(query, near ?? PHILLY_CENTER));
+  const nominatimPromise = wantsAddress ? settle(fetchNominatim(query, signal)) : null;
 
-  let photonResults = photon.status === 'fulfilled' ? photon.value : null;
-  let nominatimResults = nominatim.status === 'fulfilled' ? nominatim.value : null;
-
-  // Photon down and Nominatim wasn't asked — fall back so search still works
-  if (photonResults === null && !wantsAddress) {
-    try {
-      nominatimResults = await fetchNominatim(query);
-    } catch (err) {
-      nominatimResults = null;
-      if (err instanceof UpstreamError) return upstreamError(err.status);
-    }
+  const photon = await photonPromise;
+  // null = not asked, or skipped because Photon already had the address
+  let nominatim: Settled<GeocodingResult[]> | null = null;
+  if (nominatimPromise) {
+    const photonFoundIt = photon.ok && hasHouseOnTypedStreet(query, photon.value);
+    nominatim = photonFoundIt
+      ? await Promise.race([
+          nominatimPromise,
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), NOMINATIM_GRACE_MS)),
+        ])
+      : await nominatimPromise;
+  } else if (!photon.ok) {
+    // Photon down and Nominatim wasn't asked — fall back so search still works
+    nominatim = await settle(fetchNominatim(query, signal));
   }
 
-  if (photonResults === null && nominatimResults === null) {
-    const reason = photon.status === 'rejected' ? photon.reason : null;
-    return upstreamError(reason instanceof UpstreamError ? reason.status : 502);
+  if (!photon.ok && !nominatim?.ok) {
+    return upstreamError(errorStatus(photon.error));
   }
-  photonResults ??= [];
-  nominatimResults ??= [];
 
-  const results = mergeSearchResults(query, photonResults, nominatimResults);
-  // Don't pin a partial result set when one provider failed
-  if (photon.status === 'fulfilled' && nominatim.status === 'fulfilled') {
+  const results = mergeSearchResults(
+    query,
+    photon.ok ? photon.value : [],
+    nominatim?.ok ? nominatim.value : [],
+    MAX_SEARCH_RESULTS,
+    near,
+  );
+  // Don't pin a partial result set when a provider failed
+  if (photon.ok && (nominatim === null || nominatim.ok)) {
     searchCache.set(key, results);
     return jsonCached(results);
   }
@@ -145,35 +188,39 @@ async function fetchPhoton(query: string, near: LatLng): Promise<GeocodingResult
   url.searchParams.set('limit', String(MAX_SEARCH_RESULTS + 4));
   url.searchParams.set('lang', 'en');
 
-  const data = await fetchJson<{ features?: PhotonFeature[] }>(url);
+  const data = await fetchJson<{ features?: PhotonFeature[] }>(url, PHOTON_TIMEOUT_MS);
   return (data.features ?? [])
     .map(photonToResult)
     .filter((r): r is GeocodingResult => r !== null);
 }
 
-async function fetchNominatim(query: string): Promise<GeocodingResult[]> {
+async function fetchNominatim(query: string, signal?: AbortSignal): Promise<GeocodingResult[]> {
   const url = new URL('https://nominatim.openstreetmap.org/search');
-  url.searchParams.set('q', /philadelphia|,\s*pa\b/i.test(query) ? query : `${query}, Philadelphia, PA`);
+  // No forced ", Philadelphia" — it broke suburb/NJ addresses. The viewbox keeps Philly first.
+  url.searchParams.set('q', query);
   url.searchParams.set('format', 'json');
   url.searchParams.set('limit', '5');
-  url.searchParams.set('viewbox', PHILLY_VIEWBOX);
+  url.searchParams.set('countrycodes', 'us');
+  url.searchParams.set('viewbox', METRO_VIEWBOX);
   url.searchParams.set('bounded', '0');
   url.searchParams.set('addressdetails', '1');
 
-  const data = await fetchJson<NominatimResult[]>(url);
+  await nominatimSlot(signal);
+  const data = await fetchJson<NominatimResult[]>(url, NOMINATIM_TIMEOUT_MS, signal);
   return data.map(nominatimToResult);
 }
 
-async function fetchJson<T>(url: URL): Promise<T> {
+async function fetchJson<T>(url: URL, timeoutMs: number, signal?: AbortSignal): Promise<T> {
+  const timeout = AbortSignal.timeout(timeoutMs);
   const response = await fetch(url.toString(), {
     headers: UPSTREAM_HEADERS,
-    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
   });
   if (!response.ok) throw new UpstreamError(response.status);
   return await response.json() as T;
 }
 
-async function handleReverse(param: string) {
+async function handleReverse(param: string, signal: AbortSignal) {
   const point = parseLatLng(param);
   if (!point) {
     return NextResponse.json({ error: 'reverse must be "lat,lng"' }, { status: 400 });
@@ -192,12 +239,13 @@ async function handleReverse(param: string) {
   url.searchParams.set('addressdetails', '1');
 
   try {
-    const data = await fetchJson<NominatimResult & { error?: string }>(url);
+    await nominatimSlot(signal);
+    const data = await fetchJson<NominatimResult & { error?: string }>(url, NOMINATIM_TIMEOUT_MS, signal);
     const result = data.error || !data.lat ? null : nominatimToResult(data);
     reverseCache.set(key, result);
     return jsonCached(result);
   } catch (err) {
-    return upstreamError(err instanceof UpstreamError ? err.status : 502);
+    return upstreamError(errorStatus(err));
   }
 }
 
