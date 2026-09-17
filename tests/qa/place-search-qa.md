@@ -7,19 +7,30 @@ the table at the bottom, then fix what fails (see **Fixing** at the end).
 
 | Area | File |
 | --- | --- |
-| Server proxy: Photon + Nominatim blend, caching, Nominatim pacing (~1 req/s), timeouts | `app/api/geocode/route.ts` |
-| Pure logic: result mapping, unit stripping, street normalisation, ranking, dedupe | `lib/search-results.ts` |
+| Server proxy: Philly-first Photon pass + nationwide widening, Nominatim blend, caching, Nominatim pacing (~1 req/s), timeouts | `app/api/geocode/route.ts` |
+| Pure logic: result mapping, unit stripping, street normalisation, Philly-first ranking, dedupe | `lib/search-results.ts` |
 | Client fetch: `near` bias, abort signal, in-memory cache | `lib/nominatim-service.ts` |
 | UI: 250 ms debounce, stale-request abort, ↑/↓/Enter, "no matches" hint, richer rows | `components/map/RoutePlanningPanel.tsx` |
 | Types: `kind`, `category`, `houseNumber`, `street` on `GeocodingResult` | `types/speedbumps.ts` |
-| Unit tests | `tests/search-results.test.ts` |
+| Unit tests | `tests/search-results.test.ts`, `tests/geocode-route.test.ts` |
 
-How search works: every query goes to **Photon** (finds stores and partial text).
-Queries that start with a house number also go to **Nominatim** (exact
-addresses). If Photon already has the typed house number on the typed street,
-Nominatim gets a 400 ms grace period. Otherwise the server waits up to 8 s for
-it. Results are ranked street match first, then house number, and deduped
+How search works: every query goes to **Photon** (finds stores and partial text),
+searching greater Philly first — Photon's `bbox` is a hard filter, so the metro
+pass is re-run nationwide only when it finds fewer than 2 results, or is skipped
+when the query spells out another state ("..., washington dc"). Queries that
+start with a house number also go to **Nominatim** (exact addresses). If Photon
+already has the typed house number on the typed street, Nominatim gets a 400 ms
+grace period. Otherwise the server waits up to 8 s for it. Results are deduped
 within 75 m.
+
+**Ranking (Philly first)** — `mergeSearchResults`, in order:
+
+1. results matching the street or the words typed, above anything that is merely nearby;
+2. the city the user typed, when they typed one ("..., norristown pa");
+3. greater-Philly results, unless the query names a locality in another state;
+4. match quality (1234 South Street before 1234 South 21st Street);
+5. distance from the user — **or from City Hall when location is unavailable**;
+6. provider order (Photon, then Nominatim).
 
 ## Setup
 
@@ -65,9 +76,14 @@ q() { curl -s -w '  [%{http_code} %{time_total}s]\n' \
 | A17 | Repeat A6 | Same results, time **< 50 ms** | Server cache hit |
 | A18 | `reverse=39.9496,-75.1503` | One address object near Independence Hall | Reverse geocode still works |
 | A19 | `reverse=abc` | HTTP 400 with `error` | |
+| A22 | `1234 south st` with `near=` omitted entirely | 1234 South Street, Philadelphia first | No GPS: ranking falls back to City Hall |
+| A23 | `1600 pennsylvania ave, washington dc` | The White House / 1600 Pennsylvania Ave NW, DC | Out-of-state query is not dragged back to Philly |
+| A24 | `indiana avenue` | Indiana Avenue, Philadelphia | A state name used as a street is still local |
+| A25 | `statue of liberty` | The one in New York | Nothing local matches, so the search widens |
 
 Also check:
-- **A20:** no response takes longer than ~9 s (Photon timeout is 4 s, Nominatim 8 s).
+- **A20:** no response takes longer than ~9 s (Photon timeout is 4 s, Nominatim 8 s;
+  the widening pass adds up to 3 s, and only runs when the metro pass is thin).
 - **A21:** fire 5 different house-number queries at once (`&` each curl). All return 200, none 502. Nominatim calls are queued, not rejected.
 
 ## B. Typing & suggestions (Destination field)
@@ -139,7 +155,10 @@ the origin field. Then:
 ## Known limitations (don't "fix" these)
 
 - OSM data gaps: a store missing from OpenStreetMap won't be found. Some labels look odd (e.g. a pizza place tagged "Vacant").
-- `1234 south st` also lists 1234 South Street in Reading/Pottstown after the Philly one. They are ranked below it, which is acceptable.
+- `1234 south st` also lists 1234 South Street in Reading/Pottstown after the Philly one. They are ranked below it, which is intended.
+- Out-of-area results are reached by naming the state ("..., washington dc") or by
+  searching for something with no local match at all. A query that *does* have local
+  matches stays local, by design — this is a Philly app.
 - Intersections (`5th and market`) are only roughly supported.
 - Photon is a free public service. Occasional 2–3 s responses are normal.
 
@@ -158,6 +177,11 @@ the origin field. Then:
 ## Results
 
 Run: 2026-09-15. Baseline: `tsc`, `lint`, **54/54** tests pass.
+
+Philly-first ranking (A22–A26) landed after this run; `tsc`, `lint` and **72/72**
+unit tests pass, but rows A1–A21 and the UI sections have not been re-run against
+the live services since — the upstream geocoders were unreachable from the
+environment the change was made in. Re-run section A before trusting the table.
 
 | # | Pass/Fail | Notes (actual result) | Fixed in |
 | --- | --- | --- | --- |

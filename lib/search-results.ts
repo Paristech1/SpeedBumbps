@@ -9,6 +9,76 @@ import { haversineDistance } from '@/lib/geo-utils';
 
 export const MAX_SEARCH_RESULTS = 8;
 
+// ---------------------------------------------------------------------------
+// Home region — this is a Philadelphia app, so local results rank first
+// ---------------------------------------------------------------------------
+
+/** City Hall. Used as the ranking anchor when the user's location is unknown. */
+export const PHILLY_CENTER: LatLng = { lat: 39.9526, lng: -75.1652 };
+
+/**
+ * Greater Philly: the city plus Bucks/Montco/Delco/Chester, South Jersey and
+ * northern Delaware — roughly the area someone would drive to from Philly.
+ */
+const METRO_BOUNDS = { minLat: 39.70, minLng: -75.55, maxLat: 40.35, maxLng: -74.70 };
+
+/** Photon `bbox` order: minLon,minLat,maxLon,maxLat. */
+export const METRO_BBOX =
+  `${METRO_BOUNDS.minLng},${METRO_BOUNDS.minLat},${METRO_BOUNDS.maxLng},${METRO_BOUNDS.maxLat}`;
+
+/** Nominatim `viewbox` order: left,top,right,bottom. */
+export const METRO_VIEWBOX =
+  `${METRO_BOUNDS.minLng},${METRO_BOUNDS.maxLat},${METRO_BOUNDS.maxLng},${METRO_BOUNDS.minLat}`;
+
+/** True for results inside greater Philadelphia. */
+export function isInPhillyRegion(location: LatLng): boolean {
+  return (
+    location.lat >= METRO_BOUNDS.minLat && location.lat <= METRO_BOUNDS.maxLat &&
+    location.lng >= METRO_BOUNDS.minLng && location.lng <= METRO_BOUNDS.maxLng
+  );
+}
+
+// States that mean "not around here". Only ever matched against the part of the
+// query after a comma, where a state is a place rather than a street name:
+// Philadelphia has an Indiana Avenue, and "wawa in" is not a search in Indiana.
+const DISTANT_STATE_NAMES = [
+  'alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut',
+  'florida', 'georgia', 'hawaii', 'idaho', 'illinois', 'indiana', 'iowa', 'kansas',
+  'kentucky', 'louisiana', 'maine', 'maryland', 'massachusetts', 'michigan', 'minnesota',
+  'mississippi', 'missouri', 'montana', 'nebraska', 'nevada', 'new hampshire', 'new mexico',
+  'new york', 'north carolina', 'north dakota', 'ohio', 'oklahoma', 'oregon', 'rhode island',
+  'south carolina', 'south dakota', 'tennessee', 'texas', 'utah', 'vermont', 'virginia',
+  'washington dc', 'west virginia', 'wisconsin', 'wyoming',
+];
+
+const DISTANT_STATE_CODES = new Set([
+  'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'dc', 'fl', 'ga', 'hi', 'id', 'il', 'in', 'ia',
+  'ks', 'ky', 'me', 'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt', 'ne', 'nv', 'nh', 'nm', 'ny',
+  'nc', 'nd', 'oh', 'ok', 'or', 'ri', 'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv',
+  'wi', 'wy',
+]);
+
+/**
+ * True when the query spells out a locality in a state outside the Philly
+ * region — "1600 pennsylvania ave, washington dc", "123 main st, brooklyn ny".
+ * Those searches mean somewhere else, so local results must not jump the queue.
+ *
+ * Only the text after the first comma is considered, so street names that
+ * happen to be state names ("indiana avenue") are left alone.
+ */
+export function mentionsDistantState(query: string): boolean {
+  const parts = query.toLowerCase().replace(/[^a-z0-9\s,]/g, ' ').split(',');
+  if (parts.length < 2) return false;
+  const locality = parts.slice(1).join(' ').replace(/\s+/g, ' ').trim();
+  if (DISTANT_STATE_NAMES.some((name) => new RegExp(`\\b${name}\\b`).test(locality))) return true;
+
+  const localityWords = locality.split(' ').filter(Boolean);
+  const last = localityWords[localityWords.length - 1];
+  // The last word, or the one before a trailing ZIP ("brooklyn, ny 11201")
+  const stateWord = last && /^\d{5}$/.test(last) ? localityWords[localityWords.length - 2] : last;
+  return !!stateWord && DISTANT_STATE_CODES.has(stateWord);
+}
+
 /** Queries that start with a house number ("1500 mark", "4500 frankford av"). */
 export function leadingHouseNumber(query: string): string | null {
   const match = query.trim().match(/^(\d+[a-z]?)\b/i);
@@ -249,12 +319,76 @@ function isDuplicate(a: GeocodingResult, b: GeocodingResult): boolean {
   return sameName && haversineDistance(a.location, b.location) < DUPLICATE_RADIUS_M;
 }
 
+/** Lowercase words, apostrophes closed up so "joes" ~ "Joe's". */
+function words(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/['\u2019]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/** What the user is looking for: everything before the first comma. */
+function queryTokens(query: string): string[] {
+  return words(cleanQuery(query).split(',')[0]);
+}
+
 /**
- * Combine Photon and Nominatim results. When the query starts with a house
- * number, results are ranked by street match first, then house number, so
- * "1234 south st" prefers 1234 South Street over 1234 South 21st Street.
- * Ties keep provider order (Photon, then Nominatim); non-address queries
- * keep Photon's relevance order.
+ * Where they said to look: the city/state after the first comma, ZIP dropped.
+ * "1600 pennsylvania ave, washington dc" → ['washington', 'dc'].
+ */
+function localityTokens(query: string): string[] {
+  const parts = cleanQuery(query).split(',').slice(1);
+  return words(parts.join(' ')).filter((word) => !/^\d{5}$/.test(word));
+}
+
+/** Words from a result the user could plausibly have typed. */
+function resultWords(result: GeocodingResult): string[] {
+  return words(`${result.shortName} ${result.displayName} ${result.category ?? ''}`);
+}
+
+/**
+ * True when every word typed shows up in the result's text. Photon is fuzzy and
+ * happily returns near-misses, so this separates "actually what you typed" from
+ * "something that happened to be close by".
+ */
+function matchesQueryText(result: GeocodingResult, tokens: string[]): boolean {
+  if (tokens.length === 0) return true;
+  const candidates = resultWords(result);
+  return tokens.every((token) => candidates.some((word) => (
+    // Longer tokens may still be half-typed ("phi" ~ Philadelphia); a one- or
+    // two-letter token has to be the whole word, so ", FL" isn't "Florence St"
+    token.length > 2 ? word.startsWith(token) : word === token
+  )));
+}
+
+/**
+ * How relevant a result is to the query: street/house match for address
+ * queries ("1234 south st"), otherwise whether the typed words appear at all.
+ */
+function relevanceScore(result: GeocodingResult, houseNumber: string | null, typed: string[], tokens: string[]): number {
+  if (houseNumber) return addressScore(result, houseNumber, typed);
+  return matchesQueryText(result, tokens) ? 1 : 0;
+}
+
+// Distance is compared in coarse buckets so that results which are effectively
+// equidistant keep the provider's own relevance order.
+const DISTANCE_BUCKET_M = 250;
+
+/**
+ * Combine Photon and Nominatim results, ranked for a Philadelphia app:
+ *
+ *  1. plausible matches first — anything that matches the street or the words
+ *     typed outranks a result that just happens to be nearby;
+ *  2. then the city the user actually typed, when they typed one
+ *     ("123 e main st, norristown pa" → Norristown before Center City);
+ *  3. then greater-Philly results, unless the query names another state
+ *     ("1600 pennsylvania ave, washington dc"), so local beats out-of-town;
+ *  4. then how well it matches ("1234 south st" prefers 1234 South Street over
+ *     1234 South 21st Street);
+ *  5. then distance from the user (or from City Hall when GPS is unavailable);
+ *  6. then provider order (Photon, then Nominatim).
  */
 export function mergeSearchResults(
   query: string,
@@ -264,25 +398,36 @@ export function mergeSearchResults(
   near?: LatLng | null,
 ): GeocodingResult[] {
   const number = leadingHouseNumber(query);
-  let ordered = [...photon, ...nominatim];
-  if (number) {
-    const typed = queryStreetTokens(query);
-    ordered = ordered
-      .map((result, index) => ({ result, index, score: addressScore(result, number, typed) }))
-      .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        if (near) {
-          return haversineDistance(near, a.result.location) - haversineDistance(near, b.result.location);
-        }
-        return a.index - b.index;
-      })
-      .map(({ result }) => result);
-  } else if (near) {
-    // Chain / POI queries: Photon relevance can miss nearby-first; bias by distance.
-    ordered = [...ordered].sort(
-      (a, b) => haversineDistance(near, a.location) - haversineDistance(near, b.location),
-    );
-  }
+  const typed = number ? queryStreetTokens(query) : [];
+  const tokens = number ? [] : queryTokens(query);
+  const locality = localityTokens(query);
+  const preferLocal = !mentionsDistantState(query);
+  // No GPS is not a reason to rank blind: fall back to City Hall.
+  const bias = near ?? PHILLY_CENTER;
+
+  const ordered = [...photon, ...nominatim]
+    .map((result, index) => {
+      const relevance = relevanceScore(result, number, typed, tokens);
+      return {
+        result,
+        index,
+        relevance,
+        plausible: relevance > 0 ? 1 : 0,
+        // Neutral when nobody matches, e.g. results that carry no city text
+        inTypedCity: matchesQueryText(result, locality) && locality.length > 0 ? 1 : 0,
+        local: preferLocal && isInPhillyRegion(result.location) ? 1 : 0,
+        distance: Math.round(haversineDistance(bias, result.location) / DISTANCE_BUCKET_M),
+      };
+    })
+    .sort((a, b) =>
+      b.plausible - a.plausible ||
+      b.inTypedCity - a.inTypedCity ||
+      b.local - a.local ||
+      b.relevance - a.relevance ||
+      a.distance - b.distance ||
+      a.index - b.index,
+    )
+    .map(({ result }) => result);
 
   const merged: GeocodingResult[] = [];
   for (const result of ordered) {

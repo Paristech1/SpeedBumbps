@@ -3,7 +3,10 @@
  *
  * Forward search blends two OpenStreetMap-backed services:
  *   - Photon (komoot): typo-tolerant autocomplete that finds shops, restaurants
- *     and partial addresses ("wawa", "trader joes", "1500 mark").
+ *     and partial addresses ("wawa", "trader joes", "1500 mark"). Queried for
+ *     greater Philly first (bbox is a hard filter); if that turns up almost
+ *     nothing, or the query names another state, it is re-run nationwide so
+ *     out-of-town searches still work — local results still rank first.
  *   - Nominatim: only queried when the text starts with a house number, since
  *     it interpolates addresses Photon doesn't have ("4500 frankford av").
  *     If Photon already has the typed house on the typed street we only give
@@ -20,10 +23,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { GeocodingResult, LatLng } from '@/types/speedbumps';
 import {
   MAX_SEARCH_RESULTS,
+  METRO_BBOX,
+  METRO_VIEWBOX,
+  PHILLY_CENTER,
   biasCacheKey,
   cleanQuery,
   hasHouseOnTypedStreet,
   leadingHouseNumber,
+  mentionsDistantState,
   mergeSearchResults,
   nominatimToResult,
   photonToResult,
@@ -31,15 +38,13 @@ import {
   type PhotonFeature,
 } from '@/lib/search-results';
 
-// Greater Philly metro (Photon bbox order: minLon,minLat,maxLon,maxLat) — hard filter
-const METRO_BBOX = '-75.55,39.70,-74.70,40.35';
-// Same area in Nominatim viewbox order (left,top,right,bottom) — a preference, not a filter
-const METRO_VIEWBOX = '-75.55,40.35,-74.70,39.70';
-const PHILLY_CENTER: LatLng = { lat: 39.9526, lng: -75.1652 };
-
 const USER_AGENT = 'SpeedBumps-App/1.0 (https://github.com/paristech1/speedbumbps)';
 const UPSTREAM_HEADERS = { 'User-Agent': USER_AGENT, Accept: 'application/json' };
 const PHOTON_TIMEOUT_MS = 4000;
+// Below this many greater-Philly hits, widen the Photon search past the metro
+const PHOTON_MIN_LOCAL_RESULTS = 2;
+// The widening pass is a second round trip, so keep it short
+const PHOTON_WIDEN_TIMEOUT_MS = 3000;
 // Nominatim is often slow but is the only source for many exact addresses
 const NOMINATIM_TIMEOUT_MS = 8000;
 // How long to wait for Nominatim when Photon already found the address
@@ -138,7 +143,7 @@ async function handleSearch(query: string, near: LatLng | null, signal: AbortSig
   if (cached) return jsonCached(cached);
 
   const wantsAddress = leadingHouseNumber(query) !== null;
-  const photonPromise = settle(fetchPhoton(query, near ?? PHILLY_CENTER));
+  const photonPromise = settle(fetchPhotonLocalFirst(query, near ?? PHILLY_CENTER));
   const nominatimPromise = wantsAddress ? settle(fetchNominatim(query, signal)) : null;
 
   const photon = await photonPromise;
@@ -176,19 +181,41 @@ async function handleSearch(query: string, near: LatLng | null, signal: AbortSig
   return NextResponse.json(results);
 }
 
-async function fetchPhoton(query: string, near: LatLng): Promise<GeocodingResult[]> {
+/**
+ * Philly first: search the metro, and only widen to the whole country when the
+ * local search comes up (nearly) empty or the query names another state.
+ * Ranking in mergeSearchResults keeps local hits on top either way.
+ */
+async function fetchPhotonLocalFirst(query: string, near: LatLng): Promise<GeocodingResult[]> {
+  if (mentionsDistantState(query)) return fetchPhoton(query, near, false);
+
+  const local = await fetchPhoton(query, near, true);
+  if (local.length >= PHOTON_MIN_LOCAL_RESULTS) return local;
+
+  const wider = await fetchPhoton(query, near, false, PHOTON_WIDEN_TIMEOUT_MS);
+  // Local ones are already in `wider`, but keep them first and let dedupe run
+  return [...local, ...wider];
+}
+
+async function fetchPhoton(
+  query: string,
+  near: LatLng,
+  phillyOnly: boolean,
+  timeoutMs = PHOTON_TIMEOUT_MS,
+): Promise<GeocodingResult[]> {
   const url = new URL('https://photon.komoot.io/api/');
   url.searchParams.set('q', query);
   url.searchParams.set('lat', String(near.lat));
   url.searchParams.set('lon', String(near.lng));
-  // Lean hard on proximity so "wawa" means the nearby one, not the town of Wawa, PA
+  // Low scale = lean hard on proximity, so "wawa" means the nearby one, not the town of Wawa, PA
   url.searchParams.set('location_bias_scale', '0.1');
   url.searchParams.set('zoom', '14');
-  url.searchParams.set('bbox', METRO_BBOX);
+  // bbox is a hard filter in Photon — only set it for the Philly-first pass
+  if (phillyOnly) url.searchParams.set('bbox', METRO_BBOX);
   url.searchParams.set('limit', String(MAX_SEARCH_RESULTS + 4));
   url.searchParams.set('lang', 'en');
 
-  const data = await fetchJson<{ features?: PhotonFeature[] }>(url, PHOTON_TIMEOUT_MS);
+  const data = await fetchJson<{ features?: PhotonFeature[] }>(url, timeoutMs);
   return (data.features ?? [])
     .map(photonToResult)
     .filter((r): r is GeocodingResult => r !== null);

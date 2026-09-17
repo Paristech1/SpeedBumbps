@@ -9,6 +9,11 @@ import {
   cleanQuery,
   normalizeStreet,
   hasHouseOnTypedStreet,
+  isInPhillyRegion,
+  mentionsDistantState,
+  PHILLY_CENTER,
+  METRO_BBOX,
+  METRO_VIEWBOX,
 } from '@/lib/search-results';
 import type { GeocodingResult } from '@/types/speedbumps';
 
@@ -89,6 +94,29 @@ describe('mergeSearchResults', () => {
     expect(merged[0]).toBe(photonStreet);
   });
 
+  it('ranks results that match the typed words above whatever is merely nearby', () => {
+    const center = at(39.9526, -75.1652);
+    const closeButWrong: GeocodingResult = {
+      shortName: 'Terminal Bar', displayName: '100 Filbert Street', location: at(39.9527, -75.1653), kind: 'place',
+    };
+    const theRealThing: GeocodingResult = {
+      shortName: 'Reading Terminal Market', displayName: '51 North 12th Street', location: at(39.9533, -75.1590), kind: 'place',
+    };
+    const merged = mergeSearchResults('reading terminal market', [closeButWrong, theRealThing], [], 8, center);
+    expect(merged[0].shortName).toBe('Reading Terminal Market');
+  });
+
+  it('matches names with apostrophes and half-typed words', () => {
+    const tj: GeocodingResult = {
+      shortName: "Trader Joe's", displayName: '2121 Market Street', location: at(39.9539, -75.1760), kind: 'place',
+    };
+    const other: GeocodingResult = {
+      shortName: 'Joe Hand Gym', displayName: '7 Ridge Avenue', location: at(39.9530, -75.1650), kind: 'place',
+    };
+    expect(mergeSearchResults('trader joes', [tj, other], [], 8, at(39.9526, -75.1652))[0].shortName).toBe("Trader Joe's");
+    expect(mergeSearchResults('trader joe', [tj, other], [], 8, at(39.9526, -75.1652))[0].shortName).toBe("Trader Joe's");
+  });
+
   it('sorts chain queries nearest-first when a bias point is given', () => {
     const center = at(39.95, -75.16);
     const far: GeocodingResult = { shortName: 'CVS', displayName: 'South 70th Street', location: at(39.91, -75.23), kind: 'place', category: 'Pharmacy' };
@@ -107,6 +135,111 @@ describe('mergeSearchResults', () => {
   it('caps the result count', () => {
     const many = Array.from({ length: 20 }, (_, i) => ({ shortName: `Wawa ${i}`, displayName: '', location: at(40 + i * 0.01, -75) }));
     expect(mergeSearchResults('wawa', many, [])).toHaveLength(8);
+  });
+});
+
+describe('Philly-first ranking', () => {
+  const at = (lat: number, lng: number) => ({ lat, lng });
+  const house = (num: string, street: string, lat: number, lng: number): GeocodingResult => ({
+    shortName: `${num} ${street}`, displayName: '', location: at(lat, lng), kind: 'address', houseNumber: num, street,
+  });
+
+  it('puts a Philly address above the same address out of town', () => {
+    const reading = house('1234', 'South Street', 40.335, -75.927);   // Reading, PA
+    const philly = house('1234', 'South Street', 39.941, -75.163);
+    // No bias point (location denied) — Philly still wins
+    expect(mergeSearchResults('1234 south st', [reading, philly], [])[0]).toBe(philly);
+    expect(mergeSearchResults('1234 south st', [reading], [philly])[0]).toBe(philly);
+  });
+
+  it('prefers a local partial match over an exact match far away', () => {
+    const farExact = house('1234', 'South Street', 39.286, -76.612);  // Baltimore
+    const localStreet = house('1234', 'South 21st Street', 39.941, -75.178);
+    expect(mergeSearchResults('1234 south st', [farExact, localStreet], [])[0]).toBe(localStreet);
+  });
+
+  it('keeps nearby chains first, Philly before the suburbs', () => {
+    const center = at(39.9496, -75.1503);
+    const lancaster: GeocodingResult = { shortName: 'Wawa', displayName: 'Lancaster', location: at(40.0379, -76.3055), kind: 'place' };
+    const kingOfPrussia: GeocodingResult = { shortName: 'Wawa', displayName: 'King of Prussia', location: at(40.0893, -75.3960), kind: 'place' };
+    const centerCity: GeocodingResult = { shortName: 'Wawa', displayName: '1100 Walnut Street', location: at(39.9479, -75.1591), kind: 'place' };
+    const merged = mergeSearchResults('wawa', [lancaster, kingOfPrussia, centerCity], [], 8, center);
+    expect(merged.map((r) => r.displayName)).toEqual(['1100 Walnut Street', 'King of Prussia', 'Lancaster']);
+  });
+
+  it('does not read a state code as the start of another word', () => {
+    const florida: GeocodingResult = {
+      shortName: '100 Ocean Drive', displayName: 'South Beach, Miami Beach, FL', location: at(25.7823, -80.1301),
+      kind: 'address', houseNumber: '100', street: 'Ocean Drive',
+    };
+    const philly: GeocodingResult = {
+      shortName: '100 South Beach Street', displayName: 'Florence Street, Philadelphia', location: at(39.93, -75.17),
+      kind: 'address', houseNumber: '100', street: 'South Beach Street',
+    };
+    // "fl" must not match "Florence": the Miami result is the one that fits
+    expect(mergeSearchResults('100 south beach, miami beach, FL', [philly], [florida])[0]).toBe(florida);
+  });
+
+  it('does not bury results when the query names another state', () => {
+    const dc: GeocodingResult = {
+      shortName: '1600 Pennsylvania Avenue Northwest', displayName: 'Washington, DC', location: at(38.8977, -77.0365),
+      kind: 'address', houseNumber: '1600', street: 'Pennsylvania Avenue Northwest',
+    };
+    const philly = house('1600', 'Pennsylvania Avenue', 39.9700, -75.1770);
+    const merged = mergeSearchResults('1600 pennsylvania ave, washington dc', [philly], [dc]);
+    expect(merged[0]).toBe(dc);
+  });
+
+  it('still prefers local when the query names a nearby state', () => {
+    const haddonfield = house('8', 'South Haddon Avenue', 39.8912, -75.0377);
+    const far = house('8', 'Haddon Avenue', 42.3601, -71.0589);
+    expect(mergeSearchResults('8 Haddon Ave, Haddonfield NJ', [far], [haddonfield])[0]).toBe(haddonfield);
+  });
+});
+
+describe('isInPhillyRegion', () => {
+  it('covers the city, the suburbs and South Jersey', () => {
+    expect(isInPhillyRegion(PHILLY_CENTER)).toBe(true);
+    expect(isInPhillyRegion({ lat: 39.9259, lng: -75.1196 })).toBe(true);  // Camden, NJ
+    expect(isInPhillyRegion({ lat: 40.0893, lng: -75.3960 })).toBe(true);  // King of Prussia
+    expect(isInPhillyRegion({ lat: 39.7459, lng: -75.5466 })).toBe(true);  // Wilmington, DE (edge)
+  });
+
+  it('excludes the rest of the world', () => {
+    expect(isInPhillyRegion({ lat: 40.7128, lng: -74.0060 })).toBe(false); // New York
+    expect(isInPhillyRegion({ lat: 40.3356, lng: -75.9269 })).toBe(false); // Reading, PA
+    expect(isInPhillyRegion({ lat: 39.2904, lng: -76.6122 })).toBe(false); // Baltimore
+  });
+});
+
+describe('mentionsDistantState', () => {
+  it('spots a locality in another state', () => {
+    expect(mentionsDistantState('1600 pennsylvania ave, washington dc')).toBe(true);
+    expect(mentionsDistantState('grand central, new york')).toBe(true);
+    expect(mentionsDistantState('123 main st, brooklyn, NY 11201')).toBe(true);
+    expect(mentionsDistantState('south beach, FL')).toBe(true);
+  });
+
+  it('treats PA, NJ and DE as local', () => {
+    expect(mentionsDistantState('1234 south st')).toBe(false);
+    expect(mentionsDistantState('123 E Main St, Norristown, PA')).toBe(false);
+    expect(mentionsDistantState('8 Haddon Ave, Haddonfield NJ')).toBe(false);
+    expect(mentionsDistantState('100 Market St, Wilmington, DE')).toBe(false);
+  });
+
+  it('ignores state names used as street names', () => {
+    expect(mentionsDistantState('indiana avenue')).toBe(false);
+    expect(mentionsDistantState('2100 Indiana Ave, Philadelphia')).toBe(false);
+    expect(mentionsDistantState('washington ave')).toBe(false);
+    expect(mentionsDistantState('wawa in')).toBe(false);
+    expect(mentionsDistantState('california')).toBe(false);
+  });
+});
+
+describe('metro bounds strings', () => {
+  it('uses each provider\u2019s coordinate order', () => {
+    expect(METRO_BBOX).toBe('-75.55,39.7,-74.7,40.35');      // minLon,minLat,maxLon,maxLat
+    expect(METRO_VIEWBOX).toBe('-75.55,40.35,-74.7,39.7');   // left,top,right,bottom
   });
 });
 
