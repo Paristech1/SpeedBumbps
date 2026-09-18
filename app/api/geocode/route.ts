@@ -4,9 +4,12 @@
  * Forward search blends three sources:
  *   - City address index (data/address-index, built from Philadelphia OPA
  *     parcels): every real Philly house number, matched locally while the
- *     user types ("4521 n fr"), plus intersections ("broad and girard").
- *     OSM lacks many of these, so index hits rank first. When the index has
- *     the exact house, Photon only gets a short grace period.
+ *     user types ("4521 n fr"), plus intersections ("broad and girard") from
+ *     centerline topology. OSM lacks many of these, so index hits rank first.
+ *     When the index has the exact house or corner, Photon only gets a short
+ *     grace period, and its rows are narrowed to what fits the query type
+ *     (nearby places under an exact house; the typed streets, never a random
+ *     POI, for an intersection).
  *   - Photon (komoot): typo-tolerant autocomplete that finds shops, restaurants
  *     and partial addresses ("wawa", "trader joes", "1500 mark").
  *   - Nominatim: only queried when the text starts with a house number and
@@ -27,6 +30,7 @@ import {
   MAX_SEARCH_RESULTS,
   biasCacheKey,
   cleanQuery,
+  filterProviderResults,
   hasHouseOnTypedStreet,
   leadingHouseNumber,
   mergeSearchResults,
@@ -34,9 +38,10 @@ import {
   photonToResult,
   type NominatimResult,
   type PhotonFeature,
+  type ProviderFilter,
 } from '@/lib/search-results';
 import { parseQuery } from '@/lib/address-index/parse';
-import { searchCityIndex } from '@/lib/address-index/store';
+import { isCityStreetPair, searchCityIndex } from '@/lib/address-index/store';
 
 // Greater Philly metro (Photon bbox order: minLon,minLat,maxLon,maxLat) — hard filter
 const METRO_BBOX = '-75.55,39.70,-74.70,40.35';
@@ -90,7 +95,7 @@ function errorStatus(error: unknown): number {
 }
 
 // Bump when ranking or sources change so old cached results aren't served
-const SEARCH_CACHE_VERSION = 'v2';
+const SEARCH_CACHE_VERSION = 'v3';
 const CACHE_MAX_ENTRIES = 500;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const CDN_CACHE_HEADER = 'public, s-maxage=86400, stale-while-revalidate=604800';
@@ -153,9 +158,13 @@ async function handleSearch(query: string, near: LatLng | null, signal: AbortSig
   const cached = searchCache.get(key);
   if (cached) return jsonCached(cached);
 
-  const photonPromise = settle(fetchPhoton(query, near ?? PHILLY_CENTER));
+  const parsed = parseQuery(query);
+  // Geocoders read "16th & bigler" poorly; spell out real street pairs, but leave "at&t" alone
+  const streetPair = await isCityStreetPair(parsed, near ?? PHILLY_CENTER);
+  const upstreamQuery = streetPair && parsed.kind === 'intersection' ? `${parsed.text[0]} and ${parsed.text[1]}` : query;
+  const photonPromise = settle(fetchPhoton(upstreamQuery, near ?? PHILLY_CENTER));
   // Local disk lookup; runs while Photon is in flight
-  const indexHits = await searchCityIndex(parseQuery(query), near ?? PHILLY_CENTER);
+  const indexHits = await searchCityIndex(parsed, near ?? PHILLY_CENTER);
   const indexHasHouse = indexHits.some((hit) => hit.tier <= 2);
   const wantsAddress = leadingHouseNumber(query) !== null && !indexHasHouse;
   const nominatimPromise = wantsAddress ? settle(fetchNominatim(query, signal)) : null;
@@ -174,17 +183,22 @@ async function handleSearch(query: string, near: LatLng | null, signal: AbortSig
       : await nominatimPromise;
   } else if (photon && !photon.ok && indexHits.length === 0) {
     // Photon down, Nominatim wasn't asked and the index had nothing — fall back so search still works
-    nominatim = await settle(fetchNominatim(query, signal));
+    nominatim = await settle(fetchNominatim(upstreamQuery, signal));
   }
 
   if (photon && !photon.ok && !nominatim?.ok && indexHits.length === 0) {
     return upstreamError(errorStatus(photon.error));
   }
 
+  const exactHouses = parsed.kind === 'address' ? indexHits.filter((hit) => hit.tier === 1) : [];
+  const filter: ProviderFilter =
+    parsed.kind === 'intersection' ? { kind: 'intersection', sides: parsed.text }
+    : exactHouses.length > 0 ? { kind: 'exactAddress', anchors: exactHouses.map((hit) => hit.result.location) }
+    : null;
   const results = mergeSearchResults(
     query,
-    photon?.ok ? photon.value : [],
-    nominatim?.ok ? nominatim.value : [],
+    filterProviderResults(photon?.ok ? photon.value : [], filter),
+    filterProviderResults(nominatim?.ok ? nominatim.value : [], filter),
     MAX_SEARCH_RESULTS,
     near,
     indexHits,

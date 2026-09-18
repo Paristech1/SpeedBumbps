@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { buildIntersections, fromXY, prepareSegment } from '@/lib/address-index/centerline.mjs';
 import { parseQuery } from '@/lib/address-index/parse';
-import { createAddressIndexStore, searchCityIndex } from '@/lib/address-index/store';
+import { createAddressIndexStore, isCityStreetPair, searchCityIndex } from '@/lib/address-index/store';
 import type { LatLng } from '@/types/speedbumps';
 
 const store = createAddressIndexStore(fileURLToPath(new URL('./fixtures/address-index', import.meta.url)));
@@ -64,6 +64,17 @@ describe('intersection lookup', () => {
   it('returns nothing when intersections.json is missing', async () => {
     const empty = createAddressIndexStore(fileURLToPath(new URL('./fixtures/no-such-index', import.meta.url)));
     expect(await searchCityIndex(parseQuery('16th & bigler'), PHILLY_CENTER, empty)).toEqual([]);
+  });
+});
+
+describe('isCityStreetPair', () => {
+  it('tells street pairs from store names', async () => {
+    const pair = (q: string) => isCityStreetPair(parseQuery(q), PHILLY_CENTER, store);
+    expect(await pair('16th & bigler')).toBe(true);
+    expect(await pair('market and girard')).toBe(true); // real streets, even though they never meet
+    expect(await pair('at&t')).toBe(false);
+    expect(await pair('zzqx & qqzx')).toBe(false);
+    expect(await pair('wawa')).toBe(false);
   });
 });
 

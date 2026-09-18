@@ -257,6 +257,43 @@ export function nominatimToResult(item: NominatimResult): GeocodingResult {
 const DUPLICATE_RADIUS_M = 75;
 export const MAX_INDEX_RESULTS = 5;
 
+/**
+ * How to narrow Photon/Nominatim rows once the query type is known:
+ * - intersection ("16th & bigler"): the typed streets themselves, or places
+ *   named after both sides ("Barnes & Noble") — never an unrelated cafe or a
+ *   street in another town.
+ * - exactAddress (the City index has the exact house): only a couple of
+ *   nearby places, e.g. the business at that address — no streets or other
+ *   addresses under the house the user typed.
+ */
+export type ProviderFilter =
+  | { kind: 'intersection'; sides: [string, string] }
+  | { kind: 'exactAddress'; anchors: LatLng[] }
+  | null;
+
+const EXACT_ADDRESS_POI_RADIUS_M = 1000;
+const EXACT_ADDRESS_MAX_POIS = 2;
+
+export function filterProviderResults(results: GeocodingResult[], filter: ProviderFilter): GeocodingResult[] {
+  if (!filter) return results;
+  if (filter.kind === 'exactAddress') {
+    return results
+      .filter((r) => r.kind === 'place' && filter.anchors.some((a) => haversineDistance(a, r.location) <= EXACT_ADDRESS_POI_RADIUS_M))
+      .slice(0, EXACT_ADDRESS_MAX_POIS);
+  }
+  const sides = filter.sides.map(normalizeStreet).filter((tokens) => tokens.length > 0);
+  if (sides.length < 2) return [];
+  return results.filter((r) => {
+    // Photon sometimes types a bare street as an "address"; no house number means it's the street
+    if (r.kind === 'street' || r.kind === 'area' || (r.kind === 'address' && !r.houseNumber)) {
+      const street = r.street ?? r.shortName;
+      return sides.some((typed) => streetMatchLevel(typed, street) > 0);
+    }
+    const name = new Set(normalizeStreet(r.shortName));
+    return sides.every((typed) => typed.every((word) => name.has(word)));
+  });
+}
+
 /** First line with abbreviations expanded, so "1500 Market St" ~ "1500 Market Street". */
 function comparableName(result: GeocodingResult): string {
   return normalizeStreet(result.shortName.split(',')[0]).join(' ');

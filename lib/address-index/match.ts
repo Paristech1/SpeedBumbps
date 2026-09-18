@@ -291,6 +291,14 @@ function intersectionSide(index: StreetIndex, typed: string[], lastPartial: bool
   return [...expanded];
 }
 
+/** Both sides of "x & y" name Philly streets (vs. a store like "AT&T" or "Barnes & Noble"). */
+export function isStreetPair(parsed: Extract<ParsedQuery, { kind: 'intersection' }>, index: StreetIndex, near: LatLng): boolean {
+  return (
+    rankStreets(index, parsed.a, false, near).length > 0 &&
+    rankStreets(index, parsed.b, parsed.lastTokenPartial, near).length > 0
+  );
+}
+
 /** Where the typed streets meet, from centerline topology (exact nodes, not guesses). */
 function searchIntersection(
   parsed: Extract<ParsedQuery, { kind: 'intersection' }>,

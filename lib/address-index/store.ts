@@ -13,6 +13,7 @@ import type { IndexHit } from '@/lib/search-results';
 import { INDEX_VERSION } from './keys.mjs';
 import {
   buildStreetIndex,
+  isStreetPair,
   searchAddressIndex,
   type IntersectionPairs,
   type IntersectionsFile,
@@ -107,5 +108,16 @@ export async function searchCityIndex(parsed: ParsedQuery, near: LatLng, store =
   } catch (err) {
     console.warn('[address-index] lookup failed:', err);
     return [];
+  }
+}
+
+/** "x & y" where both sides are Philly streets. False if the index is unavailable. */
+export async function isCityStreetPair(parsed: ParsedQuery, near: LatLng, store = cityIndex): Promise<boolean> {
+  if (parsed.kind !== 'intersection') return false;
+  try {
+    const streets = await store.getStreets();
+    return !!streets && isStreetPair(parsed, streets, near);
+  } catch {
+    return false;
   }
 }

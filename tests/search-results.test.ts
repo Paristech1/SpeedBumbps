@@ -9,6 +9,7 @@ import {
   cleanQuery,
   normalizeStreet,
   hasHouseOnTypedStreet,
+  filterProviderResults,
 } from '@/lib/search-results';
 import type { GeocodingResult } from '@/types/speedbumps';
 
@@ -213,6 +214,51 @@ describe('mergeSearchResults with City index hits', () => {
     const merged = mergeSearchResults('100 market', many, [], 8, null, hits);
     expect(merged).toHaveLength(8);
     expect(merged.filter((r) => r.street === 'Market St')).toHaveLength(5);
+  });
+});
+
+describe('filterProviderResults', () => {
+  const at = (lat: number, lng: number) => ({ lat, lng });
+  const cafe: GeocodingResult = { shortName: 'Bean Cafe', displayName: '1500 Wolf Street', location: at(39.92, -75.17), kind: 'place', category: 'Cafe' };
+  const wilmington: GeocodingResult = { shortName: 'West 16th Street', displayName: 'Wilmington', location: at(39.74, -75.55), kind: 'street', street: 'West 16th Street' };
+  const bigler: GeocodingResult = { shortName: 'Bigler Street', displayName: 'South Philadelphia', location: at(39.9146, -75.17), kind: 'street', street: 'Bigler Street' };
+  const barnes: GeocodingResult = { shortName: 'Barnes & Noble', displayName: '1805 Walnut Street', location: at(39.95, -75.17), kind: 'place', category: 'Books' };
+
+  it('T8: an unknown intersection keeps nothing unrelated', () => {
+    const filter = { kind: 'intersection' as const, sides: ['zzz', 'qqq'] as [string, string] };
+    const kept = filterProviderResults([cafe, wilmington], filter);
+    expect(kept).toEqual([]);
+    expect(mergeSearchResults('zzz & qqq', kept, [])).toEqual([]);
+  });
+
+  it('keeps the typed streets for an intersection, but no POIs', () => {
+    const filter = { kind: 'intersection' as const, sides: ['s 16th', 'bigler'] as [string, string] };
+    expect(filterProviderResults([cafe, wilmington, bigler], filter)).toEqual([bigler]);
+    // Photon labels some bare streets "address"; without a house number it's still the street
+    const bareStreet: GeocodingResult = { shortName: 'North 5th Street', displayName: '19106', location: at(39.953, -75.147), kind: 'address', street: 'North 5th Street' };
+    const house: GeocodingResult = { ...bareStreet, shortName: '12 North 5th Street', houseNumber: '12' };
+    expect(filterProviderResults([bareStreet, house], { kind: 'intersection', sides: ['5th', 'market'] })).toEqual([bareStreet]);
+  });
+
+  it('keeps places named after both sides ("Barnes & Noble", "AT&T")', () => {
+    expect(filterProviderResults([barnes, cafe], { kind: 'intersection', sides: ['barnes', 'noble'] })).toEqual([barnes]);
+    const att: GeocodingResult = { ...barnes, shortName: 'AT&T Store' };
+    expect(filterProviderResults([att], { kind: 'intersection', sides: ['at', 't'] })).toEqual([att]);
+  });
+
+  it('T9: an exact index house keeps only up to 2 nearby places', () => {
+    const house = at(39.9146, -75.1749);
+    const street: GeocodingResult = { shortName: 'Bigler Street', displayName: '', location: at(39.9146, -75.1745), kind: 'street', street: 'Bigler Street' };
+    const farPoi: GeocodingResult = { ...cafe, shortName: 'Far Cafe', location: at(39.96, -75.17) };
+    const nearPoi: GeocodingResult = { ...cafe, shortName: 'Corner Store', location: at(39.9150, -75.1752) };
+    const filter = { kind: 'exactAddress' as const, anchors: [house] };
+    expect(filterProviderResults([street, farPoi, nearPoi], filter)).toEqual([nearPoi]);
+    const many = Array.from({ length: 4 }, (_, i) => ({ ...nearPoi, shortName: `Shop ${i}` }));
+    expect(filterProviderResults(many, filter)).toHaveLength(2);
+  });
+
+  it('leaves results alone without a filter', () => {
+    expect(filterProviderResults([cafe, bigler], null)).toEqual([cafe, bigler]);
   });
 });
 
