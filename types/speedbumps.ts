@@ -64,6 +64,8 @@ export interface GeocodingResult {
   houseNumber?: string;
   /** Street name without the house number, used to rank address matches. */
   street?: string;
+  /** Pin is near, not at, the typed address (nearest known house, or an intersection). */
+  approximate?: boolean;
 }
 
 /**

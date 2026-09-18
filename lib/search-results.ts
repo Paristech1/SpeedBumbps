@@ -9,6 +9,18 @@ import { haversineDistance } from '@/lib/geo-utils';
 
 export const MAX_SEARCH_RESULTS = 8;
 
+/**
+ * A City address-index result (lib/address-index) and its ranking tier:
+ * 1 = exact house on an exactly matched street,
+ * 2 = exact house on a street still being typed ("4521 n fr"),
+ * 3 = approximate house or intersection.
+ * All three rank above Photon/Nominatim results.
+ */
+export interface IndexHit {
+  result: GeocodingResult;
+  tier: 1 | 2 | 3;
+}
+
 /** Queries that start with a house number ("1500 mark", "4500 frankford av"). */
 export function leadingHouseNumber(query: string): string | null {
   const match = query.trim().match(/^(\d+[a-z]?)\b/i);
