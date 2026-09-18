@@ -5,7 +5,8 @@
  *   - City address index (data/address-index, built from Philadelphia OPA
  *     parcels): every real Philly house number, matched locally while the
  *     user types ("4521 n fr"), plus intersections ("broad and girard").
- *     OSM is missing most of these, so index hits rank first.
+ *     OSM lacks many of these, so index hits rank first. When the index has
+ *     the exact house, Photon only gets a short grace period.
  *   - Photon (komoot): typo-tolerant autocomplete that finds shops, restaurants
  *     and partial addresses ("wawa", "trader joes", "1500 mark").
  *   - Nominatim: only queried when the text starts with a house number and
@@ -50,6 +51,8 @@ const PHOTON_TIMEOUT_MS = 4000;
 const NOMINATIM_TIMEOUT_MS = 8000;
 // How long to wait for Nominatim when Photon already found the address
 const NOMINATIM_GRACE_MS = 400;
+// How long to wait for Photon's POIs when the City index has the exact address
+const PHOTON_GRACE_MS = 250;
 const NOMINATIM_MIN_INTERVAL_MS = 1100;
 
 let nominatimQueue: Promise<void> = Promise.resolve();
@@ -75,6 +78,11 @@ function settle<T>(promise: Promise<T>): Promise<Settled<T>> {
     (value) => ({ ok: true as const, value }),
     (error: unknown) => ({ ok: false as const, error }),
   );
+}
+
+/** Resolve with the promise's value, or null if it takes longer than `ms`. */
+function withGrace<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([promise, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
 }
 
 function errorStatus(error: unknown): number {
@@ -152,36 +160,37 @@ async function handleSearch(query: string, near: LatLng | null, signal: AbortSig
   const wantsAddress = leadingHouseNumber(query) !== null && !indexHasHouse;
   const nominatimPromise = wantsAddress ? settle(fetchNominatim(query, signal)) : null;
 
-  const photon = await photonPromise;
+  // The index already has the exact address: don't hold it for Photon's POIs.
+  // null = Photon still in flight after the grace period
+  const photon = indexHits.some((hit) => hit.tier === 1)
+    ? await withGrace(photonPromise, PHOTON_GRACE_MS)
+    : await photonPromise;
   // null = not asked, or skipped because Photon already had the address
   let nominatim: Settled<GeocodingResult[]> | null = null;
   if (nominatimPromise) {
-    const photonFoundIt = photon.ok && hasHouseOnTypedStreet(query, photon.value);
+    const photonFoundIt = photon?.ok && hasHouseOnTypedStreet(query, photon.value);
     nominatim = photonFoundIt
-      ? await Promise.race([
-          nominatimPromise,
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), NOMINATIM_GRACE_MS)),
-        ])
+      ? await withGrace(nominatimPromise, NOMINATIM_GRACE_MS)
       : await nominatimPromise;
-  } else if (!photon.ok && indexHits.length === 0) {
+  } else if (photon && !photon.ok && indexHits.length === 0) {
     // Photon down, Nominatim wasn't asked and the index had nothing — fall back so search still works
     nominatim = await settle(fetchNominatim(query, signal));
   }
 
-  if (!photon.ok && !nominatim?.ok && indexHits.length === 0) {
+  if (photon && !photon.ok && !nominatim?.ok && indexHits.length === 0) {
     return upstreamError(errorStatus(photon.error));
   }
 
   const results = mergeSearchResults(
     query,
-    photon.ok ? photon.value : [],
+    photon?.ok ? photon.value : [],
     nominatim?.ok ? nominatim.value : [],
     MAX_SEARCH_RESULTS,
     near,
     indexHits,
   );
-  // Don't pin a partial result set when a provider failed
-  if (photon.ok && (nominatim === null || nominatim.ok)) {
+  // Don't pin a partial result set when a provider failed or was cut off
+  if (photon?.ok && (nominatim === null || nominatim.ok)) {
     searchCache.set(key, results);
     return jsonCached(results);
   }

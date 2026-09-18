@@ -13,10 +13,19 @@ the table at the bottom, then fix what fails (see **Fixing** at the end).
 | UI: 250 ms debounce, stale-request abort, ↑/↓/Enter, "no matches" hint, richer rows | `components/map/RoutePlanningPanel.tsx` |
 | Types: `kind`, `category`, `houseNumber`, `street` on `GeocodingResult` | `types/speedbumps.ts` |
 | Unit tests | `tests/search-results.test.ts` |
+| City address index: build script, generated data, monthly refresh | `scripts/build-address-index.mjs`, `data/address-index/`, `.github/workflows/address-index.yml` |
+| Index parsing/matching/loading (pure except `store.ts`) | `lib/address-index/*` |
+| `approx.` chip on approximate results | `components/map/RoutePlanningPanel.tsx` |
+| Index unit tests + fixture index | `tests/address-normalize.test.ts`, `tests/address-match.test.ts`, `tests/fixtures/address-index/` |
 
-How search works: every query goes to **Photon** (finds stores and partial text).
-Queries that start with a house number also go to **Nominatim** (exact
-addresses). If Photon already has the typed house number on the typed street,
+How search works: house-number and intersection queries are first matched
+against the **City address index** (every Philadelphia parcel from OPA, read
+from disk). Its hits rank first: exact house on the typed street, then exact
+house on a street still being typed, then approximate houses/intersections
+(shown with an `approx.` chip). Every query also goes to **Photon** (finds
+stores and partial text). Queries that start with a house number go to
+**Nominatim** only when the index had no exact house (suburbs, NJ, new
+construction). If Photon already has the typed house number on the typed street,
 Nominatim gets a 400 ms grace period. Otherwise the server waits up to 8 s for
 it. Results are ranked street match first, then house number, and deduped
 within 75 m.
@@ -123,7 +132,7 @@ the origin field. Then:
 | # | Check | Pass if |
 | --- | --- | --- |
 | F1 | Non-address query (`wawa`), first time | Response < ~2.5 s. Only Photon is hit (check server log / timing) |
-| F2 | Address query where Photon already has it (`1600 n broad st`) | Response not much slower than F1 (400 ms grace, not 8 s) |
+| F2 | Address query where Photon already has it (`1600 n broad st`) | Response not much slower than F1. The index has it, so Nominatim is skipped and Photon gets a 250 ms grace |
 | F3 | Address Photon lacks (`1234 south st`) | Correct result even when slow. Under 9 s worst case |
 | F4 | Typing a 20-char address normally | ≤ ~4–6 `geocode` requests, older ones canceled |
 | F5 | Map pan/zoom while suggestions load | No jank. Search doesn't block the map |
@@ -136,11 +145,36 @@ the origin field. Then:
 
 ---
 
+## H. City address index
+
+Addresses below were picked from the built index (`data/address-index/`,
+built 2026-09-18), not from memory. Re-pick if a refresh drops one. Use the
+API helper from section A unless the row says UI.
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| H1 | `2945 N Taylor St` (North Philly rowhome) | Top row **2945 N Taylor St**, "Philadelphia, PA 19132", house icon, no `approx.` chip. Response ≈ 250–400 ms: Photon only gets a 250 ms grace and Nominatim isn't called |
+| H2 | UI: type `2945 n taylor st` one character at a time | **2945 N Taylor St** is the top row by `2945 n ta` and stays there through the end. Nothing index-based shows for `2945 n` or `2945 n t` |
+| H3 | `910 5th st` with `near=39.95,-75.16` | Both **910 S 5th St** and **910 N 5th St**, the nearer one first. Swap `near` to `39.97,-75.145` and the order flips |
+| H4 | `6025 N Beechwood St` | Found as the top row. Photon alone doesn't have this house (checked 2026-09-18) |
+| H5 | `broad and girard` (also `broad & girard`) | Top row **N Broad St & W Girard Ave**, `approx.` chip, pin at the corner |
+| H6 | `8 Haddon Ave, Haddonfield NJ` | Unchanged from A11: 8 N/S Haddon Ave, Haddonfield via Photon/Nominatim. No Philly index rows |
+| H7 | `wawa`, `trader joes` | Unchanged from A1/A2 |
+| H8 | Vercel preview, first full-address search after a deploy (cold start) | Responds < 1.5 s. Then a different full address (warm): < 300 ms server time (check the function log or `x-vercel` timing, not your network RTT) |
+
+Also check:
+- **H9:** `4521 n franklin st` → `4521 N Franklin St` with the `approx.` chip (OPA has no 4500 block, so it's pinned at the nearest same-side house).
+- **H10:** `1234 south st` → **1234 South Street** first. OPA lacks 1234 (only 1232, 1232R and 1236R), so the index's approximate pin is replaced by the provider's exact one. `S St Bernard St` must **not** appear.
+- **H11:** Temporarily rename `data/address-index/` and restart the dev server. `2945 N Taylor St` and `wawa` still return results (Photon/Nominatim only), and the server logs one `[address-index] … unavailable` warning. Rename it back.
+- **H12:** `npm run build`, then check `.next/server/app/api/geocode/route.js.nft.json` lists `data/address-index/streets.json` and the shards.
+
 ## Known limitations (don't "fix" these)
 
 - OSM data gaps: a store missing from OpenStreetMap won't be found. Some labels look odd (e.g. a pizza place tagged "Vacant").
 - `1234 south st` also lists 1234 South Street in Reading/Pottstown after the Philly one. They are ranked below it, which is acceptable.
-- Intersections (`5th and market`) are only roughly supported.
+- Intersections (`5th and market`) are only roughly supported. The index finds a corner only when both streets have parcels within 60 m of each other. 5th St has none near Market (Independence Mall), so that one falls through to Photon.
+- The address index is Philadelphia-only and refreshed monthly. New construction can lag. The `approx.` fallback only covers gaps of up to ±100 house numbers.
+- A house number outside a street's range (±50) returns no index result. For example, N/S 5th St have no parcels in the 100 block.
 - Photon is a free public service. Occasional 2–3 s responses are normal.
 
 ## Fixing

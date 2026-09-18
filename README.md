@@ -25,7 +25,7 @@ Everything is stored in `localStorage`; there is no backend beyond two small API
 | Framework | Next.js 16 (App Router), React 19, TypeScript |
 | Map | Leaflet 1.9 (canvas renderer), OpenStreetMap raster tiles |
 | Routing | Valhalla public server (primary; `alternates`, `exclude_locations`, per-vehicle costing) with OSRM demo servers as fallback, via `app/api/route` |
-| Geocoding | Nominatim (forward + reverse) via `app/api/geocode`, with an in-process LRU cache |
+| Geocoding | City of Philadelphia address index (OPA parcels, built into `data/address-index`) first, then Photon + Nominatim (forward) and Nominatim (reverse), via `app/api/geocode` with an in-process LRU cache |
 | Voice | Web Speech API (`speechSynthesis`) |
 | UI | Tailwind CSS 4, vaul drawers, lucide icons, sonner toasts |
 | Tests | Vitest |
@@ -51,7 +51,7 @@ No environment variables are required. The routing and geocoding proxies call pu
 
 ```
 app/
-  api/geocode/route.ts     Nominatim proxy: ?q=<address> or ?reverse=<lat>,<lng>
+  api/geocode/route.ts     Search: address index + Photon/Nominatim: ?q=<text> or ?reverse=<lat>,<lng>
   api/route/route.ts       Routing proxy: Valhalla → OSRM fallback, normalised to OSRM JSON
   map/page.tsx             The app (also served at /)
   demo/active-navigation   Static UI preview
@@ -59,6 +59,7 @@ components/map/            Map chrome: planner, route sheet, navigation HUD, tab
 contexts/                  MapContext (Leaflet instance), RoutingContext (route state + cache), ThemeContext
 hooks/                     Location tracking, follow-cam, deviation, voice, markers, local persistence
 lib/
+  address-index/           Philly address index: query parsing, street matching, disk loader
   bump-avoidance.ts        Candidate scoring + exclusion rounds
   osrm-service.ts          Route request/parse, polyline decode, step→polyline indexing
   geo-utils.ts             Haversine, segment distance, route progress, imperial formatting
@@ -66,7 +67,9 @@ lib/
   voice-guidance.ts        Speech singleton, voice selection, spoken distances
 types/                     Domain types (routes, bumps, profiles, user data)
 public/data/phl_speed_bumps.json   The bump dataset
+data/address-index/                Generated Philly address index (refreshed monthly by GitHub Actions)
 scripts/snap-bumps-to-roads.mjs    One-off data fix (see below)
+scripts/build-address-index.mjs    Rebuilds data/address-index from City OPA data
 tests/                     Vitest unit tests
 ```
 
