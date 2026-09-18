@@ -134,7 +134,7 @@ describe('parseQuery', () => {
   });
 
   it('parses intersections', () => {
-    const expected = { kind: 'intersection', a: ['BROAD'], b: ['GIRARD'], lastTokenPartial: true };
+    const expected = { kind: 'intersection', a: ['BROAD'], b: ['GIRARD'], lastTokenPartial: true, text: ['broad', 'girard'] };
     expect(parseQuery('broad and girard')).toEqual(expected);
     expect(parseQuery('broad & girard')).toEqual(expected);
     expect(parseQuery('Broad St @ Girard Ave')).toMatchObject({ a: ['BROAD', 'ST'], b: ['GIRARD', 'AVE'], lastTokenPartial: false });

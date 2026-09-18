@@ -1,7 +1,7 @@
 /**
  * Match parsed queries against the City address index. Pure: the street
- * dictionary and a shard loader are passed in, so tests run on fixtures and
- * the route (via store.ts) runs on data/address-index/.
+ * dictionary, a shard loader and the intersection table are passed in, so
+ * tests run on fixtures and the route (via store.ts) runs on data/address-index/.
  */
 
 import type { GeocodingResult, LatLng } from '@/types/speedbumps';
@@ -33,6 +33,22 @@ export type Shard = Record<string, HouseRow[]>;
 
 export type ShardLoader = (bucket: string) => Shard | null | Promise<Shard | null>;
 
+/** Sorted "KEYA|KEYB" → where the two streets meet ([lat, lng], one per corner). */
+export type IntersectionPairs = Record<string, [number, number][]>;
+
+export interface IntersectionsFile {
+  version: number;
+  pairs: IntersectionPairs;
+}
+
+/** Loaded index data a search runs against. */
+export interface IndexData {
+  streets: StreetIndex;
+  loadShard: ShardLoader;
+  /** Only needed for intersection queries; null when the file is missing. */
+  intersections?: IntersectionPairs | null;
+}
+
 // --- In-memory index -------------------------------------------------------
 
 export interface IndexedStreet {
@@ -54,6 +70,8 @@ export interface IndexedStreet {
 export interface StreetIndex {
   streets: IndexedStreet[];
   byKey: Map<string, IndexedStreet>;
+  /** "NAME|TYPE" → every direction of that street (N 16th St, S 16th St). */
+  byNameType: Map<string, IndexedStreet[]>;
 }
 
 export function buildStreetIndex(file: StreetsFile): StreetIndex {
@@ -69,7 +87,12 @@ export function buildStreetIndex(file: StreetsFile): StreetIndex {
       sequences,
     };
   });
-  return { streets, byKey: new Map(streets.map((s) => [s.key, s])) };
+  const byNameType = new Map<string, IndexedStreet[]>();
+  for (const street of streets) {
+    const key = `${street.name}|${street.type}`;
+    byNameType.set(key, [...(byNameType.get(key) ?? []), street]);
+  }
+  return { streets, byKey: new Map(streets.map((s) => [s.key, s])), byNameType };
 }
 
 // --- Street matching -------------------------------------------------------
@@ -250,67 +273,62 @@ async function searchAddress(
 // --- Intersections ---------------------------------------------------------
 
 const INTERSECTION_SIDE_STREETS = 3;
-/** Address points on two streets this close means they cross (or meet) here. */
-const INTERSECTION_MAX_GAP_M = 60;
-/** Grid cell (degrees) — bigger than the max gap in both axes at Philly's latitude. */
-const GRID_CELL_DEG = 0.0008;
+const MAX_INTERSECTION_HITS = 3;
+/** Corners of the same two streets closer than this are one place. */
 const DUPLICATE_POINT_M = 75;
 
-/** Closest pair of address points between two streets (grid-bucketed, not O(n·m)). */
-export function closestPoints(a: HouseRow[], b: HouseRow[]): { a: HouseRow; b: HouseRow; meters: number } | null {
-  const cell = (lat: number, lng: number) => [Math.floor(lat / GRID_CELL_DEG), Math.floor(lng / GRID_CELL_DEG)];
-  const grid = new Map<string, HouseRow[]>();
-  for (const row of b) {
-    const [y, x] = cell(row[2], row[3]);
-    const k = `${y},${x}`;
-    const list = grid.get(k);
-    if (list) list.push(row);
-    else grid.set(k, [row]);
+/**
+ * Candidate streets for one side of "x & y". Without a typed direction,
+ * every direction of a matched street is included ("16th" → N and S 16th St).
+ */
+function intersectionSide(index: StreetIndex, typed: string[], lastPartial: boolean, near: LatLng): IndexedStreet[] {
+  const top = rankStreets(index, typed, lastPartial, near).slice(0, INTERSECTION_SIDE_STREETS).map((c) => c.street);
+  if (typed.length > 1 && PREDIRS.has(typed[0])) return top;
+  const expanded = new Set(top);
+  for (const street of top) {
+    for (const variant of index.byNameType.get(`${street.name}|${street.type}`) ?? []) expanded.add(variant);
   }
+  return [...expanded];
+}
 
-  let best: { a: HouseRow; b: HouseRow; meters: number } | null = null;
-  for (const rowA of a) {
-    const [y, x] = cell(rowA[2], rowA[3]);
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        for (const rowB of grid.get(`${y + dy},${x + dx}`) ?? []) {
-          const meters = haversineDistance({ lat: rowA[2], lng: rowA[3] }, { lat: rowB[2], lng: rowB[3] });
-          if (!best || meters < best.meters) best = { a: rowA, b: rowB, meters };
-        }
+/** Where the typed streets meet, from centerline topology (exact nodes, not guesses). */
+function searchIntersection(
+  parsed: Extract<ParsedQuery, { kind: 'intersection' }>,
+  index: StreetIndex,
+  pairs: IntersectionPairs,
+  near: LatLng,
+): IndexHit[] {
+  const sideA = intersectionSide(index, parsed.a, false, near);
+  const sideB = sideA.length ? intersectionSide(index, parsed.b, parsed.lastTokenPartial, near) : [];
+
+  const corners: { location: LatLng; shortName: string; distance: number }[] = [];
+  for (const a of sideA) {
+    for (const b of sideB) {
+      if (a.key === b.key) continue;
+      const pair = a.key < b.key ? `${a.key}|${b.key}` : `${b.key}|${a.key}`;
+      for (const [lat, lng] of pairs[pair] ?? []) {
+        const location = { lat, lng };
+        corners.push({ location, shortName: `${a.display} & ${b.display}`, distance: haversineDistance(near, location) });
       }
     }
   }
-  return best;
-}
 
-async function searchIntersection(
-  parsed: Extract<ParsedQuery, { kind: 'intersection' }>,
-  index: StreetIndex,
-  loadShard: ShardLoader,
-  near: LatLng,
-): Promise<IndexHit[]> {
-  const sideA = rankStreets(index, parsed.a, false, near).slice(0, INTERSECTION_SIDE_STREETS);
-  if (sideA.length === 0) return [];
-  const sideB = rankStreets(index, parsed.b, parsed.lastTokenPartial, near).slice(0, INTERSECTION_SIDE_STREETS);
-
-  const rowsFor = async (street: IndexedStreet) => (await loadShard(street.bucket))?.[street.key] ?? [];
   const hits: IndexHit[] = [];
-  for (const { street: streetA } of sideA) {
-    for (const { street: streetB } of sideB) {
-      if (streetA.key === streetB.key) continue;
-      const pair = closestPoints(await rowsFor(streetA), await rowsFor(streetB));
-      if (!pair || pair.meters > INTERSECTION_MAX_GAP_M) continue;
-      const location = { lat: (pair.a[2] + pair.b[2]) / 2, lng: (pair.a[3] + pair.b[3]) / 2 };
-      // N 5th & Market and S 5th & Market are the same corner
-      if (hits.some((h) => haversineDistance(h.result.location, location) < DUPLICATE_POINT_M)) continue;
-      const shortName = `${streetA.display} & ${streetB.display}`;
-      hits.push({
-        tier: 3,
-        result: { shortName, displayName: 'Philadelphia, PA', location, kind: 'street', approximate: true },
-      });
-    }
+  for (const corner of corners.sort((x, y) => x.distance - y.distance)) {
+    if (hits.some((h) => haversineDistance(h.result.location, corner.location) < DUPLICATE_POINT_M)) continue;
+    hits.push({
+      tier: 1,
+      result: {
+        shortName: corner.shortName,
+        displayName: 'Philadelphia, PA',
+        location: corner.location,
+        kind: 'street',
+        approximate: false,
+      },
+    });
+    if (hits.length >= MAX_INTERSECTION_HITS) break;
   }
-  return hits.slice(0, MAX_INDEX_HITS);
+  return hits;
 }
 
 // ---------------------------------------------------------------------------
@@ -319,13 +337,10 @@ async function searchIntersection(
  * City-index results for a parsed query, best first. Empty for non-address
  * queries or when nothing matches — Photon/Nominatim cover those.
  */
-export async function searchAddressIndex(
-  parsed: ParsedQuery,
-  index: StreetIndex,
-  loadShard: ShardLoader,
-  near: LatLng,
-): Promise<IndexHit[]> {
-  if (parsed.kind === 'address') return searchAddress(parsed, index, loadShard, near);
-  if (parsed.kind === 'intersection') return searchIntersection(parsed, index, loadShard, near);
+export async function searchAddressIndex(parsed: ParsedQuery, data: IndexData, near: LatLng): Promise<IndexHit[]> {
+  if (parsed.kind === 'address') return searchAddress(parsed, data.streets, data.loadShard, near);
+  if (parsed.kind === 'intersection' && data.intersections) {
+    return searchIntersection(parsed, data.streets, data.intersections, near);
+  }
   return [];
 }

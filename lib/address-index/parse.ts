@@ -18,7 +18,14 @@ export type ParsedQuery =
       lastTokenPartial: boolean;
       zip?: string;
     }
-  | { kind: 'intersection'; a: string[]; b: string[]; lastTokenPartial: boolean }
+  | {
+      kind: 'intersection';
+      a: string[];
+      b: string[];
+      lastTokenPartial: boolean;
+      /** Each side as typed ("16th", "bigler"), for upstream queries and filtering. */
+      text: [string, string];
+    }
   | { kind: 'other' };
 
 const OTHER: ParsedQuery = { kind: 'other' };
@@ -30,6 +37,7 @@ const TRAILING_LOCALITY = /(?:\s+(?:philadelphia|phila|philly|pa|pennsylvania|us
 
 // "1234", "1234r", "1234-36" (OPA range), "256 1/2"
 const HOUSE_PATTERN = /^(\d+)([a-z])?(?:-\d+[a-z]?)?(\s+1\/2)?(?=\s|$)/i;
+// "x and y", "x at y", "x & y", "x @ y", "x/y"
 const INTERSECTION_PATTERN = /^(.+?)(?:\s+(?:and|at)\s+|\s*[&@/]\s*)(.+)$/i;
 
 /**
@@ -87,7 +95,7 @@ export function parseQuery(query: string): ParsedQuery {
     const a = normalizeStreetTokens(intersection[1]);
     const b = normalizeStreetTokens(intersection[2], lastTokenPartial);
     if (a.length === 0 || b.length === 0) return OTHER;
-    return { kind: 'intersection', a, b, lastTokenPartial };
+    return { kind: 'intersection', a, b, lastTokenPartial, text: [intersection[1].trim(), intersection[2].trim()] };
   }
 
   return OTHER;

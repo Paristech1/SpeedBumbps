@@ -11,7 +11,15 @@ import path from 'node:path';
 import type { LatLng } from '@/types/speedbumps';
 import type { IndexHit } from '@/lib/search-results';
 import { INDEX_VERSION } from './keys.mjs';
-import { buildStreetIndex, searchAddressIndex, type Shard, type StreetIndex, type StreetsFile } from './match';
+import {
+  buildStreetIndex,
+  searchAddressIndex,
+  type IntersectionPairs,
+  type IntersectionsFile,
+  type Shard,
+  type StreetIndex,
+  type StreetsFile,
+} from './match';
 import type { ParsedQuery } from './parse';
 
 const DEFAULT_DIR = path.join(process.cwd(), 'data', 'address-index');
@@ -20,10 +28,12 @@ const SHARD_CACHE_MAX = 40;
 export interface AddressIndexStore {
   getStreets(): Promise<StreetIndex | null>;
   getShard(bucket: string): Promise<Shard | null>;
+  getIntersections(): Promise<IntersectionPairs | null>;
 }
 
 export function createAddressIndexStore(dir = DEFAULT_DIR): AddressIndexStore {
   let streets: Promise<StreetIndex | null> | null = null;
+  let intersections: Promise<IntersectionPairs | null> | null = null;
   // LRU: Map keeps insertion order; re-inserting on hit moves a bucket to the back
   const shards = new Map<string, Promise<Shard | null>>();
   let warned = false;
@@ -53,6 +63,18 @@ export function createAddressIndexStore(dir = DEFAULT_DIR): AddressIndexStore {
       return streets;
     },
 
+    getIntersections() {
+      intersections ??= readJson<IntersectionsFile>('intersections.json').then((file) => {
+        if (!file) return null;
+        if (file.version !== INDEX_VERSION) {
+          console.warn(`[address-index] intersections.json is version ${file.version}, expected ${INDEX_VERSION}; ignoring it`);
+          return null;
+        }
+        return file.pairs;
+      });
+      return intersections;
+    },
+
     getShard(bucket) {
       if (!/^[A-Z0-9_]{2}$/.test(bucket)) return Promise.resolve(null);
       let shard = shards.get(bucket);
@@ -80,7 +102,8 @@ export async function searchCityIndex(parsed: ParsedQuery, near: LatLng, store =
   try {
     const streets = await store.getStreets();
     if (!streets) return [];
-    return await searchAddressIndex(parsed, streets, store.getShard, near);
+    const intersections = parsed.kind === 'intersection' ? await store.getIntersections() : null;
+    return await searchAddressIndex(parsed, { streets, loadShard: store.getShard, intersections }, near);
   } catch (err) {
     console.warn('[address-index] lookup failed:', err);
     return [];

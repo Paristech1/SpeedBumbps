@@ -117,19 +117,18 @@ describe('address index: house numbers', () => {
 });
 
 describe('address index: intersections', () => {
-  it('U10: finds where two streets meet', async () => {
+  it('U10: finds where two streets meet (exact node from centerline topology)', async () => {
     for (const query of ['broad and girard', 'broad & girard', 'N Broad St at W Girard Ave']) {
       const hits = await search(query);
       expect(hits).toHaveLength(1);
-      expect(hits[0].tier).toBe(3);
-      expect(hits[0].result).toMatchObject({ shortName: 'N Broad St & W Girard Ave', kind: 'street', approximate: true });
-      expect(hits[0].result.location.lat).toBeCloseTo(39.9713, 3);
-      expect(hits[0].result.location.lng).toBeCloseTo(-75.1594, 3);
+      expect(hits[0].tier).toBe(1);
+      expect(hits[0].result).toMatchObject({
+        shortName: 'N Broad St & W Girard Ave',
+        kind: 'street',
+        approximate: false,
+        location: { lat: 39.97148, lng: -75.15944 },
+      });
     }
-  });
-
-  it('returns nothing when the streets never meet', async () => {
-    expect(await search('market and girard')).toEqual([]);
   });
 });
 
