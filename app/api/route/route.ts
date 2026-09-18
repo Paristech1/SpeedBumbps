@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { valhallaTypeToOsrm } from '@/lib/valhalla-maneuvers';
 
 const SERVER_TIMEOUT_MS = 8000;
 
@@ -167,35 +168,6 @@ interface OsrmLikeResponse {
     duration: number;
     legs: OsrmLeg[];
   }>;
-}
-
-/** Map Valhalla maneuver type int → OSRM type + modifier strings. */
-function valhallaTypeToOsrm(type: number): { type: string; modifier: string } {
-  // Valhalla type reference: https://valhalla.github.io/valhalla/turn-by-turn/api-reference/#maneuver-types
-  switch (type) {
-    case 1: return { type: 'depart', modifier: '' };
-    case 4: return { type: 'turn', modifier: 'left' };
-    case 5: return { type: 'turn', modifier: 'slight left' };
-    case 6: return { type: 'turn', modifier: 'sharp left' };
-    case 7: return { type: 'turn', modifier: 'right' };
-    case 8: return { type: 'turn', modifier: 'slight right' };
-    case 9: return { type: 'turn', modifier: 'sharp right' };
-    case 10: return { type: 'turn', modifier: 'uturn' };
-    case 11: return { type: 'turn', modifier: 'uturn' };
-    case 15: return { type: 'fork', modifier: 'slight right' };
-    case 16: return { type: 'fork', modifier: 'slight left' };
-    case 17: return { type: 'merge', modifier: '' };
-    case 20: return { type: 'off ramp', modifier: 'slight right' };
-    case 21: return { type: 'off ramp', modifier: 'slight left' };
-    case 22: return { type: 'on ramp', modifier: 'slight right' };
-    case 23: return { type: 'on ramp', modifier: 'slight left' };
-    case 24: return { type: 'fork', modifier: 'slight left' };
-    case 25: return { type: 'fork', modifier: 'slight right' };
-    case 26: return { type: 'roundabout', modifier: '' };
-    case 27: return { type: 'exit roundabout', modifier: '' };
-    case 37: return { type: 'arrive', modifier: '' };
-    default: return { type: 'continue', modifier: '' };
-  }
 }
 
 function valhallaToOsrm(trip: ValhallaTrip): OsrmLikeResponse {
