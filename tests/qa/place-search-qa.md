@@ -17,6 +17,11 @@ the table at the bottom, then fix what fails (see **Fixing** at the end).
 | Index parsing/matching/loading (pure except `store.ts`) | `lib/address-index/*` |
 | `approx.` chip on approximate results | `components/map/RoutePlanningPanel.tsx` |
 | Index unit tests + fixture index | `tests/address-normalize.test.ts`, `tests/address-match.test.ts`, `tests/fixtures/address-index/` |
+| Street-front house points + intersections from City street centerlines (build) | `scripts/build-address-index.mjs`, `lib/address-index/centerline.mjs`, `data/address-index/intersections.json` |
+| Intersection lookup, provider-row filtering by query type | `lib/address-index/match.ts`, `lib/search-results.ts`, `app/api/geocode/route.ts` |
+| Valhalla maneuver mapping (right turns were read out as U-turns) | `lib/valhalla-maneuvers.ts`, `app/api/route/route.ts` |
+| Planner origin when GPS fails; route framing above the preview sheet | `components/map/RoutePlanningPanel.tsx`, `hooks/useRoutePolyline.ts`, `components/map/MapMain.tsx` |
+| Unit tests for the above | `tests/address-snap.test.ts`, `tests/address-intersections.test.ts`, `tests/valhalla-maneuvers.test.ts` |
 
 How search works: house-number and intersection queries are first matched
 against the **City address index** (every Philadelphia parcel from OPA, read
@@ -157,7 +162,7 @@ API helper from section A unless the row says UI.
 | H2 | UI: type `2945 n taylor st` one character at a time | **2945 N Taylor St** is the top row by `2945 n ta` and stays there through the end. Nothing index-based shows for `2945 n` or `2945 n t` |
 | H3 | `910 5th st` with `near=39.95,-75.16` | Both **910 S 5th St** and **910 N 5th St**, the nearer one first. Swap `near` to `39.97,-75.145` and the order flips |
 | H4 | `6025 N Beechwood St` | Found as the top row. Photon alone doesn't have this house (checked 2026-09-18) |
-| H5 | `broad and girard` (also `broad & girard`) | Top row **N Broad St & W Girard Ave**, `approx.` chip, pin at the corner |
+| H5 | `broad and girard` (also `broad & girard`) | Top row **N Broad St & W Girard Ave**, pin at the corner (exact node since section I, so no `approx.` chip) |
 | H6 | `8 Haddon Ave, Haddonfield NJ` | Unchanged from A11: 8 N/S Haddon Ave, Haddonfield via Photon/Nominatim. No Philly index rows |
 | H7 | `wawa`, `trader joes` | Unchanged from A1/A2 |
 | H8 | Vercel preview, first full-address search after a deploy (cold start) | Responds < 1.5 s. Then a different full address (warm): < 300 ms server time (check the function log or `x-vercel` timing, not your network RTT) |
@@ -168,11 +173,52 @@ Also check:
 - **H11:** Temporarily rename `data/address-index/` and restart the dev server. `2945 N Taylor St` and `wawa` still return results (Photon/Nominatim only), and the server logs one `[address-index] … unavailable` warning. Rename it back.
 - **H12:** `npm run build`, then check `.next/server/app/api/geocode/route.js.nft.json` lists `data/address-index/streets.json` and the shards.
 
+## I. QA regression (E1–E6, 18 Sep 2026 findings)
+
+House pins are now **street-front points**: each parcel is moved onto its own
+street's centerline, clear of corners. Intersections come from centerline
+topology (`intersections.json`), not from nearby parcels.
+
+| # | Steps | Pass criteria |
+| --- | --- | --- |
+| I1 | Plan `440 Sloan St` → `2846 S 16th St` | First maneuver is on **Sloan St** (not Nectarine), and there's no U-turn in the first 500 m |
+| I2 | Repeat I1 from 3 other houses at the start of short blocks (e.g. `2601 S Iseminger St`, `501 S Philip St`, `1203 W Airdrie St`) | First maneuver is on the named street each time |
+| I3 | Start from a house on N Broad St (e.g. `4600 N Broad St`, `5501 N Broad St`) | Starts on N Broad St, on the correct side, with no immediate U-turn |
+| I4 | Search `S 16th & Bigler` | `S 16th St & Bigler St` on top, pin at the corner |
+| I5 | Search `16th & bigler`, `16th and bigler`, `16th at bigler` | Same top result for all three, never `[]` |
+| I6 | Search `sloan and nectarine` | `Sloan St & Nectarine St` (control) |
+| I7 | Search `zzqx & qqzx` | Empty state: no cafes, no out-of-state streets |
+| I8 | Open Plan Route with location blocked (DevTools → Sensors → Location unavailable, or deny the permission) | Within 8 s the origin becomes typeable, with placeholder "Location unavailable — type a start address" and the error underneath. `/api/geocode` calls include `near` (the map center) |
+| I9 | Plan a ~6 mi route with the preview sheet open, at phone width and on desktop. Drag the sheet between its low and middle heights | The whole route stays visible above the sheet and re-frames when the sheet snaps. No suburb-scale zoom |
+| I10 | Search `7255 hill rd` | Exact house first. No unrelated streets below it (at most 2 nearby places) |
+| I11 | Build log (`node scripts/build-address-index.mjs`) | Centerline unmatched ≤ 2%, unsnapped ≤ 3%, and `BIGLER_ST\|S_16TH_ST` present |
+
+Also check:
+- **I12:** Store names that contain `&` still work: `barnes & noble`, `at&t`, `h&m` show the stores.
+- **I13:** Turn-by-turn for any route: right turns read "Turn right onto …", not "Make a U-turn" (the maneuver mapping was wrong before this change).
+
+### Results (local dev, 2026-09-18)
+
+| # | Result | Notes |
+| --- | --- | --- |
+| I1 | Pass | Old parcel pin started on Nectarine St. New pin (on Sloan's centerline, 11 m from the corner) departs "north on Sloan Street", then turns right onto Spring Garden. The "U-turns" were a maneuver-mapping bug: Valhalla type 10 (right turn) was mapped to U-turn |
+| I2 | Pass | 6/6 random block-start houses depart on their own street |
+| I3 | Pass* | 4600 and 5501 N Broad depart on N Broad St. *1401 N Broad is a large parcel more than 60 m from the centerline, so it keeps its parcel point (one of the 0.91% unsnapped). It departs on a service road, then turns onto Broad |
+| I4–I6 | Pass | ~250 ms each |
+| I7 | Pass | `[]` |
+| I8 | N/T | Needs DevTools location emulation. This browser had a GPS fix |
+| I9 | Pass (desktop) | 11 mi route framed above the sheet, and re-framed after dragging to the low snap. Phone width not run |
+| I10 | Pass | Only `7255 Hill Rd` |
+| I11 | Pass | 0/3,433 street codes unmatched (0%), 4,955/547,412 unsnapped (0.91%), 22,266 street pairs, `BIGLER_ST\|S_16TH_ST` = [39.91462, -75.1748] |
+| I12 | Pass | |
+
 ## Known limitations (don't "fix" these)
 
 - OSM data gaps: a store missing from OpenStreetMap won't be found. Some labels look odd (e.g. a pizza place tagged "Vacant").
 - `1234 south st` also lists 1234 South Street in Reading/Pottstown after the Philly one. They are ranked below it, which is acceptable.
-- Intersections (`5th and market`) are only roughly supported. The index finds a corner only when both streets have parcels within 60 m of each other. 5th St has none near Market (Independence Mall), so that one falls through to Photon.
+- Intersections come from the City's centerline names. Where the City names a stretch differently from everyday use, the index misses it. At Market St, 5th St is **N/S Independence Mall**, so `5th and market` falls through to Photon (which shows North 5th Street).
+- About 0.9% of houses (mostly large lots: Delaire Landing Rd, Roosevelt Blvd, Academy Rd) are more than 60 m from their street's centerline. They keep the parcel point, so a route may start or end on a driveway or service road.
+- Intersection-shaped queries (`x & y`, `x and y`) only show provider rows that are the typed streets or places named after both sides. A POI search like `pizza at broad` keeps only places whose names contain both words.
 - The address index is Philadelphia-only and refreshed monthly. New construction can lag. The `approx.` fallback only covers gaps of up to ±100 house numbers.
 - A house number outside a street's range (±50) returns no index result. For example, N/S 5th St have no parcels in the 100 block.
 - Photon is a free public service. Occasional 2–3 s responses are normal.
