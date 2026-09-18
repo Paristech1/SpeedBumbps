@@ -11,10 +11,44 @@ import type { Map as LeafletMap, Polyline, Marker } from 'leaflet';
 import type { AppRoute, LatLng } from '@/types/speedbumps';
 import { routeColor, routeProgress } from '@/lib/geo-utils';
 import { polylineBounds } from '@/lib/bump-avoidance';
+import { log } from '@/lib/app-logger';
 
 const STROKE_WIDTH = 5;
 const ALT_STROKE_OPACITY = 0.6;
 const OFF_ROUTE_SNAP_MIN_M = 25;
+
+// Route framing: keep the whole route in the map area between the top bar and the preview sheet
+const FIT_SIDE_PX = 40;
+const FIT_TOP_PX = 96 + 24; // top bar + margin
+const FIT_BOTTOM_MARGIN_PX = 24;
+const FIT_MAX_ZOOM = 17;
+/** Re-fit when the sheet moves between snap points, not on every pixel. */
+const REFIT_INSET_DELTA_PX = 40;
+/** Less visible map than this (sheet pulled up to read steps): leave the camera alone. */
+const MIN_VISIBLE_MAP_PX = 160;
+// A city route framed wider than this is the "zoomed out to the suburbs" symptom
+const SUBURB_ZOOM = 11;
+const CITY_ROUTE_M = 30000;
+
+/** Frame a route in the part of the map not covered by the top bar and the bottom sheet. */
+async function fitRoute(map: LeafletMap, route: AppRoute, bottomInset: number): Promise<boolean> {
+  const bounds = polylineBounds(route.polylinePoints);
+  if (!bounds) return false;
+  const L = (await import('leaflet')).default;
+  // The container may have changed size (sheet, rotation, mobile URL bar) since Leaflet last measured
+  map.invalidateSize();
+  if (map.getSize().y - FIT_TOP_PX - bottomInset < MIN_VISIBLE_MAP_PX) return false;
+
+  const latLngBounds = L.latLngBounds([bounds.sw.lat, bounds.sw.lng], [bounds.ne.lat, bounds.ne.lng]);
+  const paddingTopLeft = L.point(FIT_SIDE_PX, FIT_TOP_PX);
+  const paddingBottomRight = L.point(FIT_SIDE_PX, bottomInset + FIT_BOTTOM_MARGIN_PX);
+  const zoom = Math.min(map.getBoundsZoom(latLngBounds, false, paddingTopLeft.add(paddingBottomRight)), FIT_MAX_ZOOM);
+  if (zoom < SUBURB_ZOOM && route.distanceMeters < CITY_ROUTE_M) {
+    log('warn', 'route-fit', `Route of ${Math.round(route.distanceMeters)} m framed at zoom ${zoom}`, { bottomInset, mapHeight: map.getSize().y });
+  }
+  map.fitBounds(latLngBounds, { paddingTopLeft, paddingBottomRight, maxZoom: FIT_MAX_ZOOM, animate: true });
+  return true;
+}
 
 interface UseRoutePolylineOptions {
   map: LeafletMap | null;
@@ -23,6 +57,8 @@ interface UseRoutePolylineOptions {
   selectedRouteIndex: 0 | 1;
   /** Frame the whole route on render. Disable during navigation (follow-cam owns the camera). */
   autoFit?: boolean;
+  /** Height (px) of the sheet covering the bottom of the map; the route is framed above it. */
+  bottomInset?: number;
   /** Live driver position — drives the progress trace and off-route snap line. */
   currentLocation?: LatLng | null;
   isNavigating?: boolean;
@@ -34,6 +70,7 @@ export function useRoutePolyline({
   alternativeRoute,
   selectedRouteIndex,
   autoFit = true,
+  bottomInset = 0,
   currentLocation = null,
   isNavigating = false,
 }: UseRoutePolylineOptions) {
@@ -43,6 +80,13 @@ export function useRoutePolyline({
   const destMarkerRef = useRef<Marker | null>(null);
   const traveledPolylineRef = useRef<Polyline | null>(null);
   const snapLineRef = useRef<Polyline | null>(null);
+  // Read at render time without re-rendering the route when they change
+  const bottomInsetRef = useRef(bottomInset);
+  bottomInsetRef.current = bottomInset;
+  const autoFitRef = useRef(autoFit);
+  autoFitRef.current = autoFit;
+  /** Sheet height the route was last framed for. */
+  const fittedInsetRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!map) return;
@@ -119,14 +163,9 @@ export function useRoutePolyline({
       destMarkerRef.current = L.marker([last.lat, last.lng], { icon: destIcon }).addTo(map);
 
       // Fit map to route bounds — skipped during navigation (follow-cam owns the camera)
-      if (autoFit) {
-        const bounds = polylineBounds(selectedRoute.polylinePoints);
-        if (bounds) {
-          map.fitBounds(
-            [[bounds.sw.lat, bounds.sw.lng], [bounds.ne.lat, bounds.ne.lng]],
-            { paddingTopLeft: [60, 120], paddingBottomRight: [60, 220], animate: true }
-          );
-        }
+      if (autoFitRef.current) {
+        const inset = bottomInsetRef.current;
+        if (await fitRoute(map, selectedRoute, inset)) fittedInsetRef.current = inset;
       }
     };
 
@@ -135,9 +174,24 @@ export function useRoutePolyline({
     return () => {
       mounted = false;
     };
-    // autoFit intentionally excluded: it should not trigger a re-render of the route
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, primaryRoute, alternativeRoute, selectedRouteIndex]);
+
+  // Re-frame when the preview sheet snaps to a different height (new routes are framed as they're drawn)
+  const selectedRouteRef = useRef<AppRoute | undefined>(undefined);
+  selectedRouteRef.current = selectedRouteIndex === 1 && alternativeRoute ? alternativeRoute : primaryRoute;
+  useEffect(() => {
+    const route = selectedRouteRef.current;
+    if (!map || !route || !autoFit) return;
+    const fitted = fittedInsetRef.current;
+    if (fitted !== null && Math.abs(bottomInset - fitted) <= REFIT_INSET_DELTA_PX) return;
+    let cancelled = false;
+    fitRoute(map, route, bottomInset).then((didFit) => {
+      if (didFit && !cancelled) fittedInsetRef.current = bottomInset;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [map, bottomInset, autoFit]);
 
   // Navigation overlays: progress trace (traveled portion dimmed) + off-route snap line.
   const selectedRoute = selectedRouteIndex === 1 && alternativeRoute ? alternativeRoute : primaryRoute;

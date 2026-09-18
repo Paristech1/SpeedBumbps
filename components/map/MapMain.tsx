@@ -52,10 +52,13 @@ function SpeedBumpsMap({
   location,
   isFollowing,
   onUserPan,
+  bottomInset,
 }: {
   location: UserLocation | null;
   isFollowing: boolean;
   onUserPan: () => void;
+  /** Height of the route preview sheet; routes are framed above it. */
+  bottomInset: number;
 }) {
   const map = useLeafletMap();
   const routing = useRouting();
@@ -71,6 +74,7 @@ function SpeedBumpsMap({
     alternativeRoute: routing.result?.alternativeRoute,
     selectedRouteIndex: routing.selectedRouteIndex,
     autoFit: !routing.isNavigating,
+    bottomInset,
     currentLocation: location?.position ?? null,
     isNavigating: routing.isNavigating,
   });
@@ -173,7 +177,14 @@ function MapMainInner() {
   const { recents, addRecent, removeRecent } = useRecentSearches();
   const selectedRoute = useSelectedRoute();
   // High-accuracy GPS only while navigating (heading, speed, fresh fixes)
-  const { location, isTracking, error: locationError, startTracking } = useLocationTracking({ highAccuracy: routing.isNavigating });
+  const { location, isTracking, hasPermission, error: locationError, startTracking } = useLocationTracking({ highAccuracy: routing.isNavigating });
+  const map = useLeafletMap();
+  // Search bias for the planner when there's no GPS fix
+  const getMapCenter = useCallback((): LatLng | null => {
+    if (!map) return null;
+    const center = map.getCenter();
+    return { lat: center.lat, lng: center.lng };
+  }, [map]);
   const [routeErrorDismissed, setRouteErrorDismissed] = useState(false);
   useEffect(() => {
     setRouteErrorDismissed(false);
@@ -438,6 +449,7 @@ function MapMainInner() {
           location={location}
           isFollowing={isFollowing}
           onUserPan={() => setIsFollowing(false)}
+          bottomInset={routeSheetVisible ? snapToPx(routeSnap) : 0}
         />
       </LeafletMap>
 
@@ -719,6 +731,9 @@ function MapMainInner() {
         initialDestination={routeHereDestination}
         recentDestinations={recents}
         onRemoveRecent={removeRecent}
+        locationPermission={hasPermission}
+        locationError={locationError}
+        getMapCenter={getMapCenter}
       />
 
       {/* Route Result Card — hidden during active navigation */}

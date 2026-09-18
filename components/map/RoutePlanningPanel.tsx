@@ -41,6 +41,12 @@ interface RoutePlanningPanelProps {
   initialDestination?: GeocodingResult | null;
   recentDestinations?: RecentDestination[];
   onRemoveRecent?: (result: GeocodingResult) => void;
+  /** From useLocationTracking: false = denied. */
+  locationPermission?: boolean | null;
+  /** From useLocationTracking, e.g. "Location permission denied". */
+  locationError?: string | null;
+  /** Search bias when there's no GPS fix (the visible map center). */
+  getMapCenter?: () => LatLng | null;
 }
 
 export const VEHICLE_OPTIONS: { id: VehicleProfile; label: string; emoji: string }[] = [
@@ -59,6 +65,8 @@ export const MODE_OPTIONS: { id: RoutePreferenceMode; label: string; description
 
 const MY_LOCATION_LABEL = 'My Location';
 const SEARCH_DEBOUNCE_MS = 250;
+// Give up on "Locating…" and let the user type a start address after this long
+const LOCATE_TIMEOUT_MS = 8000;
 
 function isAbortError(err: unknown): boolean {
   return err instanceof DOMException && err.name === 'AbortError';
@@ -82,6 +90,9 @@ export function RoutePlanningPanel({
   initialDestination,
   recentDestinations = [],
   onRemoveRecent,
+  locationPermission = null,
+  locationError = null,
+  getMapCenter,
 }: RoutePlanningPanelProps) {
   const [useMyLocation, setUseMyLocation] = useState(true);
   const [originQuery, setOriginQuery] = useState('');
@@ -102,9 +113,14 @@ export function RoutePlanningPanel({
   // so Enter must not pick a suggestion for text the user has since changed
   const [originResultsFor, setOriginResultsFor] = useState('');
   const [destResultsFor, setDestResultsFor] = useState('');
+  const [locateTimedOut, setLocateTimedOut] = useState(false);
   // GPS updates constantly — read it through a ref so it doesn't re-trigger searches
   const userLocationRef = useRef(userLocation);
   userLocationRef.current = userLocation;
+  const getMapCenterRef = useRef(getMapCenter);
+  getMapCenterRef.current = getMapCenter;
+  /** Bias searches toward the user, or toward what's on screen when GPS isn't available. */
+  const searchBias = () => userLocationRef.current ?? getMapCenterRef.current?.() ?? null;
   const destInputRef = useRef<HTMLInputElement>(null);
   const originInputRef = useRef<HTMLInputElement>(null);
   // Tracks whether the current destQuery is the pre-filled hint (no autocomplete until user edits)
@@ -122,6 +138,7 @@ export function RoutePlanningPanel({
       setVehicle(initialProfileRef.current?.vehicle ?? 'sedan');
       setMode(initialProfileRef.current?.mode ?? 'balanced');
       setUseMyLocation(true);
+      setLocateTimedOut(false);
       setOriginQuery('');
       setSelectedOrigin(null);
       setOriginResults([]);
@@ -137,11 +154,38 @@ export function RoutePlanningPanel({
         const prefill = initialDestLabelRef.current ?? '';
         destIsPrefillRef.current = prefill !== '';
         setDestQuery(prefill);
-        setTimeout(() => destInputRef.current?.focus(), 200);
+        // Unless the origin field already took focus (location unavailable)
+        setTimeout(() => {
+          if (!(document.activeElement instanceof HTMLInputElement)) destInputRef.current?.focus();
+        }, 200);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]); // intentionally omit initial* — snapshot on open only
+
+  // No fix within LOCATE_TIMEOUT_MS of opening: stop waiting on GPS
+  const hasFix = !!userLocation;
+  useEffect(() => {
+    if (!isOpen || hasFix) return;
+    const timer = setTimeout(() => setLocateTimedOut(true), LOCATE_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [isOpen, hasFix]);
+
+  const originStatus: 'ready' | 'locating' | 'unavailable' = hasFix
+    ? 'ready'
+    : locationPermission === false || locationError || locateTimedOut
+      ? 'unavailable'
+      : 'locating';
+
+  // Location unavailable: switch the origin to a typed address instead of spinning forever
+  useEffect(() => {
+    if (!isOpen || originStatus !== 'unavailable' || !useMyLocation) return;
+    setUseMyLocation(false);
+    // Don't steal focus from the destination field if the user is typing there
+    setTimeout(() => {
+      if (!(document.activeElement instanceof HTMLInputElement)) originInputRef.current?.focus();
+    }, 50);
+  }, [isOpen, originStatus, useMyLocation]);
 
   // Debounced origin search
   useEffect(() => {
@@ -154,7 +198,7 @@ export function RoutePlanningPanel({
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const results = await searchAddress(originQuery, { near: userLocationRef.current, signal: controller.signal });
+        const results = await searchAddress(originQuery, { near: searchBias(), signal: controller.signal });
         setOriginResults(results);
         setOriginResultsFor(originQuery.trim());
         setOriginActive(-1);
@@ -185,7 +229,7 @@ export function RoutePlanningPanel({
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const results = await searchAddress(destQuery, { near: userLocationRef.current, signal: controller.signal });
+        const results = await searchAddress(destQuery, { near: searchBias(), signal: controller.signal });
         setDestResults(results);
         setDestResultsFor(destQuery.trim());
         setDestActive(-1);
@@ -239,7 +283,7 @@ export function RoutePlanningPanel({
     }
     setDestLoading(true);
     try {
-      const results = await searchAddress(q, { near: userLocationRef.current });
+      const results = await searchAddress(q, { near: searchBias() });
       if (results.length > 0) {
         setSelectedDest(results[0]);
         setDestQuery('');
@@ -266,7 +310,7 @@ export function RoutePlanningPanel({
     }
     setOriginLoading(true);
     try {
-      const results = await searchAddress(q, { near: userLocationRef.current });
+      const results = await searchAddress(q, { near: searchBias() });
       if (results.length > 0) {
         setSelectedOrigin(results[0]);
         setOriginQuery('');
@@ -370,8 +414,11 @@ export function RoutePlanningPanel({
                     className="w-full h-14 bg-[#00a844]/10 border-none rounded-2xl pl-12 pr-20 font-semibold text-[#3ce36a] focus:ring-2 focus:ring-[#3ce36a]"
                     readOnly
                     type="text"
-                    value={userLocation ? MY_LOCATION_LABEL : 'Locating…'}
+                    value={originStatus === 'ready' ? MY_LOCATION_LABEL : 'Locating…'}
                   />
+                  {originStatus === 'locating' && (
+                    <Loader2 className="absolute right-20 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3ce36a]/70 animate-spin" />
+                  )}
                   <button
                     onClick={() => {
                       setUseMyLocation(false);
@@ -405,7 +452,7 @@ export function RoutePlanningPanel({
                         commitOriginFromKeyboard();
                       }
                     }}
-                    placeholder="Address, store, or place"
+                    placeholder={originStatus === 'unavailable' ? 'Location unavailable — type a start address' : 'Address, store, or place'}
                     className="w-full h-14 bg-[#282a30] border-none rounded-2xl pl-12 pr-10 font-medium text-[#e2e2eb] placeholder:text-[#89919d] focus:ring-2 focus:ring-[#9ecaff]"
                   />
                   {originLoading && (
@@ -430,12 +477,21 @@ export function RoutePlanningPanel({
                       onSelect={(r) => { setSelectedOrigin(r); setOriginQuery(''); setOriginResults([]); }}
                     />
                   )}
-                  <button
-                    onClick={() => setUseMyLocation(true)}
-                    className="mt-1 text-xs text-[#2196F3] hover:underline"
-                  >
-                    Use my location
-                  </button>
+                  {originStatus === 'unavailable' ? (
+                    !selectedOrigin && (
+                      <p className="mt-1 px-1 text-xs text-[#89919d]">
+                        {locationError ?? 'GPS hasn’t found you yet'}
+                      </p>
+                    )
+                  ) : (
+                    // A late GPS fix is offered, never forced over a typed origin
+                    <button
+                      onClick={() => setUseMyLocation(true)}
+                      className="mt-1 text-xs text-[#2196F3] hover:underline"
+                    >
+                      Use my location
+                    </button>
+                  )}
                 </div>
               )}
 
