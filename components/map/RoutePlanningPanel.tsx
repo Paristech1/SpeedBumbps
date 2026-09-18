@@ -682,6 +682,14 @@ function AddressDropdown({
                 {r.category && (
                   <span className="text-[11px] text-[#9ecaff]/80 whitespace-nowrap">{r.category}</span>
                 )}
+                {r.approximate && (
+                  <span
+                    className="text-[10px] leading-4 px-1.5 rounded-full border border-[#404752]/60 text-[#89919d] whitespace-nowrap"
+                    title="Pinned at the nearest known address"
+                  >
+                    approx.
+                  </span>
+                )}
               </div>
               {r.displayName && <div className="text-xs text-[#89919d] truncate">{r.displayName}</div>}
             </div>
