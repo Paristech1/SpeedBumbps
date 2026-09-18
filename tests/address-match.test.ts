@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
-import { findHouse, type HouseRow } from '@/lib/address-index/match';
+import { buildStreetIndex, findHouse, streetMatchScore, type HouseRow } from '@/lib/address-index/match';
 import { parseQuery } from '@/lib/address-index/parse';
 import { createAddressIndexStore, searchCityIndex } from '@/lib/address-index/store';
 import type { LatLng } from '@/types/speedbumps';
@@ -137,6 +137,34 @@ describe('address index: missing files', () => {
   it('returns nothing instead of throwing', async () => {
     const empty = createAddressIndexStore(fileURLToPath(new URL('./fixtures/no-such-index', import.meta.url)));
     expect(await searchCityIndex(parseQuery('4521 n franklin st'), PHILLY_CENTER, empty)).toEqual([]);
+  });
+});
+
+describe('streetMatchScore', () => {
+  const index = buildStreetIndex({
+    version: 1, builtAt: '', source: 'test',
+    streets: [
+      ['SOUTH_ST', 'South St', '', 'SOUTH', 'ST', 100, 3220, 641, 39.94, -75.16, []],
+      ['S_ST_BERNARD_ST', 'S St Bernard St', 'S', 'ST BERNARD', 'ST', 1000, 1300, 90, 39.95, -75.22, []],
+      ['FRANKLIN_MILLS_BLVD', 'Franklin Mills Blvd', '', 'FRANKLIN MILLS', 'BLVD', 1, 1800, 10, 40.08, -74.96, []],
+    ],
+  });
+  const score = (key: string, query: string) => {
+    const parsed = parseQuery(query);
+    if (parsed.kind !== 'address') throw new Error(`not an address: ${query}`);
+    return streetMatchScore(index.byKey.get(key)!, parsed.streetTokens, parsed.lastTokenPartial);
+  };
+
+  it('requires the whole name once the street is finished', () => {
+    expect(score('SOUTH_ST', '1234 south st')).toBe(2);
+    expect(score('S_ST_BERNARD_ST', '1234 south st')).toBe(0);
+    expect(score('S_ST_BERNARD_ST', '1234 s st b')).toBe(1);
+  });
+
+  it('lets a still-typed word match a longer name', () => {
+    expect(score('FRANKLIN_MILLS_BLVD', '1500 franklin')).toBe(1);
+    expect(score('FRANKLIN_MILLS_BLVD', '1500 franklin mills blvd')).toBe(2);
+    expect(score('FRANKLIN_MILLS_BLVD', '1500 franklin blvd')).toBe(0);
   });
 });
 

@@ -158,6 +158,64 @@ describe('mergeSearchResults street ranking', () => {
   });
 });
 
+describe('mergeSearchResults with City index hits', () => {
+  const at = (lat: number, lng: number) => ({ lat, lng });
+  const indexHouse = (num: string, street: string, lat: number, approximate = false): GeocodingResult => ({
+    shortName: `${num} ${street}`, displayName: 'Philadelphia, PA', location: at(lat, -75.14), kind: 'address', houseNumber: num, street, approximate,
+  });
+  const photonHouse: GeocodingResult = {
+    shortName: '4521 North Franklin Street', displayName: '', location: at(40.3, -75.14), kind: 'address', houseNumber: '4521', street: 'North Franklin Street',
+  };
+  const wawa: GeocodingResult = { shortName: 'Wawa', displayName: '', location: at(40.01, -75.14), kind: 'place', category: 'Convenience store' };
+
+  it('ranks index tiers above provider results, nearest first within a tier', () => {
+    const merged = mergeSearchResults('4521 n fr', [wawa, photonHouse], [], 8, at(40.0, -75.14), [
+      { tier: 3, result: indexHouse('4521', 'N Fairhill St', 40.0, true) },
+      { tier: 2, result: indexHouse('4521', 'N Front St', 40.05) },
+      { tier: 2, result: indexHouse('4521', 'N Franklin St', 40.02) },
+      { tier: 1, result: indexHouse('4521', 'N Franklin St', 40.1) },
+    ]);
+    expect(merged.map((r) => r.location.lat)).toEqual([40.1, 40.02, 40.05, 40.0, 40.3, 40.01]);
+  });
+
+  it('keeps index order when there is no bias point', () => {
+    const merged = mergeSearchResults('123 5th st', [], [], 8, null, [
+      { tier: 1, result: indexHouse('123', 'S 5th St', 39.94) },
+      { tier: 1, result: indexHouse('123', 'N 5th St', 39.95) },
+    ]);
+    expect(merged.map((r) => r.shortName)).toEqual(['123 S 5th St', '123 N 5th St']);
+  });
+
+  it('prefers the index copy when a provider returns the same address', () => {
+    const photonCopy = { ...photonHouse, location: at(40.0151, -75.1402) };
+    const merged = mergeSearchResults('4521 n franklin st', [photonCopy], [], 8, null, [
+      { tier: 1, result: indexHouse('4521', 'N Franklin St', 40.015) },
+    ]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].shortName).toBe('4521 N Franklin St');
+  });
+
+  it('swaps an approximate index pin for a provider\'s exact copy, keeping its rank', () => {
+    const approx = indexHouse('1234', 'South St', 39.9437, true);
+    const nominatimExact: GeocodingResult = { ...house1234South, location: at(39.9436, -75.1401) };
+    const merged = mergeSearchResults('1234 south st', [wawa], [nominatimExact], 8, null, [{ tier: 3, result: approx }]);
+    expect(merged[0]).toBe(nominatimExact);
+    expect(merged).toHaveLength(2);
+  });
+
+  const house1234South: GeocodingResult = {
+    shortName: '1234 South Street', displayName: '', location: at(0, 0), kind: 'address', houseNumber: '1234', street: 'South Street',
+  };
+
+  it('caps index hits at 5 and the total at the limit', () => {
+    const hits = Array.from({ length: 7 }, (_, i) => ({ tier: 1 as const, result: indexHouse(String(100 + i), 'Market St', 39.95 + i * 0.01) }));
+    const many = Array.from({ length: 10 }, (_, i) => ({ ...wawa, location: at(40.2 + i * 0.01, -75) }));
+    const merged = mergeSearchResults('100 market', many, [], 8, null, hits);
+    expect(merged).toHaveLength(8);
+    expect(merged.filter((r) => r.street === 'Market St')).toHaveLength(5);
+  });
+});
+
 describe('hasHouseOnTypedStreet', () => {
   const house = (num: string, street: string): GeocodingResult => ({
     shortName: `${num} ${street}`, displayName: '', location: { lat: 39.95, lng: -75.16 }, kind: 'address', houseNumber: num, street,

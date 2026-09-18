@@ -80,7 +80,8 @@ const PREFIX = 1;
 /**
  * 2 = the typed words name the whole street (type optional, predir optional),
  * 1 = the typed words start it ("n fr" → N Franklin St, "franklin" → Franklin Mills Blvd),
- * 0 = no match.
+ * 0 = no match. A finished street ("south st", "…st, philadelphia") must be
+ * exact, so "south st" doesn't pick S St Bernard St.
  */
 export function streetMatchScore(street: IndexedStreet, typed: string[], lastPartial: boolean): number {
   let best = 0;
@@ -99,7 +100,7 @@ export function streetMatchScore(street: IndexedStreet, typed: string[], lastPar
       }
       return false;
     });
-    if (matches) best = Math.max(best, exact ? EXACT : PREFIX);
+    if (matches && (exact || lastPartial)) best = Math.max(best, exact ? EXACT : PREFIX);
   }
   return best;
 }

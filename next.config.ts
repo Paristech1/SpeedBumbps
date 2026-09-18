@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
     formats: ['image/webp'],
     minimumCacheTTL: 60,
   },
+  // The geocode route reads the City address index from disk at runtime
+  outputFileTracingIncludes: {
+    '/api/geocode': ['./data/address-index/**/*'],
+  },
 };
 
 export default nextConfig;

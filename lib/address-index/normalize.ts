@@ -124,11 +124,15 @@ export function partialTokenMatches(typed: string, streetToken: string): boolean
   return typed.length >= 3 && EXPANDABLE_WORDS.some(([word, canonical]) => canonical === streetToken && word.startsWith(typed));
 }
 
-/** A street type word ("st", "avenue") that follows at least one name word. */
+/**
+ * A street type word ("st", "avenue") that follows at least one name word.
+ * A spelled-out direction counts as a name ("south st" is South St), a bare
+ * letter doesn't ("s st" may become S St Bernard St).
+ */
 export function endsWithStreetType(rawTokens: string[]): boolean {
   if (rawTokens.length < 2) return false;
   const last = TO_CANONICAL.get(rawTokens[rawTokens.length - 1]);
-  const hasName = rawTokens.slice(0, -1).some((t) => !PREDIRS.has(canonicalToken(t)));
+  const hasName = rawTokens.slice(0, -1).some((t) => !PREDIRS.has(t));
   return !!last && STREET_TYPES.has(last) && hasName;
 }
 

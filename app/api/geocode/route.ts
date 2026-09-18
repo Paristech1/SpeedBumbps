@@ -1,14 +1,18 @@
 /**
  * Place search + reverse geocoding proxy.
  *
- * Forward search blends two OpenStreetMap-backed services:
+ * Forward search blends three sources:
+ *   - City address index (data/address-index, built from Philadelphia OPA
+ *     parcels): every real Philly house number, matched locally while the
+ *     user types ("4521 n fr"), plus intersections ("broad and girard").
+ *     OSM is missing most of these, so index hits rank first.
  *   - Photon (komoot): typo-tolerant autocomplete that finds shops, restaurants
  *     and partial addresses ("wawa", "trader joes", "1500 mark").
- *   - Nominatim: only queried when the text starts with a house number, since
- *     it interpolates addresses Photon doesn't have ("4500 frankford av").
- *     If Photon already has the typed house on the typed street we only give
- *     Nominatim a short grace period; otherwise we wait for it. Calls are
- *     spaced ~1/s per its usage policy, and skipped if the client gave up.
+ *   - Nominatim: only queried when the text starts with a house number and
+ *     the index had no exact house (suburbs, NJ, new construction). If Photon
+ *     already has the typed house on the typed street we only give Nominatim
+ *     a short grace period; otherwise we wait for it. Calls are spaced ~1/s
+ *     per its usage policy, and skipped if the client gave up.
  * Photon falls back to Nominatim if it's down. Results are cached in-process
  * (LRU, 24 h) and marked cacheable for the CDN.
  *
@@ -30,6 +34,8 @@ import {
   type NominatimResult,
   type PhotonFeature,
 } from '@/lib/search-results';
+import { parseQuery } from '@/lib/address-index/parse';
+import { searchCityIndex } from '@/lib/address-index/store';
 
 // Greater Philly metro (Photon bbox order: minLon,minLat,maxLon,maxLat) — hard filter
 const METRO_BBOX = '-75.55,39.70,-74.70,40.35';
@@ -75,6 +81,8 @@ function errorStatus(error: unknown): number {
   return error instanceof UpstreamError ? error.status : 502;
 }
 
+// Bump when ranking or sources change so old cached results aren't served
+const SEARCH_CACHE_VERSION = 'v2';
 const CACHE_MAX_ENTRIES = 500;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const CDN_CACHE_HEADER = 'public, s-maxage=86400, stale-while-revalidate=604800';
@@ -133,12 +141,15 @@ export async function GET(request: NextRequest) {
 }
 
 async function handleSearch(query: string, near: LatLng | null, signal: AbortSignal) {
-  const key = `${query.toLowerCase()}|${biasCacheKey(near)}`;
+  const key = `${SEARCH_CACHE_VERSION}|${query.toLowerCase()}|${biasCacheKey(near)}`;
   const cached = searchCache.get(key);
   if (cached) return jsonCached(cached);
 
-  const wantsAddress = leadingHouseNumber(query) !== null;
   const photonPromise = settle(fetchPhoton(query, near ?? PHILLY_CENTER));
+  // Local disk lookup; runs while Photon is in flight
+  const indexHits = await searchCityIndex(parseQuery(query), near ?? PHILLY_CENTER);
+  const indexHasHouse = indexHits.some((hit) => hit.tier <= 2);
+  const wantsAddress = leadingHouseNumber(query) !== null && !indexHasHouse;
   const nominatimPromise = wantsAddress ? settle(fetchNominatim(query, signal)) : null;
 
   const photon = await photonPromise;
@@ -152,12 +163,12 @@ async function handleSearch(query: string, near: LatLng | null, signal: AbortSig
           new Promise<null>((resolve) => setTimeout(() => resolve(null), NOMINATIM_GRACE_MS)),
         ])
       : await nominatimPromise;
-  } else if (!photon.ok) {
-    // Photon down and Nominatim wasn't asked — fall back so search still works
+  } else if (!photon.ok && indexHits.length === 0) {
+    // Photon down, Nominatim wasn't asked and the index had nothing — fall back so search still works
     nominatim = await settle(fetchNominatim(query, signal));
   }
 
-  if (!photon.ok && !nominatim?.ok) {
+  if (!photon.ok && !nominatim?.ok && indexHits.length === 0) {
     return upstreamError(errorStatus(photon.error));
   }
 
@@ -167,6 +178,7 @@ async function handleSearch(query: string, near: LatLng | null, signal: AbortSig
     nominatim?.ok ? nominatim.value : [],
     MAX_SEARCH_RESULTS,
     near,
+    indexHits,
   );
   // Don't pin a partial result set when a provider failed
   if (photon.ok && (nominatim === null || nominatim.ok)) {

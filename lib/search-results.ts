@@ -1,7 +1,7 @@
 /**
  * Pure helpers for place search: normalising Photon + Nominatim responses
- * into GeocodingResult, and merging/ranking them. Kept free of fetch so the
- * geocode route and tests can share it.
+ * into GeocodingResult, and merging/ranking them with City address-index
+ * hits. Kept free of fetch so the geocode route and tests can share it.
  */
 
 import type { GeocodingResult, GeocodingKind, LatLng } from '@/types/speedbumps';
@@ -255,18 +255,25 @@ export function nominatimToResult(item: NominatimResult): GeocodingResult {
 // ---------------------------------------------------------------------------
 
 const DUPLICATE_RADIUS_M = 75;
+export const MAX_INDEX_RESULTS = 5;
+
+/** First line with abbreviations expanded, so "1500 Market St" ~ "1500 Market Street". */
+function comparableName(result: GeocodingResult): string {
+  return normalizeStreet(result.shortName.split(',')[0]).join(' ');
+}
 
 function isDuplicate(a: GeocodingResult, b: GeocodingResult): boolean {
-  const sameName = a.shortName.split(',')[0].trim().toLowerCase() === b.shortName.split(',')[0].trim().toLowerCase();
-  return sameName && haversineDistance(a.location, b.location) < DUPLICATE_RADIUS_M;
+  return comparableName(a) === comparableName(b) && haversineDistance(a.location, b.location) < DUPLICATE_RADIUS_M;
 }
 
 /**
- * Combine Photon and Nominatim results. When the query starts with a house
- * number, results are ranked by street match first, then house number, so
- * "1234 south st" prefers 1234 South Street over 1234 South 21st Street.
- * Ties keep provider order (Photon, then Nominatim); non-address queries
- * keep Photon's relevance order.
+ * Combine City-index, Photon and Nominatim results. Index hits come first
+ * (by tier, then distance to `near`), so a real OPA address beats whatever
+ * OSM guessed. Then, when the query starts with a house number, results are
+ * ranked by street match first, then house number, so "1234 south st"
+ * prefers 1234 South Street over 1234 South 21st Street. Ties keep provider
+ * order (Photon, then Nominatim); non-address queries keep Photon's
+ * relevance order. Duplicates keep the earlier (higher-ranked) copy.
  */
 export function mergeSearchResults(
   query: string,
@@ -274,7 +281,16 @@ export function mergeSearchResults(
   nominatim: GeocodingResult[],
   limit = MAX_SEARCH_RESULTS,
   near?: LatLng | null,
+  index: IndexHit[] = [],
 ): GeocodingResult[] {
+  const indexed = [...index]
+    .sort((a, b) => {
+      if (a.tier !== b.tier) return a.tier - b.tier;
+      return near ? haversineDistance(near, a.result.location) - haversineDistance(near, b.result.location) : 0;
+    })
+    .slice(0, MAX_INDEX_RESULTS)
+    .map((hit) => hit.result);
+
   const number = leadingHouseNumber(query);
   let ordered = [...photon, ...nominatim];
   if (number) {
@@ -297,8 +313,13 @@ export function mergeSearchResults(
   }
 
   const merged: GeocodingResult[] = [];
-  for (const result of ordered) {
-    if (merged.some((existing) => isDuplicate(existing, result))) continue;
+  for (const result of [...indexed, ...ordered]) {
+    const duplicate = merged.findIndex((existing) => isDuplicate(existing, result));
+    if (duplicate >= 0) {
+      // Keep the index hit's rank, but a provider's exact pin beats its nearest-house guess
+      if (merged[duplicate].approximate && !result.approximate) merged[duplicate] = result;
+      continue;
+    }
     merged.push(result);
     if (merged.length >= limit) break;
   }
