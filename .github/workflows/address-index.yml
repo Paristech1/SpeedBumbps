@@ -1,0 +1,47 @@
+name: Refresh address index
+
+# Rebuilds data/address-index from the City's OPA property data
+# (scripts/build-address-index.mjs) and commits it when anything changed.
+# OPA updates continuously; monthly keeps new construction reasonably fresh.
+
+on:
+  schedule:
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+  # Changes to the build script rebuild the index. The data commit itself
+  # doesn't re-trigger (path filter excludes data/).
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build-address-index.mjs'
+      - 'lib/address-index/keys.mjs'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: address-index
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build index
+        run: node scripts/build-address-index.mjs
+      - name: Commit result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A data/address-index
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Refresh Philly address index from OPA"
+          git push
