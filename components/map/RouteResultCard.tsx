@@ -243,11 +243,11 @@ function RouteChoice({
     <button
       onClick={onClick}
       className={`nv-frame flex-1 text-left px-4 py-3 rounded-2xl nv-hairline transition-all ${
-        isSelected ? 'nv-ember-edge' : 'hover:bg-white/[0.03]'
+        isSelected ? 'nv-chosen-edge' : 'hover:bg-white/[0.03]'
       }`}
     >
       <div className="kicker">{label}</div>
-      <div className={`mast mast-3 mast-num mt-1.5 ${isSelected ? 'text-[#E8662E]' : 'text-[#E6EAF0]'}`}>
+      <div className={`mast mast-3 mast-num mt-1.5 ${isSelected ? 'text-[#2BD9CE]' : 'text-[#E6EAF0]'}`}>
         {minutes}
       </div>
       <div className="ui-sm text-[#5B6E7F] mt-1">{detail}</div>

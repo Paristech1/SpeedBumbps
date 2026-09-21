@@ -226,10 +226,10 @@ export function ProfilePanel({
                     key={m.id}
                     onClick={() => setDefaultProfile({ ...profile.defaultProfile, mode: m.id })}
                     className={`nv-frame w-full nv-hairline px-4 py-3.5 rounded-2xl text-left transition-all active:scale-[0.99] ${
-                      profile.defaultProfile.mode === m.id ? 'nv-ember-edge' : 'hover:bg-white/[0.03]'
+                      profile.defaultProfile.mode === m.id ? 'nv-chosen-edge' : 'hover:bg-white/[0.03]'
                     }`}
                   >
-                    <div className={`mast mast-3 ${profile.defaultProfile.mode === m.id ? 'text-[#E8662E]' : 'text-[#E6EAF0]'}`}>
+                    <div className={`mast mast-3 ${profile.defaultProfile.mode === m.id ? 'text-[#2BD9CE]' : 'text-[#E6EAF0]'}`}>
                       {m.label}
                     </div>
                     <div className="ui-sm text-[#5B6E7F] mt-1.5">{m.description}</div>
@@ -307,14 +307,14 @@ export function ProfilePanel({
                 onClick={handleToggleCapture}
                 className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-bold active:scale-[0.99] transition-all ${
                   capturing
-                    ? 'bg-[#0C1416] text-[#E8662E]'
+                    ? 'bg-[#0C1416] text-[#2BD9CE]'
                     : 'bg-[#E6EAF0]/20 text-[#E6EAF0]'
                 }`}
               >
                 {capturing ? 'Stop capture' : 'Start capture'}
                 {capturing && (
-                  <span className="ml-1 inline-flex items-center gap-1 text-xs font-semibold text-[#E8662E]/80">
-                    <span className="w-2 h-2 rounded-full bg-[#E8662E] animate-pulse" /> {entryCount}
+                  <span className="ml-1 inline-flex items-center gap-1 text-xs font-semibold text-[#2BD9CE]/80">
+                    <span className="w-2 h-2 rounded-full bg-[#2BD9CE] animate-pulse" /> {entryCount}
                   </span>
                 )}
               </button>

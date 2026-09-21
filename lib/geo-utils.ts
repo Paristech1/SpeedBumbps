@@ -193,11 +193,10 @@ export function formatDuration(seconds: number): string {
 }
 
 /**
- * Route line colour. In preview the chosen route carries the ember; once
- * you're driving it turns chrome and the ember moves to the next bump, so
- * the map never shows two accents at once.
+ * Route line colour. The route you chose is teal — the accent for a chosen
+ * thing — and every other line stays steel. The hazard accent belongs to the
+ * bumps, so the two never compete on the map.
  */
-export function routeColor(isSelected: boolean, isNavigating = false): string {
-  if (!isSelected) return '#5B6E7F';
-  return isNavigating ? '#E6EAF0' : '#E8662E';
+export function routeColor(isSelected: boolean): string {
+  return isSelected ? '#2BD9CE' : '#5B6E7F';
 }

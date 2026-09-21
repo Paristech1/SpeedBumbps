@@ -1,7 +1,7 @@
 # Nocturne Velocity
 
-The design language SpeedBumps ships. Blue-hour steel, crushed black, and a
-single ember spark. This file mirrors the external handoff
+The design language SpeedBumps ships. Blue-hour steel, crushed black, and two
+accents that never do each other's job. This file mirrors the external handoff
 (`speedbumps-handoff/HANDOFF.md`, commit `c9a3cb2`); the drop-in stylesheet
 lives here as `app/nocturne.css`.
 
@@ -9,8 +9,11 @@ Supersedes `velocity_dark/DESIGN.md`.
 
 ## Rules
 
-- Ember at most twice per screen. It marks the next bump or the chosen value.
-  It is never a row of buttons.
+- Two accents, one job each: **flare** (hot pink) marks the hazard — the next
+  bump, bump counts, harshness, warnings, destructive actions. **Teal** marks
+  what the driver chose — their route, the option they picked, the top hit.
+  Neither stands in for the other, and a screen carries at most one mark of
+  each. Accents are never a row of buttons.
 - One diagonal per composition. The diagonal lives in the map. Type stays
   orthogonal.
 - Sharp type, soft world. Blur and grain stay off the glyphs.
@@ -28,7 +31,8 @@ Supersedes `velocity_dark/DESIGN.md`.
 | slate-blue | `--nv-slate` | `#5B6E7F` | Secondary text, idle markers |
 | fog | `--nv-fog` | `#B6BECB` | Captions, inactive chrome |
 | chrome | `--nv-chrome` | `#E6EAF0` | Primary text, hairlines, streaks |
-| ember | `--nv-ember` | `#E8662E` | The one accent — next bump, chosen value |
+| flare | `--nv-flare` | `#FF3D8E` | The hazard — next bump, harshness, warnings |
+| teal | `--nv-teal` | `#2BD9CE` | The chosen — your route, your pick, the top hit |
 | glass | `--nv-glass` | `#0C14169E` | Frosted pills over the map |
 | hairline | `--nv-hairline` | `#E6EAF01F` | 1 px steel edges |
 
@@ -50,15 +54,15 @@ would collapse the box.
 
 ## Screens
 
-| # | Screen | Ember (max 2) | Caption |
+| # | Screen | Accents (one of each, at most) | Caption |
 |---|---|---|---|
 | 01 | Welcome | — | *(not built; `/` opens the map)* |
-| 02 | Map home | next-bump marker | `14 bumps within 1 mi.` |
-| 03 | Search | first address dot | `exact first. places after.` |
+| 02 | Map home | next-bump marker (flare) | `14 bumps within 1 mi.` |
+| 03 | Search | first address dot (teal) | `exact first. places after.` |
 |  | — the sheet becomes the search screen while typing: ADDRESSES then PLACES, `DROP A PIN` at the foot ||
-| 04 | Route preview | chosen route + chosen minutes | `3 bumps on this one.` |
-| 05 | Navigating | next bump + its distance digits | `speed table in 250 ft.` |
-| 06 | Report a bump | selected harshness digit | `one tap. we verify later.` |
+| 04 | Route preview | chosen route + chosen minutes (teal) | `3 bumps on this one.` |
+| 05 | Navigating | route (teal), next bump + its digits (flare) | `speed table in 250 ft.` |
+| 06 | Report a bump | selected harshness digit (flare) | `one tap. we verify later.` |
 
 ## Map
 
@@ -73,9 +77,8 @@ Bumps are round dots, sized by state.
 |---|---|
 | Idle bump | slate-blue dot |
 | Bump on your route | chrome dot, void stroke |
-| Next bump ahead | ember dot with a halo (exactly one) |
-| Chosen route, in preview | ember |
-| Chosen route, while driving | chrome — the ember moves to the next bump |
+| Next bump ahead | flare dot with a halo (exactly one) |
+| Chosen route | teal, driving or previewing |
 | Alternate route | slate-blue, dashed |
 | User location | chrome dot, void stroke |
 | Destination | hollow chrome ring |

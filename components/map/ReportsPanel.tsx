@@ -30,10 +30,11 @@ interface ReportsPanelProps {
 // Lowest snap leaves the map visible while picking a location
 const snapPoints = ['150px', 0.6, 0.92];
 
-const SEVERITY_LABELS = ['Gentle', 'Mild', 'Moderate', 'Harsh', 'Brutal'];
+// Kept short so each one fits its tile on a 360 px phone.
+const SEVERITY_LABELS = ['Gentle', 'Mild', 'Medium', 'Harsh', 'Brutal'];
 
 function severityChipClasses(severity: number): string {
-  if (severity >= 4) return 'text-[#E8662E] border border-[#E8662E]/50';
+  if (severity >= 4) return 'text-[#FF3D8E] border border-[#FF3D8E]/50';
   if (severity === 3) return 'text-[#E6EAF0] border border-[#E6EAF0]/30';
   return 'text-[#5B6E7F] border border-[#E6EAF0]/15';
 }
@@ -138,7 +139,7 @@ export function ReportsPanel({
                   className="w-full flex items-center justify-between gap-2 py-3 nv-hairline-t nv-hairline-b transition-opacity active:opacity-60"
                 >
                   <span className="mast mast-3 text-[#E6EAF0]">Report a bump</span>
-                  <TriangleAlert className="w-4 h-4 text-[#E8662E]" />
+                  <TriangleAlert className="w-4 h-4 text-[#FF3D8E]" />
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto hide-scrollbar px-4 pb-32 space-y-2">
@@ -155,7 +156,7 @@ export function ReportsPanel({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`px-2.5 py-1 rounded-full kicker ${severityChipClasses(report.severity)}`}>
-                            {report.severity} · {SEVERITY_LABELS[report.severity - 1] ?? 'Moderate'}
+                            {report.severity} · {SEVERITY_LABELS[report.severity - 1] ?? 'Medium'}
                           </span>
                           <span className="ui-sm text-[#5B6E7F]">
                             {new Date(report.createdAt).toLocaleDateString()}
@@ -170,7 +171,7 @@ export function ReportsPanel({
                       </div>
                       <button
                         onClick={() => onDeleteReport(report.id)}
-                        className="p-2.5 rounded-full bg-[#0C1416] text-[#B6BECB] hover:bg-[#0C1416]/30 hover:text-[#E8662E] transition-colors active:scale-90 shrink-0"
+                        className="p-2.5 rounded-full bg-[#0C1416] text-[#B6BECB] hover:bg-[#0C1416]/30 hover:text-[#FF3D8E] transition-colors active:scale-90 shrink-0"
                         aria-label="Delete report"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -202,7 +203,7 @@ export function ReportsPanel({
                   <button
                     onClick={onTogglePickLocation}
                     className={`nv-chip mono-bar flex-1 flex items-center justify-center gap-2 py-3 transition-all active:scale-95 ${
-                      isPickingLocation ? 'nv-ember-edge text-[#E8662E]' : 'hover:text-[#E6EAF0]'
+                      isPickingLocation ? 'nv-chosen-edge text-[#2BD9CE]' : 'hover:text-[#E6EAF0]'
                     }`}
                   >
                     <MapPin className="w-4 h-4" />
@@ -226,10 +227,10 @@ export function ReportsPanel({
                       key={s}
                       onClick={() => setSeverity(s)}
                       className={`nv-frame nv-hairline flex-1 flex flex-col items-center py-3 rounded-2xl transition-all active:scale-95 ${
-                        severity === s ? 'nv-ember-edge' : 'hover:bg-white/[0.03]'
+                        severity === s ? 'nv-flare-edge' : 'hover:bg-white/[0.03]'
                       }`}
                     >
-                      <span className={`mast mast-3 mast-num ${severity === s ? 'text-[#E8662E]' : 'text-[#B6BECB]'}`}>{s}</span>
+                      <span className={`mast mast-3 mast-num ${severity === s ? 'text-[#FF3D8E]' : 'text-[#B6BECB]'}`}>{s}</span>
                       <span className="kicker mt-1.5 text-[8px] tracking-[0.02em] w-full text-center truncate">{SEVERITY_LABELS[s - 1]}</span>
                     </button>
                   ))}

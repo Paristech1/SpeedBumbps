@@ -131,7 +131,7 @@ const POIListItem = memo(function POIListItem({
             className="p-1.5 rounded hover:bg-[#0C1416] dark:hover:bg-[#0C1416]/30 transition-colors"
             title="Delete"
           >
-            <Trash2 className="h-4 w-4 text-[#E8662E] dark:text-[#E8662E]" />
+            <Trash2 className="h-4 w-4 text-[#FF3D8E] dark:text-[#FF3D8E]" />
           </button>
         </div>
       )}
@@ -571,7 +571,7 @@ export const MapPOIPanel = memo(function MapPOIPanel({
               disabled={pois.length === 0}
               className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-[#0C1416] dark:bg-[#0C1416]/30 hover:bg-[#0C1416] dark:hover:bg-[#0C1416]/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Trash2 className="h-5 w-5 text-[#E8662E] dark:text-[#E8662E]" />
+              <Trash2 className="h-5 w-5 text-[#FF3D8E] dark:text-[#FF3D8E]" />
               <span className="text-[10px] font-medium text-[#B6BECB] text-[#B6BECB] leading-tight">
                 Clear
               </span>

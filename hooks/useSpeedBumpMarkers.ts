@@ -26,7 +26,7 @@ const HALO_RADIUS = 13;
 /** Nocturne marker states: idle steel, chrome on your route, ember for the next one. */
 const IDLE_COLOR = '#5B6E7F';
 const ON_ROUTE_COLOR = '#E6EAF0';
-const NEXT_COLOR = '#E8662E';
+const NEXT_COLOR = '#FF3D8E';
 const VOID_COLOR = '#07090A';
 const DIMMED_OPACITY = 0.45;
 
@@ -114,30 +114,33 @@ export function useSpeedBumpMarkers(
       newMarkers.push(marker);
     }
 
-    // Bumps on the route sit on top in chrome; the next one is the single
-    // ember, with a halo so it carries from a glance.
+    // Bumps on the route sit on top in chrome. The next one goes last, with a
+    // halo: the dataset has bumps a metre apart, and the one that matters must
+    // not be overdrawn by its neighbour.
     for (const bump of emphasised) {
-      const isNext = bump.id === nextId;
-      const color = isNext ? NEXT_COLOR : ON_ROUTE_COLOR;
+      if (bump.id === nextId) continue;
+      const marker = dot(bump, ON_ROUTE_RADIUS, ON_ROUTE_COLOR, { stroke: VOID_COLOR, weight: 1.5 })
+        .bindPopup(popupHtml(bump, true));
+      marker.addTo(leafletMap);
+      newMarkers.push(marker);
+    }
 
-      if (isNext) {
-        const halo = L.circleMarker([bump.location.lat, bump.location.lng], {
-          radius: HALO_RADIUS,
-          fillColor: NEXT_COLOR,
-          color: NEXT_COLOR,
-          weight: 1,
-          fillOpacity: 0.2,
-          opacity: 0.55,
-          interactive: false,
-        });
-        halo.addTo(leafletMap);
-        newMarkers.push(halo);
-      }
+    const next = nextId ? emphasised.find((b) => b.id === nextId) : undefined;
+    if (next) {
+      const halo = L.circleMarker([next.location.lat, next.location.lng], {
+        radius: HALO_RADIUS,
+        fillColor: NEXT_COLOR,
+        color: NEXT_COLOR,
+        weight: 1,
+        fillOpacity: 0.2,
+        opacity: 0.55,
+        interactive: false,
+      });
+      halo.addTo(leafletMap);
+      newMarkers.push(halo);
 
-      const marker = dot(bump, isNext ? NEXT_RADIUS : ON_ROUTE_RADIUS, color, {
-        stroke: VOID_COLOR,
-        weight: 1.5,
-      }).bindPopup(popupHtml(bump, true));
+      const marker = dot(next, NEXT_RADIUS, NEXT_COLOR, { stroke: VOID_COLOR, weight: 1.5 })
+        .bindPopup(popupHtml(next, true));
       marker.addTo(leafletMap);
       newMarkers.push(marker);
     }
@@ -170,6 +173,6 @@ export function useSpeedBumpMarkers(
 function popupHtml(bump: SpeedBump, onRoute: boolean): string {
   const source = bump.source === 'user' ? `User report · severity ${bump.severity}` : `Speed bump · ID ${bump.id}`;
   return onRoute
-    ? `<strong style="color:#E8662E">On your route</strong><br/>${source}`
+    ? `<strong style="color:#FF3D8E">On your route</strong><br/>${source}`
     : source;
 }

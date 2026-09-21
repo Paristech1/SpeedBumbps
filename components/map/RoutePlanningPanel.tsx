@@ -582,13 +582,13 @@ export function RoutePlanningPanel({
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                className="-mt-4 px-4 py-3 nv-hairline rounded-xl ui-sm text-[#E8662E] flex items-start justify-between gap-2"
+                className="-mt-4 px-4 py-3 nv-hairline rounded-xl ui-sm text-[#FF3D8E] flex items-start justify-between gap-2"
               >
                 <span className="flex-1">{searchError}</span>
                 <button
                   type="button"
                   onClick={() => setSearchError(null)}
-                  className="p-0.5 rounded-full hover:bg-[#E8662E]/10 shrink-0"
+                  className="p-0.5 rounded-full hover:bg-[#FF3D8E]/10 shrink-0"
                   aria-label="Dismiss search error"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -640,11 +640,11 @@ export function RoutePlanningPanel({
                 key={m.id}
                 onClick={() => setMode(m.id)}
                 className={`w-full flex items-center justify-between gap-4 px-4 py-4 rounded-2xl text-left transition-all nv-hairline ${
-                  mode === m.id ? 'nv-ember-edge' : 'hover:bg-white/[0.03]'
+                  mode === m.id ? 'nv-chosen-edge' : 'hover:bg-white/[0.03]'
                 }`}
               >
                 <div className="min-w-0">
-                  <h4 className={`mast mast-3 ${mode === m.id ? 'text-[#E8662E]' : 'text-[#E6EAF0]'}`}>{m.label}</h4>
+                  <h4 className={`mast mast-3 ${mode === m.id ? 'text-[#2BD9CE]' : 'text-[#E6EAF0]'}`}>{m.label}</h4>
                   <p className="ui-sm text-[#5B6E7F] mt-1.5">{m.description}</p>
                 </div>
               </button>
@@ -795,7 +795,7 @@ function ResultGroup({
             }`}
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full shrink-0 ${index === topRow ? 'bg-[#E8662E]' : 'bg-transparent'}`}
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${index === topRow ? 'bg-[#2BD9CE]' : 'bg-transparent'}`}
               aria-hidden
             />
             <span className="min-w-0 flex-1">
@@ -872,7 +872,7 @@ function AddressDropdown({
             }`}
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full shrink-0 ${isTop ? 'bg-[#E8662E]' : 'bg-transparent'}`}
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${isTop ? 'bg-[#2BD9CE]' : 'bg-transparent'}`}
               aria-hidden
             />
             <div className="min-w-0 flex-1">
@@ -933,7 +933,7 @@ function RecentsDropdown({
             <button
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => onRemove(r)}
-              className="p-3 mr-1 text-[#5B6E7F] hover:text-[#E8662E] shrink-0"
+              className="p-3 mr-1 text-[#5B6E7F] hover:text-[#FF3D8E] shrink-0"
               aria-label={`Remove ${r.shortName} from recents`}
             >
               <Trash2 className="w-3.5 h-3.5" />

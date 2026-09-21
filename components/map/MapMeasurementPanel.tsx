@@ -201,7 +201,7 @@ export function MapMeasurementPanel({
                 <div className="flex items-center gap-1">
                   <button
                     onClick={handleClear}
-                    className="p-1.5 bg-[#0C1416] dark:bg-[#0C1416]/30 hover:bg-[#0C1416] dark:hover:bg-[#0C1416]/50 text-[#E8662E] dark:text-[#E8662E] rounded-lg transition-colors"
+                    className="p-1.5 bg-[#0C1416] dark:bg-[#0C1416]/30 hover:bg-[#0C1416] dark:hover:bg-[#0C1416]/50 text-[#FF3D8E] dark:text-[#FF3D8E] rounded-lg transition-colors"
                     title="Clear"
                   >
                     <X className="h-3.5 w-3.5" />

@@ -46,10 +46,10 @@
   --sb-on-tertiary-container: #07090A;
 
   /* === Semantic Colors === */
-  --sb-error: #E8662E;
+  --sb-error: #FF3D8E;
   --sb-error-container: #0C1416;
   --sb-on-error: #07090A;
-  --sb-on-error-container: #E8662E;
+  --sb-on-error-container: #FF3D8E;
 
   /* === Text Colors === */
   --sb-on-surface: #E6EAF0;
@@ -63,7 +63,7 @@
   --sb-surface-tint: #E6EAF0;
 
   /* === Accent Shortcuts === */
-  --sb-warning-orange: #E8662E;
+  --sb-warning-orange: #FF3D8E;
   --sb-gradient-start: #E6EAF0;
   --sb-gradient-end: #B6BECB;
 
@@ -92,7 +92,7 @@
   --muted-foreground: #5B6E7F;
   --accent: #0C1416;
   --accent-foreground: #E6EAF0;
-  --destructive: #E8662E;
+  --destructive: #FF3D8E;
   --border: var(--nv-hairline);
   --input: var(--nv-hairline);
   --ring: rgba(230, 234, 240, 0.45);
@@ -226,7 +226,7 @@
    ============================================ */
 
 .route-glow {
-  filter: drop-shadow(0 0 10px rgba(232, 102, 46, 0.45));
+  filter: drop-shadow(0 0 10px rgba(43, 217, 206, 0.45));
 }
 
 .map-glow {
@@ -284,8 +284,8 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 8px rgba(232, 102, 46, 0.35), 0 0 24px rgba(232, 102, 46, 0.12); }
-  50% { box-shadow: 0 0 16px rgba(232, 102, 46, 0.5), 0 0 40px rgba(232, 102, 46, 0.22); }
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 61, 142, 0.35), 0 0 24px rgba(255, 61, 142, 0.12); }
+  50% { box-shadow: 0 0 16px rgba(255, 61, 142, 0.5), 0 0 40px rgba(255, 61, 142, 0.22); }
 }
 
 @keyframes route-dash {

@@ -140,7 +140,7 @@ function SavedRouteRow({ route, onRun, onDelete }: { route: SavedRoute; onRun: (
         </div>
         <div className="ui-sm text-[#5B6E7F] mt-1.5 truncate">
           {formatDuration(summary.durationSeconds)} · {formatDistance(summary.distanceMeters)} ·{' '}
-          <span className={summary.isSpeedBumpFree ? '' : 'text-[#E8662E]'}>
+          <span className={summary.isSpeedBumpFree ? '' : 'text-[#FF3D8E]'}>
             {summary.isSpeedBumpFree
               ? 'no bumps'
               : `${summary.speedBumpCount} bump${summary.speedBumpCount !== 1 ? 's' : ''}`}
@@ -153,7 +153,7 @@ function SavedRouteRow({ route, onRun, onDelete }: { route: SavedRoute; onRun: (
       </button>
       <button
         onClick={onDelete}
-        className="p-2.5 rounded-full text-[#5B6E7F] hover:text-[#E8662E] transition-colors active:scale-90 shrink-0"
+        className="p-2.5 rounded-full text-[#5B6E7F] hover:text-[#FF3D8E] transition-colors active:scale-90 shrink-0"
         aria-label="Delete saved route"
       >
         <Trash2 className="w-4 h-4" />
@@ -182,7 +182,7 @@ function SavedPlaceRow({ poi, onFlyTo, onDelete }: { poi: POI; onFlyTo: () => vo
       </button>
       <button
         onClick={onDelete}
-        className="p-2.5 rounded-full text-[#5B6E7F] hover:text-[#E8662E] transition-colors active:scale-90 shrink-0"
+        className="p-2.5 rounded-full text-[#5B6E7F] hover:text-[#FF3D8E] transition-colors active:scale-90 shrink-0"
         aria-label="Delete saved place"
       >
         <Trash2 className="w-4 h-4" />

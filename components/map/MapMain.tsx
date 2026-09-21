@@ -628,13 +628,13 @@ function MapMainInner() {
                   initial="hidden"
                   animate="visible"
                   exit="exit"
-                  className="mt-2 px-4 py-3 rounded-xl nv-glass ui-sm text-[#E8662E] flex items-start justify-between gap-2"
+                  className="mt-2 px-4 py-3 rounded-xl nv-glass ui-sm text-[#FF3D8E] flex items-start justify-between gap-2"
                 >
                   <span className="flex-1">{routing.error}</span>
                   <button
                     type="button"
                     onClick={() => setRouteErrorDismissed(true)}
-                    className="p-0.5 rounded-full hover:bg-[#E8662E]/10 shrink-0"
+                    className="p-0.5 rounded-full hover:bg-[#FF3D8E]/10 shrink-0"
                     aria-label="Dismiss route error"
                   >
                     <X className="w-4 h-4" />
@@ -657,7 +657,7 @@ function MapMainInner() {
             animate="visible"
             exit="exit"
             onClick={() => startTracking(routing.isNavigating)}
-            className="absolute top-[calc(4.5rem+env(safe-area-inset-top))] right-4 z-[1050] px-3 py-2 nv-glass kicker text-[#E8662E] rounded-full flex items-center gap-1.5 active:scale-95 transition-transform"
+            className="absolute top-[calc(4.5rem+env(safe-area-inset-top))] right-4 z-[1050] px-3 py-2 nv-glass kicker text-[#FF3D8E] rounded-full flex items-center gap-1.5 active:scale-95 transition-transform"
           >
             <LocateFixed className="w-3 h-3" />
             GPS error — tap to retry

@@ -253,7 +253,7 @@ export function NavigationBar({
         {bumpAhead && (
           <p className="caption mt-3 pl-2">
             {bumpKindLabel(bumpAhead.bump)} in{' '}
-            <span className="text-[#E8662E] mast-num">{toImperial(bumpAhead.distanceMeters).value}</span>
+            <span className="text-[#FF3D8E] mast-num">{toImperial(bumpAhead.distanceMeters).value}</span>
             {' '}{toImperial(bumpAhead.distanceMeters).unit}.
           </p>
         )}
@@ -297,7 +297,7 @@ export function NavigationBar({
             )}
             <button
               onClick={onEndNavigation}
-              className="mono-bar text-[#E8662E] mt-4 py-2 transition-opacity active:opacity-60"
+              className="mono-bar text-[#FF3D8E] mt-4 py-2 transition-opacity active:opacity-60"
             >
               {hasArrived ? 'Done' : 'End'}
             </button>

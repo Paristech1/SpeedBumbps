@@ -3,7 +3,9 @@
    Blue-hour steel, crushed black, one ember spark.
 
    Rules this file encodes:
-   · Ember is the only accent, and it marks the one thing that matters.
+   · Two accents, each with one job: flare marks the hazard, teal marks what
+     the driver has chosen. Neither ever stands in for the other, and a screen
+     carries at most one mark of each.
    · Surfaces separate by hairline, not by a ladder of greys.
    · Sharp type, soft world — blur and grain stay off the glyphs.
    · Mast sizes are in cqw so type scales with the frame it sits in.
@@ -15,14 +17,18 @@
   --nv-slate: #5B6E7F;
   --nv-fog: #B6BECB;
   --nv-chrome: #E6EAF0;
-  --nv-ember: #E8662E;
+  /* The hazard: the next bump, bump counts, harshness, warnings. */
+  --nv-flare: #FF3D8E;
+  /* The chosen: your route, the option you picked, the top hit. */
+  --nv-teal: #2BD9CE;
   --nv-glass: #0C14169E;
   --nv-hairline: #E6EAF01F;
 
   /* Washes — chrome at low alpha, for hover and pressed states. */
   --nv-wash: rgba(230, 234, 240, 0.05);
   --nv-wash-strong: rgba(230, 234, 240, 0.09);
-  --nv-ember-wash: rgba(232, 102, 46, 0.035);
+  --nv-flare-wash: rgba(255, 61, 142, 0.05);
+  --nv-teal-wash: rgba(43, 217, 206, 0.05);
 }
 
 /* --- Mast: Barlow Condensed 700, uppercase, set tight ------------------- */
@@ -125,10 +131,16 @@
   color: var(--nv-chrome);
 }
 
-/* Selected value — the second place ember is allowed to appear. */
-.nv-ember-edge {
-  border-color: var(--nv-ember);
-  background: var(--nv-ember-wash);
+/* What the driver picked: the route, the strategy, the saved default. */
+.nv-chosen-edge {
+  border-color: var(--nv-teal);
+  background: var(--nv-teal-wash);
+}
+
+/* A hazard the driver is setting or reading: harshness, a live warning. */
+.nv-flare-edge {
+  border-color: var(--nv-flare);
+  background: var(--nv-flare-wash);
 }
 
 /* A streak of light across the sheet, in place of a divider. */
