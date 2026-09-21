@@ -230,7 +230,7 @@ export function ReportsPanel({
                       }`}
                     >
                       <span className={`mast mast-3 mast-num ${severity === s ? 'text-[#E8662E]' : 'text-[#B6BECB]'}`}>{s}</span>
-                      <span className="kicker mt-1.5 text-[8px] tracking-[0.06em] truncate max-w-full px-1">{SEVERITY_LABELS[s - 1]}</span>
+                      <span className="kicker mt-1.5 text-[8px] tracking-[0.02em] w-full text-center truncate">{SEVERITY_LABELS[s - 1]}</span>
                     </button>
                   ))}
                 </div>

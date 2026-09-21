@@ -700,6 +700,8 @@ function ResultSections({
     (kind === 'address' || kind === 'street' ? addresses : places).push({ result, index });
   });
 
+  const topRow = (addresses[0] ?? places[0])?.index ?? -1;
+
   return (
     <div className="-mt-3">
       {isLoading && results.length === 0 && (
@@ -722,6 +724,7 @@ function ResultSections({
           label="Addresses"
           rows={addresses}
           activeIndex={activeIndex}
+          topRow={topRow}
           userLocation={userLocation}
           onSelect={onSelect}
         />
@@ -732,6 +735,7 @@ function ResultSections({
           label="Places"
           rows={places}
           activeIndex={activeIndex}
+          topRow={topRow}
           userLocation={userLocation}
           onSelect={onSelect}
         />
@@ -757,12 +761,15 @@ function ResultGroup({
   label,
   rows,
   activeIndex,
+  topRow,
   userLocation,
   onSelect,
 }: {
   label: string;
   rows: { result: GeocodingResult; index: number }[];
   activeIndex: number;
+  /** Flat index of the first row as displayed — the one that gets the ember. */
+  topRow: number;
   userLocation?: LatLng | null;
   onSelect: (r: GeocodingResult) => void;
 }) {
@@ -788,7 +795,7 @@ function ResultGroup({
             }`}
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full shrink-0 ${index === 0 ? 'bg-[#E8662E]' : 'bg-transparent'}`}
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${index === topRow ? 'bg-[#E8662E]' : 'bg-transparent'}`}
               aria-hidden
             />
             <span className="min-w-0 flex-1">

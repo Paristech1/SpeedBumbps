@@ -447,7 +447,8 @@ function MapMainInner() {
   const controlsBottom = routeSheetVisible ? snapToPx(routeSnap) + 16 : 128;
   const controlsHidden =
     (routeSheetVisible && typeof routeSnap === "number" && routeSnap >= 0.8) ||
-    activeTab !== "explore";
+    activeTab !== "explore" ||
+    routing.isNavigating;
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-[#07090A]">
@@ -714,11 +715,13 @@ function MapMainInner() {
       </AnimatePresence>
 
       {/* Tile Switcher */}
-      <MapTileSwitcher
-        selectedProviderId={currentProviderId}
-        onProviderChange={setProviderId}
-        bottomOffset={controlsBottom}
-      />
+      {!routing.isNavigating && (
+        <MapTileSwitcher
+          selectedProviderId={currentProviderId}
+          onProviderChange={setProviderId}
+          bottomOffset={controlsBottom}
+        />
+      )}
 
       {/* Map Controls */}
       <MapControls

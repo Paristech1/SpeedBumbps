@@ -283,7 +283,7 @@ export function NavigationBar({
               </button>
             ) : (
               <p className="mast mast-1 text-[#E6EAF0] mt-2">
-                {hasArrived ? 'Arrived' : 'Driving'}
+                {hasArrived ? "You're here" : 'Driving'}
               </p>
             )}
           </div>
