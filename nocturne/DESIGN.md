@@ -67,14 +67,13 @@ the tile pane plus a steel veil above it (`.leaflet-container::after`, between
 the tile pane and the overlays). Everything the app draws sits above the veil
 and keeps its own colour.
 
-A bump reads as a short bar lying across the street, sized in screen pixels so
-it holds its weight at any zoom — never a dot.
+Bumps are round dots, sized by state.
 
 | Element | Colour |
 |---|---|
-| Idle bump | slate-blue bar |
-| Bump on your route | chrome bar |
-| Next bump ahead | ember pill (exactly one) |
+| Idle bump | slate-blue dot |
+| Bump on your route | chrome dot, void stroke |
+| Next bump ahead | ember dot with a halo (exactly one) |
 | Chosen route, in preview | ember |
 | Chosen route, while driving | chrome — the ember moves to the next bump |
 | Alternate route | slate-blue, dashed |

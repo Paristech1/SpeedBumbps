@@ -172,10 +172,3 @@
 .nv-map-thumb {
   filter: grayscale(0.7) brightness(0.42) contrast(1.15) saturate(0.55);
 }
-
-/* The next bump: an ember pill lying across the street. */
-.nv-bump-next {
-  background: var(--nv-ember);
-  border-radius: 999px;
-  box-shadow: 0 0 0 1px rgba(7, 9, 10, 0.9), 0 0 16px rgba(232, 102, 46, 0.55);
-}
