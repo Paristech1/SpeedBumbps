@@ -23,6 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { RouteStep, LatLng, SpeedBump } from '@/types/speedbumps';
 import { haversineDistance, formatDistance, formatDuration, routeProgress } from '@/lib/geo-utils';
 import { useVoiceGuidance } from '@/hooks/useVoiceGuidance';
+import { maneuverHeadline } from '@/lib/maneuver-display';
 import { isSpeechSupported, isVoiceMuted, setVoiceMuted } from '@/lib/voice-guidance';
 
 /** Within this many metres of the route end (on the last step) we call it arrived. */
@@ -151,6 +152,23 @@ export function NavigationBar({
   const gps = gpsTier(gpsAccuracy ?? null);
   const waitingForGps = !hasArrived && distanceToManeuver == null;
 
+  // The HUD sets the action at display size and the street underneath, so the
+  // driver reads the turn in a glance rather than a sentence.
+  const headline = hasArrived
+    ? { action: 'Arrived', detail: 'Ending navigation…' }
+    : maneuverHeadline(currentStep.instruction);
+  const eyebrow = hasArrived
+    ? 'Destination'
+    : waitingForGps
+      ? 'Acquiring GPS signal…'
+      : distanceToManeuver != null
+        ? isLastStep
+          ? `Destination in ${formatDistance(distanceToManeuver)}`
+          : `In ${formatDistance(distanceToManeuver)}`
+        : isLastStep
+          ? 'Arriving at destination'
+          : 'Waiting for GPS…';
+
   return (
     <>
       {/* Top Navigation Banner — Velocity Dark gradient header */}
@@ -161,81 +179,70 @@ export function NavigationBar({
         exit="exit"
         className="fixed top-0 left-0 w-full z-[1050] bg-gradient-to-r from-[#1565C0] to-[#2196F3] shadow-2xl pt-[env(safe-area-inset-top)]"
       >
-        <div className="flex items-center justify-between px-6 py-5">
-          <div className="flex items-center gap-5 min-w-0">
-            <div className="bg-white/20 p-3 rounded-2xl shrink-0">
-              {hasArrived ? <Flag className="w-6 h-6 text-white" /> : <TurnIcon instruction={currentStep.instruction} />}
+        <div className="px-6 py-5">
+          {/* Kicker + controls share a row so the maneuver below gets the full width */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="bg-white/20 p-2.5 rounded-2xl shrink-0">
+                {hasArrived ? <Flag className="w-6 h-6 text-white" /> : <TurnIcon instruction={currentStep.instruction} />}
+              </div>
+              <p className="sb-eyebrow text-white/75 truncate">{eyebrow}</p>
             </div>
-            <div className="min-w-0 flex-1">
-              {waitingForGps ? (
-                <div className="space-y-2 py-0.5">
-                  <Skeleton className="h-5 w-48 max-w-full bg-white/20" />
-                  <Skeleton className="h-3.5 w-28 max-w-full bg-white/15" />
-                  <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest pt-0.5">
-                    Acquiring GPS signal…
-                  </p>
-                </div>
-              ) : (
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={hasArrived ? 'arrived' : `step-${currentStepIndex}`}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{ duration: 0.16 }}
-                  >
-                    <h1 className="font-[var(--font-headline)] font-bold text-xl text-white tracking-tight leading-tight truncate">
-                      {hasArrived ? "You've arrived" : currentStep.instruction}
-                    </h1>
-                    <p className="font-[var(--font-body)] font-medium text-white/80 text-sm tracking-wider uppercase">
-                      {hasArrived
-                        ? 'Ending navigation…'
-                        : distanceToManeuver != null
-                          ? isLastStep
-                            ? `Destination in ${formatDistance(distanceToManeuver)}`
-                            : `In ${formatDistance(distanceToManeuver)}`
-                          : isLastStep
-                            ? 'Arriving at destination'
-                            : 'Waiting for GPS…'}
-                    </p>
-                  </motion.div>
-                </AnimatePresence>
+            <div className="flex items-center gap-2 shrink-0">
+              {isSpeechSupported() && (
+                <button
+                  onClick={toggleVoice}
+                  className={`p-2 rounded-full transition-colors ${
+                    voiceMuted ? 'bg-white/10 hover:bg-white/20' : 'bg-white/20 hover:bg-white/30'
+                  }`}
+                  title={voiceMuted ? 'Unmute voice guidance' : 'Mute voice guidance'}
+                  aria-label={voiceMuted ? 'Unmute voice guidance' : 'Mute voice guidance'}
+                >
+                  {voiceMuted ? (
+                    <VolumeX className="w-6 h-6 text-white/60" />
+                  ) : (
+                    <Volume2 className="w-6 h-6 text-white" />
+                  )}
+                </button>
               )}
-            </div>
-          </div>
-          <div className="flex items-center gap-6 shrink-0">
-            <div className="text-right border-l border-white/20 pl-6 hidden sm:block">
-              <span className="font-[var(--font-headline)] font-black text-3xl text-white block">
-                {remainingMinutes}
-              </span>
-              <span className="font-[var(--font-body)] font-semibold text-white/70 text-[10px] uppercase tracking-[0.2em]">
-                min
-              </span>
-            </div>
-            {isSpeechSupported() && (
               <button
-                onClick={toggleVoice}
-                className={`p-2 rounded-full transition-colors ${
-                  voiceMuted ? 'bg-white/10 hover:bg-white/20' : 'bg-white/20 hover:bg-white/30'
-                }`}
-                title={voiceMuted ? 'Unmute voice guidance' : 'Mute voice guidance'}
-                aria-label={voiceMuted ? 'Unmute voice guidance' : 'Mute voice guidance'}
+                onClick={onEndNavigation}
+                className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"
+                aria-label="End navigation"
               >
-                {voiceMuted ? (
-                  <VolumeX className="w-6 h-6 text-white/60" />
-                ) : (
-                  <Volume2 className="w-6 h-6 text-white" />
-                )}
+                <X className="w-6 h-6 text-white" />
               </button>
-            )}
-            <button
-              onClick={onEndNavigation}
-              className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"
-              aria-label="End navigation"
-            >
-              <X className="w-6 h-6 text-white" />
-            </button>
+            </div>
           </div>
+
+          {waitingForGps ? (
+            <div className="mt-4 space-y-3">
+              <Skeleton className="h-11 w-56 max-w-full bg-white/20" />
+              <Skeleton className="h-4 w-36 max-w-full bg-white/15" />
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={hasArrived ? 'arrived' : `step-${currentStepIndex}`}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.16 }}
+                className="mt-3 flex items-end justify-between gap-4"
+              >
+                <div className="min-w-0 flex-1">
+                  <h1 className="sb-display uppercase text-white truncate">{headline.action}</h1>
+                  {headline.detail && (
+                    <p className="sb-support text-white/80 truncate mt-1.5">{headline.detail}</p>
+                  )}
+                </div>
+                <div className="text-right border-l border-white/20 pl-6 hidden sm:block shrink-0">
+                  <span className="sb-data text-white block">{remainingMinutes}</span>
+                  <span className="sb-eyebrow text-white/70 block mt-1">min</span>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          )}
         </div>
       </motion.header>
 
@@ -249,27 +256,31 @@ export function NavigationBar({
       >
         <div className="glass-panel p-6 rounded-2xl shadow-2xl ghost-border flex items-center justify-between gap-4">
           <div className="flex flex-col min-w-0">
-            <span className="font-[var(--font-body)] text-xs font-bold text-white/50 uppercase tracking-[0.15em] mb-1">
+            <span className="sb-eyebrow text-white/50 mb-1.5">
               {hasArrived ? 'Arrived' : 'Remaining'}
             </span>
-            <h2 className="font-[var(--font-headline)] font-bold text-2xl text-[#e2e2eb] truncate">
-              {hasArrived
-                ? 'Smooth all the way'
-                : `${formatDuration(remainingDuration)} · ${formatDistance(remainingDistance)}`}
+            <h2 className="sb-display-sm text-[#e2e2eb] truncate tabular-nums">
+              {hasArrived ? "You're here" : formatDuration(remainingDuration)}
             </h2>
-            {!hasArrived && (
-              <span className="text-xs font-semibold text-[#9ecaff] mt-1">
-                ETA {etaClock}
-                {speedMph != null && <span className="text-white/50"> · {speedMph} mph</span>}
-              </span>
-            )}
+            <span className="sb-support font-semibold text-[#9ecaff] mt-1.5 truncate">
+              {hasArrived ? (
+                'Smooth all the way'
+              ) : (
+                <>
+                  {formatDistance(remainingDistance)} · ETA {etaClock}
+                  {speedMph != null && (
+                    <span className="text-white/50 hidden min-[380px]:inline"> · {speedMph} mph</span>
+                  )}
+                </>
+              )}
+            </span>
           </div>
           <button
             onClick={onEndNavigation}
-            className="bg-[#93000a] hover:bg-[#ffb4ab]/20 transition-all active:scale-95 px-8 py-3 rounded-full flex items-center gap-2 group shrink-0"
+            className="bg-[#93000a] hover:bg-[#ffb4ab]/20 transition-all active:scale-95 px-6 py-3.5 rounded-full flex items-center gap-2 group shrink-0"
           >
             <Square className="w-5 h-5 text-[#ffdad6] fill-current" />
-            <span className="font-[var(--font-headline)] font-bold text-[#ffdad6] tracking-tight">
+            <span className="sb-title text-[#ffdad6] uppercase">
               {hasArrived ? 'Done' : 'Stop'}
             </span>
           </button>
@@ -282,11 +293,11 @@ export function NavigationBar({
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="fixed bottom-[max(8rem,calc(env(safe-area-inset-bottom)+5.5rem))] left-6 z-[1050] flex flex-col gap-2"
+        className="fixed bottom-[max(11rem,calc(env(safe-area-inset-bottom)+8.5rem))] left-6 z-[1050] flex flex-col gap-2"
       >
         <div className="flex items-center gap-2 px-3 py-2 rounded-full glass-panel ghost-border">
           <div className={`w-2 h-2 rounded-full ${gps.dotClass}`} />
-          <span className="font-[var(--font-body)] text-[10px] font-bold text-white/70 uppercase">{gps.label}</span>
+          <span className="sb-eyebrow text-white/70 tracking-[0.1em]">{gps.label}</span>
         </div>
       </motion.div>
     </>

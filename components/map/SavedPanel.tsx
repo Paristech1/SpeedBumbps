@@ -62,8 +62,8 @@ export function SavedPanel({
           {/* Header */}
           <div className="flex items-center gap-4 px-6 mb-4 shrink-0">
             <div className="w-1.5 h-8 bg-[#9ecaff] rounded-full" />
-            <h2 className="text-2xl font-[var(--font-headline)] font-bold text-[#e2e2eb] tracking-tight">Saved</h2>
-            <span className="text-xs text-[#bfc7d4] font-medium uppercase tracking-wider">
+            <h2 className="sb-display-sm uppercase text-[#e2e2eb]">Saved</h2>
+            <span className="sb-eyebrow text-[#bfc7d4]">
               {savedRoutes.length} route{savedRoutes.length !== 1 ? 's' : ''} · {pois.length} place{pois.length !== 1 ? 's' : ''}
             </span>
           </div>
@@ -74,7 +74,7 @@ export function SavedPanel({
               <button
                 key={v}
                 onClick={() => setView(v)}
-                className={`px-5 py-2 rounded-full text-sm font-bold capitalize transition-all active:scale-95 ${
+                className={`px-5 py-2.5 rounded-full sb-title capitalize transition-all active:scale-95 ${
                   view === v
                     ? 'bg-[#2196F3]/20 text-[#9ecaff]'
                     : 'bg-[#282a30] text-[#bfc7d4] hover:bg-[#33343b]'

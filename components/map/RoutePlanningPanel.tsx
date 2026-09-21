@@ -390,7 +390,7 @@ export function RoutePlanningPanel({
 
             {/* Header */}
             <div className="flex justify-between items-center px-6 mb-8">
-              <h2 className="font-[var(--font-headline)] text-2xl font-bold tracking-tight text-[#e2e2eb]">Plan Route</h2>
+              <h2 className="sb-display-sm uppercase text-[#e2e2eb]">Plan route</h2>
               <button
                 onClick={onClose}
                 className="p-2 rounded-full hover:bg-[#33343b] transition-colors"
@@ -411,7 +411,7 @@ export function RoutePlanningPanel({
                     <Navigation className="w-5 h-5 text-[#3ce36a]" />
                   </div>
                   <input
-                    className="w-full h-14 bg-[#00a844]/10 border-none rounded-2xl pl-12 pr-20 font-semibold text-[#3ce36a] focus:ring-2 focus:ring-[#3ce36a]"
+                    className="w-full h-14 bg-[#00a844]/10 border-none rounded-2xl pl-12 pr-20 sb-title text-[#3ce36a] focus:ring-2 focus:ring-[#3ce36a]"
                     readOnly
                     type="text"
                     value={originStatus === 'ready' ? MY_LOCATION_LABEL : 'Locating…'}
@@ -452,8 +452,8 @@ export function RoutePlanningPanel({
                         commitOriginFromKeyboard();
                       }
                     }}
-                    placeholder={originStatus === 'unavailable' ? 'Location unavailable — type a start address' : 'Address, store, or place'}
-                    className="w-full h-14 bg-[#282a30] border-none rounded-2xl pl-12 pr-10 font-medium text-[#e2e2eb] placeholder:text-[#89919d] focus:ring-2 focus:ring-[#9ecaff]"
+                    placeholder={originStatus === 'unavailable' ? 'Type a start address' : 'Address or place'}
+                    className="w-full h-14 bg-[#282a30] border-none rounded-2xl pl-12 pr-10 sb-title text-[#e2e2eb] placeholder:text-[#89919d] placeholder:font-medium focus:ring-2 focus:ring-[#9ecaff]"
                   />
                   {originLoading && (
                     <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#89919d] animate-spin" />
@@ -523,8 +523,8 @@ export function RoutePlanningPanel({
                     }
                   }}
                   enterKeyHint="search"
-                  placeholder="Search an address, store, or place"
-                  className="w-full h-14 bg-[#282a30] border-none rounded-2xl pl-12 pr-10 font-medium text-[#e2e2eb] placeholder:text-[#89919d]/50 focus:ring-2 focus:ring-[#9ecaff]"
+                  placeholder="Address, store, or place"
+                  className="w-full h-14 bg-[#282a30] border-none rounded-2xl pl-12 pr-10 sb-title text-[#e2e2eb] placeholder:text-[#89919d]/50 placeholder:font-medium focus:ring-2 focus:ring-[#9ecaff]"
                 />
                 {destLoading && (
                   <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#89919d] animate-spin" />
@@ -595,8 +595,8 @@ export function RoutePlanningPanel({
 
           {/* Vehicle Profile */}
           <div>
-            <label className="block font-[var(--font-headline)] text-xs font-bold uppercase tracking-widest text-[#bfc7d4] mb-4 px-1">
-              Vehicle Profile
+            <label className="block sb-eyebrow text-[#bfc7d4] mb-4 px-1">
+              Vehicle profile
             </label>
             <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
               {VEHICLE_OPTIONS.map((v) => (
@@ -610,7 +610,7 @@ export function RoutePlanningPanel({
                   }`}
                 >
                   <span>{v.emoji}</span>
-                  <span className="font-bold text-sm">{v.label}</span>
+                  <span className="sb-title">{v.label}</span>
                 </button>
               ))}
             </div>
@@ -618,8 +618,8 @@ export function RoutePlanningPanel({
 
           {/* Route Preferences */}
           <div className="space-y-3">
-            <label className="block font-[var(--font-headline)] text-xs font-bold uppercase tracking-widest text-[#bfc7d4] mb-4 px-1">
-              Routing Strategy
+            <label className="block sb-eyebrow text-[#bfc7d4] mb-4 px-1">
+              Routing strategy
             </label>
             {MODE_OPTIONS.map((m) => (
               <button
@@ -631,25 +631,25 @@ export function RoutePlanningPanel({
                     : 'bg-[#282a30] border border-transparent hover:border-[#404752]/30'
                 }`}
               >
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center text-2xl ${
                     mode === m.id ? 'bg-[#2196F3]' : 'bg-[#33343b]'
                   }`}>
                     {m.icon}
                   </div>
-                  <div className="text-left">
-                    <h4 className={`font-bold ${mode === m.id ? 'text-[#9ecaff]' : 'text-[#e2e2eb]'}`}>
+                  <div className="text-left min-w-0">
+                    <h4 className={`sb-headline ${mode === m.id ? 'text-[#9ecaff]' : 'text-[#e2e2eb]'}`}>
                       {m.label}
                     </h4>
-                    <p className={`text-sm ${mode === m.id ? 'text-[#9ecaff]/70' : 'text-[#bfc7d4]'}`}>
+                    <p className={`sb-support mt-0.5 ${mode === m.id ? 'text-[#9ecaff]/70' : 'text-[#bfc7d4]'}`}>
                       {m.description}
                     </p>
                   </div>
                 </div>
                 {mode === m.id ? (
-                  <svg className="w-6 h-6 text-[#9ecaff]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                  <svg className="w-6 h-6 shrink-0 ml-3 text-[#9ecaff]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                 ) : (
-                  <svg className="w-6 h-6 text-[#404752]/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                  <svg className="w-6 h-6 shrink-0 ml-3 text-[#404752]/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                 )}
               </button>
             ))}
@@ -659,7 +659,7 @@ export function RoutePlanningPanel({
           <button
             onClick={handlePlanRoute}
             disabled={!canPlanRoute}
-            className="w-full h-14 bg-gradient-to-r from-[#2196F3] to-[#00BCD4] rounded-full font-[var(--font-headline)] text-lg font-extrabold text-white shadow-xl shadow-[#00BCD4]/20 flex items-center justify-center gap-3 active:scale-95 transition-transform duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full h-16 bg-gradient-to-r from-[#2196F3] to-[#00BCD4] rounded-full sb-headline uppercase text-white shadow-xl shadow-[#00BCD4]/20 flex items-center justify-center gap-3 active:scale-95 transition-transform duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Find Route
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
@@ -704,7 +704,7 @@ function AddressDropdown({
   if (results.length === 0 && !isLoading && !emptyMessage) return null;
   if (results.length === 0 && !isLoading) {
     return (
-      <div className="absolute left-0 right-0 top-full mt-1 bg-[#1e1f26] border border-[#404752]/20 rounded-2xl shadow-lg z-50 px-4 py-3 text-sm text-[#89919d]">
+      <div className="absolute left-0 right-0 top-full mt-1 bg-[#1e1f26] border border-[#404752]/20 rounded-2xl shadow-lg z-50 px-4 py-3.5 sb-support text-[#89919d]">
         {emptyMessage}
       </div>
     );
@@ -713,7 +713,7 @@ function AddressDropdown({
     <div
       ref={listRef}
       role="listbox"
-      className="absolute left-0 right-0 top-full mt-1 bg-[#1e1f26] border border-[#404752]/20 rounded-2xl shadow-lg z-50 max-h-72 overflow-y-auto hide-scrollbar"
+      className="absolute left-0 right-0 top-full mt-1 bg-[#1e1f26] border border-[#404752]/20 rounded-2xl shadow-lg z-50 max-h-[22rem] overflow-y-auto hide-scrollbar"
     >
       {results.map((r, i) => {
         const Icon = KIND_ICONS[r.kind ?? 'area'];
@@ -727,30 +727,30 @@ function AddressDropdown({
             // firing before onClick on mobile, which would dismiss the dropdown
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onSelect(r)}
-            className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[#373940] transition-colors ${
+            className={`w-full flex items-start gap-3 px-4 py-3.5 text-left hover:bg-[#373940] transition-colors ${
               i === activeIndex ? 'bg-[#373940]' : ''
             }`}
           >
-            <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${r.kind === 'place' ? 'text-[#9ecaff]' : 'text-[#89919d]'}`} />
+            <Icon className={`w-4 h-4 mt-1 shrink-0 ${r.kind === 'place' ? 'text-[#9ecaff]' : 'text-[#89919d]'}`} />
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-2">
-                <span className="text-sm font-medium text-[#e2e2eb] truncate">{r.shortName}</span>
+                <span className="sb-headline uppercase text-[#e2e2eb] truncate">{r.shortName}</span>
                 {r.category && (
-                  <span className="text-[11px] text-[#9ecaff]/80 whitespace-nowrap">{r.category}</span>
+                  <span className="text-xs text-[#9ecaff]/80 whitespace-nowrap">{r.category}</span>
                 )}
                 {r.approximate && (
                   <span
-                    className="text-[10px] leading-4 px-1.5 rounded-full border border-[#404752]/60 text-[#89919d] whitespace-nowrap"
+                    className="text-[11px] leading-4 px-1.5 rounded-full border border-[#404752]/60 text-[#89919d] whitespace-nowrap"
                     title="Pinned at the nearest known address"
                   >
                     approx.
                   </span>
                 )}
               </div>
-              {r.displayName && <div className="text-xs text-[#89919d] truncate">{r.displayName}</div>}
+              {r.displayName && <div className="sb-support text-[#89919d] truncate mt-0.5">{r.displayName}</div>}
             </div>
             {distance && (
-              <span className="text-[11px] text-[#89919d] whitespace-nowrap mt-0.5 tabular-nums">{distance}</span>
+              <span className="text-xs font-semibold text-[#89919d] whitespace-nowrap mt-1 tabular-nums">{distance}</span>
             )}
           </button>
         );
@@ -782,19 +782,19 @@ function RecentsDropdown({
   onRemove?: (r: GeocodingResult) => void;
 }) {
   return (
-    <div className="absolute left-0 right-0 top-full mt-1 bg-[#1e1f26] border border-[#404752]/20 rounded-2xl shadow-lg z-50 max-h-56 overflow-y-auto hide-scrollbar">
-      <div className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-[#89919d]">Recent</div>
+    <div className="absolute left-0 right-0 top-full mt-1 bg-[#1e1f26] border border-[#404752]/20 rounded-2xl shadow-lg z-50 max-h-72 overflow-y-auto hide-scrollbar">
+      <div className="px-4 pt-3 pb-1.5 sb-eyebrow text-[#89919d]">Recent</div>
       {recents.map((r, i) => (
         <div key={i} className="flex items-center hover:bg-[#373940] transition-colors">
           <button
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onSelect(r)}
-            className="flex-1 flex items-start gap-3 px-4 py-3 text-left min-w-0"
+            className="flex-1 flex items-start gap-3 px-4 py-3.5 text-left min-w-0"
           >
-            <History className="w-4 h-4 text-[#89919d] mt-0.5 shrink-0" />
+            <History className="w-4 h-4 text-[#89919d] mt-1 shrink-0" />
             <div className="min-w-0">
-              <div className="text-sm font-medium text-[#e2e2eb] truncate">{r.shortName}</div>
-              <div className="text-xs text-[#89919d] truncate">{r.displayName}</div>
+              <div className="sb-headline uppercase text-[#e2e2eb] truncate">{r.shortName}</div>
+              <div className="sb-support text-[#89919d] truncate mt-0.5">{r.displayName}</div>
             </div>
           </button>
           {onRemove && (

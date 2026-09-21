@@ -261,6 +261,73 @@
   font-family: "Manrope", sans-serif;
 }
 
+/* --- Display scale ---------------------------------------------------------
+   The headline sizes track the viewport so one class reads big on a phone
+   without overflowing a 360 px screen. Use `uppercase` alongside the display
+   classes for the poster-style headlines (maneuvers, sheet titles, results);
+   leave user-entered names in their own case. */
+
+.sb-display {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 800;
+  font-size: clamp(2.5rem, 13vw, 4rem);
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+}
+
+.sb-display-sm {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.75rem, 7.5vw, 2.375rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+
+/* Big numbers — ETAs, distances, counts. Tabular so digits don't jitter. */
+.sb-data {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 800;
+  font-size: clamp(2rem, 8.5vw, 2.75rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* List primaries — address results, turn-by-turn steps, card titles. */
+.sb-headline {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.0625rem, 4.4vw, 1.3125rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.sb-title {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 1.0625rem;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+/* Small uppercase kicker above a display line, and section labels. */
+.sb-eyebrow {
+  font-family: "Manrope", sans-serif;
+  font-weight: 700;
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+/* Secondary line under a headline — bigger than the old text-xs default. */
+.sb-support {
+  font-family: "Manrope", sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+
 /* ============================================
    ANIMATIONS
    ============================================ */

@@ -152,7 +152,7 @@ export function ProfilePanel({
                       onBlur={commitName}
                       maxLength={30}
                       autoFocus
-                      className="flex-1 min-w-0 bg-[#282a30] border-none rounded-2xl px-4 py-2 text-lg font-[var(--font-headline)] font-bold text-[#e2e2eb] focus:outline-none focus:ring-2 focus:ring-[#2196F3]/40"
+                      className="flex-1 min-w-0 bg-[#282a30] border-none rounded-2xl px-4 py-2 sb-display-sm text-[#e2e2eb] focus:outline-none focus:ring-2 focus:ring-[#2196F3]/40"
                     />
                     <button
                       onMouseDown={(e) => e.preventDefault()}
@@ -172,13 +172,13 @@ export function ProfilePanel({
                     }}
                     className="flex items-center gap-2 text-left group"
                   >
-                    <span className="text-2xl font-[var(--font-headline)] font-bold text-[#e2e2eb] tracking-tight truncate">
+                    <span className="sb-display-sm text-[#e2e2eb] truncate">
                       {profile.displayName}
                     </span>
                     <Pencil className="w-4 h-4 text-[#89919d] group-hover:text-[#9ecaff] transition-colors shrink-0" />
                   </button>
                 )}
-                <div className="text-xs text-[#bfc7d4] font-medium uppercase tracking-wider mt-1">
+                <div className="sb-eyebrow text-[#bfc7d4] mt-1.5">
                   Local profile · stored on this device
                 </div>
               </div>
@@ -374,8 +374,8 @@ export function ProfilePanel({
 function StatTile({ value, label }: { value: number; label: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-4 rounded-2xl bg-[#1e1f26]">
-      <span className="text-3xl font-[var(--font-headline)] font-extrabold text-[#44d8f1]">{value}</span>
-      <span className="text-[10px] font-semibold uppercase tracking-widest text-[#bfc7d4] mt-1">{label}</span>
+      <span className="sb-data text-[#44d8f1]">{value}</span>
+      <span className="sb-eyebrow text-[#bfc7d4] mt-1.5">{label}</span>
     </div>
   );
 }

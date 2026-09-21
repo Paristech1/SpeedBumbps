@@ -20,7 +20,7 @@ import { listContainerVariants, listItemVariants } from '@/lib/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 
 /** Visible sheet height at each snap: peek / default / expanded. */
-export const ROUTE_SHEET_SNAP_POINTS: (number | string)[] = ['164px', '340px', 0.85];
+export const ROUTE_SHEET_SNAP_POINTS: (number | string)[] = ['180px', '356px', 0.85];
 
 interface RouteResultCardProps {
   result: RouteCalculationResult;
@@ -56,11 +56,11 @@ export function RouteResultCard({
   const altFewerBumps = hasAlternative ? primaryRoute.speedBumpCount - alternativeRoute!.speedBumpCount : 0;
 
   const bumpBadge = selectedRoute.isSpeedBumpFree ? (
-    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-[#00a844]/20 text-[#3ce36a] uppercase tracking-wider">
+    <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full sb-eyebrow whitespace-nowrap bg-[#00a844]/20 text-[#3ce36a]">
       ✅ Bump-free
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-[#FF6B00]/20 text-[#FF6B00] uppercase tracking-wider">
+    <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full sb-eyebrow whitespace-nowrap bg-[#FF6B00]/20 text-[#FF6B00]">
       🚧 {selectedRoute.speedBumpCount} bump{selectedRoute.speedBumpCount !== 1 ? 's' : ''}
     </span>
   );
@@ -87,22 +87,21 @@ export function RouteResultCard({
           <div className="mx-auto mt-4 mb-4 h-1.5 w-12 shrink-0 rounded-full bg-[#89919d]/70" />
 
           {/* Route summary — large ETA style from stitch */}
-          <div className="flex items-end gap-4 px-6 mb-4 shrink-0">
+          <div className="flex flex-wrap items-end gap-x-4 gap-y-3 px-6 mb-4 shrink-0">
             <div className="flex flex-col">
-              <span className="text-4xl font-[var(--font-headline)] font-extrabold text-[#44d8f1]">
+              <span className="sb-data whitespace-nowrap text-[#44d8f1]">
                 {formatDuration(selectedRoute.durationSeconds)}
               </span>
-              <span className="text-xs text-[#bfc7d4] font-medium uppercase tracking-wider">Duration</span>
+              <span className="sb-eyebrow text-[#bfc7d4] mt-1.5">Duration</span>
             </div>
             <div className="h-10 w-px bg-[#404752]/30 mb-2" />
             <div className="flex flex-col">
-              <span className="text-4xl font-[var(--font-headline)] font-extrabold text-[#e2e2eb]">
+              <span className="sb-data whitespace-nowrap text-[#e2e2eb]">
                 {formatDistance(selectedRoute.distanceMeters)}
               </span>
-              <span className="text-xs text-[#bfc7d4] font-medium uppercase tracking-wider">Distance</span>
+              <span className="sb-eyebrow text-[#bfc7d4] mt-1.5">Distance</span>
             </div>
-            <div className="flex-1" />
-            {bumpBadge}
+            <div className="ml-auto pb-1">{bumpBadge}</div>
           </div>
 
           {/* Route toggle (when alternative exists) */}
@@ -157,9 +156,9 @@ export function RouteResultCard({
             </button>
             <button
               onClick={onStartNavigation}
-              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-bold bg-gradient-to-br from-[#9ecaff] to-[#2196F3] text-[#003258] shadow-xl shadow-[#2196F3]/20 transition-all active:scale-[0.98]"
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-full sb-title uppercase bg-gradient-to-br from-[#9ecaff] to-[#2196F3] text-[#003258] shadow-xl shadow-[#2196F3]/20 transition-all active:scale-[0.98]"
             >
-              <Navigation className="w-4 h-4" />
+              <Navigation className="w-5 h-5" />
               Start
             </button>
           </div>
@@ -167,10 +166,10 @@ export function RouteResultCard({
           {/* Turn-by-turn steps — visible at the expanded snap */}
           <div className="flex items-center gap-3 px-6 pt-2 pb-3 shrink-0">
             <div className="w-1.5 h-6 bg-[#9ecaff] rounded-full" />
-            <h2 className="text-lg font-[var(--font-headline)] font-bold text-[#e2e2eb] tracking-tight">
+            <h2 className="sb-headline uppercase text-[#e2e2eb]">
               Turn-by-turn
             </h2>
-            <span className="text-xs text-[#bfc7d4] font-medium">
+            <span className="sb-eyebrow text-[#bfc7d4]">
               {selectedRoute.steps.length} steps
             </span>
           </div>
@@ -204,10 +203,10 @@ export function RouteResultCard({
                   <DirectionIcon instruction={step.instruction} isCurrent={i === 0} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-[var(--font-headline)] font-bold leading-snug text-base text-[#e2e2eb]">
+                  <h3 className="sb-headline text-[#e2e2eb]">
                     {step.instruction}
                   </h3>
-                  <p className="text-sm text-[#bfc7d4] font-medium mt-0.5">
+                  <p className="sb-support text-[#bfc7d4] mt-1 tabular-nums">
                     {formatDistance(step.distanceMeters)} · {formatDuration(step.durationSeconds)}
                   </p>
                 </div>
@@ -266,8 +265,8 @@ function RouteTabButton({
           : 'border-[#404752]/30 hover:border-[#404752]/60'
       }`}
     >
-      <div className="text-sm font-semibold text-[#e2e2eb]">{label}</div>
-      <div className="text-xs text-[#bfc7d4] mt-0.5">{subLabel}</div>
+      <div className="sb-title text-[#e2e2eb]">{label}</div>
+      <div className="sb-support text-[#bfc7d4] mt-0.5">{subLabel}</div>
     </button>
   );
 }

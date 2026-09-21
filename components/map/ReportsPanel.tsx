@@ -118,11 +118,11 @@ export function ReportsPanel({
               </button>
             )}
             <div className="w-1.5 h-8 bg-[#FF6B00] rounded-full" />
-            <h2 className="text-2xl font-[var(--font-headline)] font-bold text-[#e2e2eb] tracking-tight">
-              {view === 'list' ? 'My Reports' : 'Report a bump'}
+            <h2 className="sb-display-sm uppercase text-[#e2e2eb]">
+              {view === 'list' ? 'My reports' : 'Report a bump'}
             </h2>
             {view === 'list' && (
-              <span className="text-xs text-[#bfc7d4] font-medium uppercase tracking-wider">
+              <span className="sb-eyebrow text-[#bfc7d4]">
                 {reports.length} report{reports.length !== 1 ? 's' : ''}
               </span>
             )}
@@ -133,7 +133,7 @@ export function ReportsPanel({
               <div className="px-6 mb-4 shrink-0">
                 <button
                   onClick={() => setView('add')}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-bold bg-gradient-to-br from-[#9ecaff] to-[#2196F3] text-[#003258] shadow-xl shadow-[#2196F3]/20 transition-all active:scale-[0.98]"
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-full sb-title uppercase bg-gradient-to-br from-[#9ecaff] to-[#2196F3] text-[#003258] shadow-xl shadow-[#2196F3]/20 transition-all active:scale-[0.98]"
                 >
                   <TriangleAlert className="w-4 h-4" />
                   Report a bump

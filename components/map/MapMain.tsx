@@ -468,7 +468,7 @@ function MapMainInner() {
               <svg className="w-7 h-7 text-[#2196F3]" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
               </svg>
-              <h1 className="font-[var(--font-headline)] font-bold tracking-tight text-2xl text-slate-100">
+              <h1 className="sb-display-sm uppercase text-slate-100">
                 SpeedBumps
               </h1>
             </div>
@@ -506,7 +506,7 @@ function MapMainInner() {
       {routing.isNavigating && !isFollowing && (
         <button
           onClick={() => setIsFollowing(true)}
-          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[1100] flex items-center gap-2 px-5 py-3 rounded-full glass-panel ghost-border shadow-2xl text-[#9ecaff] font-bold text-sm active:scale-95 transition-all"
+          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[1100] flex items-center gap-2 px-5 py-3 rounded-full glass-panel ghost-border shadow-2xl text-[#9ecaff] sb-title uppercase active:scale-95 transition-all"
           aria-label="Recenter on my location"
         >
           <LocateFixed className="w-4 h-4" />
@@ -537,7 +537,7 @@ function MapMainInner() {
                   >
                     <Navigation className="w-5 h-5 text-[#44d8f1] shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-[#e2e2eb] truncate">
+                      <div className="sb-title text-[#e2e2eb] truncate">
                         {routing.originLabel} → {routing.destinationLabel}
                       </div>
                     </div>
@@ -575,7 +575,7 @@ function MapMainInner() {
                     <circle cx="11" cy="11" r="8" />
                     <path d="m21 21-4.35-4.35" />
                   </svg>
-                  <span className="text-sm font-medium text-[#bfc7d4] flex-1">
+                  <span className="sb-title text-[#bfc7d4] flex-1">
                     Where to in Philly?
                   </span>
                   <svg className="w-5 h-5 text-[#bfc7d4] shrink-0" viewBox="0 0 24 24" fill="currentColor">
