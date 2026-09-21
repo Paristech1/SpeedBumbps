@@ -37,7 +37,7 @@ export const MapTopBar = memo(function MapTopBar({
           <button
             key={category.id}
             onClick={() => onCategoryClick?.(category.id)}
-            className="flex items-center gap-2 whitespace-nowrap rounded-full bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-sm"
+            className="flex items-center gap-2 whitespace-nowrap rounded-full bg-white/70 bg-[#0C1416]/70 backdrop-blur-sm px-4 py-2 text-sm font-medium text-[#B6BECB] text-[#B6BECB] hover:bg-[#0C1416] dark:hover:bg-[#0C1416] transition-colors shadow-sm"
           >
             <category.icon className="h-4 w-4" />
             {category.label}

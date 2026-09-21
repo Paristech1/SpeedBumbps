@@ -28,8 +28,8 @@ export function MapUser() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="rounded-full bg-white dark:bg-gray-800 p-1 shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-offset-2">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-green-400 flex items-center justify-center text-white font-semibold text-sm">
+        <button className="rounded-full bg-[#0C1416] bg-[#0C1416] p-1 shadow-lg hover:bg-[#0C1416] dark:hover:bg-[#0C1416] transition-colors focus:outline-none focus:ring-2 focus:ring-[#E6EAF0]/40 dark:focus:ring-[#E6EAF0]/40 focus:ring-offset-2">
+          <div className="h-8 w-8 rounded-full bg-[#0C1416] flex items-center justify-center text-[#E6EAF0] font-semibold text-sm">
             W
           </div>
         </button>

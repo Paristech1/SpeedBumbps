@@ -22,16 +22,16 @@ export function MapThemeSwitcher() {
   return (
     <button
       onClick={toggleTheme}
-      className="rounded-full bg-white dark:bg-gray-800 p-2 shadow-lg hover:bg-gray-50 transition-colors"
+      className="rounded-full nv-glass p-2 hover:bg-white/5 transition-colors"
       title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       aria-label={
         theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
       }
     >
       {theme === "dark" ? (
-        <Sun className="h-5 w-5 text-gray-200" />
+        <Sun className="h-5 w-5 text-[#B6BECB]" />
       ) : (
-        <Moon className="h-5 w-5 text-gray-600" />
+        <Moon className="h-5 w-5 text-[#5B6E7F]" />
       )}
     </button>
   );

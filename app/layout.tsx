@@ -1,28 +1,35 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Manrope } from "next/font/google";
+import { Barlow_Condensed, Inter_Tight, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProviderWrapper } from "@/components/providers/ThemeProviderWrapper";
 import { Toaster } from "@/components/ui/sonner";
 
 /**
- * Velocity Dark Design System Typography:
- * - Space Grotesk → "Command" typeface for headlines, ETAs, speed data
- * - Manrope → "Utility" typeface for body, labels, instructions
+ * Nocturne Velocity typography:
+ * - Barlow Condensed 700 → the mast: RIGHT, WHERE, SEND, route minutes
+ * - Inter Tight → UI: captions, chips, body
+ * - Geist Mono → kickers: EXACT, SMOOTHEST, status readouts
  */
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-headline",
+const mast = Barlow_Condensed({
+  variable: "--font-mast",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["500", "600", "700"],
 });
 
-const manrope = Manrope({
-  variable: "--font-body",
+const ui = Inter_Tight({
+  variable: "--font-ui",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600"],
+});
+
+const mono = Geist_Mono({
+  variable: "--font-code",
+  subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export const viewport: Viewport = {
-  themeColor: "#111319",
+  themeColor: "#07090A",
   viewportFit: "cover",
   width: "device-width",
   initialScale: 1,
@@ -31,7 +38,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "SpeedBumps — Navigate Philly Bump-Free",
   description:
-    "Navigate Philadelphia with smart speed bump avoidance. The Neon Navigator finds the smoothest routes across the city.",
+    "Navigate Philadelphia with smart speed bump avoidance — the smoothest way across the city, block by block.",
 };
 
 export default function RootLayout({
@@ -42,7 +49,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`${spaceGrotesk.variable} ${manrope.variable} font-[var(--font-body)] antialiased bg-[#111319] text-[#e2e2eb]`}
+        className={`${mast.variable} ${ui.variable} ${mono.variable} font-[var(--font-ui)] antialiased bg-[#07090A] text-[#E6EAF0]`}
       >
         <ThemeProviderWrapper>
           {children}

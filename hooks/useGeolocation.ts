@@ -94,8 +94,8 @@ export function useGeolocation() {
         // Add accuracy circle
         const circle = L.circle(e.latlng, {
           radius: e.accuracy / 2,
-          color: '#3b82f6',
-          fillColor: '#3b82f6',
+          color: '#E6EAF0',
+          fillColor: '#E6EAF0',
           fillOpacity: 0.2,
         }).addTo(map);
         locationCircleRef.current = circle;
@@ -104,7 +104,7 @@ export function useGeolocation() {
         const marker = L.marker(e.latlng, {
           icon: L.divIcon({
             className: 'custom-location-marker',
-            html: `<div style="width: 16px; height: 16px; background: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+            html: `<div style="width: 16px; height: 16px; background: #E6EAF0; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
             iconSize: [16, 16],
             iconAnchor: [8, 8],
           }),

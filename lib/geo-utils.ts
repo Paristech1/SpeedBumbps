@@ -192,9 +192,10 @@ export function formatDuration(seconds: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-/** Polyline color based on bump count (matching Flutter color logic). */
-export function routeColor(bumpCount: number, isSpeedBumpFree: boolean): string {
-  if (isSpeedBumpFree) return '#00C853'; // green
-  if (bumpCount >= 5) return '#FF1744'; // red
-  return '#2196F3'; // blue
+/**
+ * Route line colour. Nocturne gives the chosen route the ember and leaves
+ * every other line in steel, so the map never carries two accents.
+ */
+export function routeColor(isSelected: boolean): string {
+  return isSelected ? '#E8662E' : '#5B6E7F';
 }

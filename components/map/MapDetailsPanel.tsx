@@ -74,7 +74,7 @@ export function MapDetailsPanel({ country, onClose }: MapDetailsPanelProps) {
     <div className="flex flex-col h-full">
       {/* Header Image - Hidden on mobile */}
       {!isMobile && (
-        <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600">
+        <div className="relative h-48 w-full overflow-hidden bg-[#0C1416]">
           {/* Background landscape image */}
           <Image
             src="/vecteezy_village-and-mountains-landscape-illustration_11871677-1.jpg"
@@ -89,7 +89,7 @@ export function MapDetailsPanel({ country, onClose }: MapDetailsPanelProps) {
 
           {/* Country name overlay */}
           <div className="absolute bottom-4 left-6 right-6 z-20">
-            <h2 className="text-3xl font-bold text-white drop-shadow-lg">
+            <h2 className="text-3xl font-bold text-[#E6EAF0] drop-shadow-lg">
               {countryName}
             </h2>
             {countryCode && (
@@ -102,15 +102,15 @@ export function MapDetailsPanel({ country, onClose }: MapDetailsPanelProps) {
       )}
 
       {/* Content - Custom thin scrollbar */}
-      <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto bg-[#0C1416] bg-[#0C1416] scrollbar-thin">
         {/* Country Name - Only show on mobile since desktop has it in header */}
         {isMobile && (
-          <div className="px-6 py-4 border-b dark:border-gray-800">
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+          <div className="px-6 py-4 border-b border-[#E6EAF0]/12">
+            <h2 className="text-2xl font-semibold text-[#E6EAF0] text-[#E6EAF0]">
               {countryName}
             </h2>
             {countryCode && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-sm text-[#B6BECB] text-[#5B6E7F] mt-1">
                 {countryCode}
               </p>
             )}
@@ -118,29 +118,29 @@ export function MapDetailsPanel({ country, onClose }: MapDetailsPanelProps) {
         )}
 
         {/* Action Buttons */}
-        <div className="px-6 py-4 border-b dark:border-gray-800">
+        <div className="px-6 py-4 border-b border-[#E6EAF0]/12">
           <div className="grid grid-cols-4 gap-2">
             <button className="flex flex-col items-center gap-1.5 p-2 rounded-full bg-teal-600 hover:bg-teal-700 transition-colors">
-              <Navigation className="h-5 w-5 text-white" />
-              <span className="text-[10px] font-medium text-white leading-tight">
+              <Navigation className="h-5 w-5 text-[#E6EAF0]" />
+              <span className="text-[10px] font-medium text-[#E6EAF0] leading-tight">
                 Directions
               </span>
             </button>
-            <button className="flex flex-col items-center gap-1.5 p-2 rounded-full bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
-              <Bookmark className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300 leading-tight">
+            <button className="flex flex-col items-center gap-1.5 p-2 rounded-full bg-[#0C1416] dark:bg-[#0C1416]/30 hover:bg-[#0C1416] dark:hover:bg-[#0C1416]/50 transition-colors">
+              <Bookmark className="h-5 w-5 text-[#E6EAF0] dark:text-[#E6EAF0]" />
+              <span className="text-[10px] font-medium text-[#B6BECB] text-[#B6BECB] leading-tight">
                 Save
               </span>
             </button>
-            <button className="flex flex-col items-center gap-1.5 p-2 rounded-full bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
-              <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300 leading-tight">
+            <button className="flex flex-col items-center gap-1.5 p-2 rounded-full bg-[#0C1416] dark:bg-[#0C1416]/30 hover:bg-[#0C1416] dark:hover:bg-[#0C1416]/50 transition-colors">
+              <MapPin className="h-5 w-5 text-[#E6EAF0] dark:text-[#E6EAF0]" />
+              <span className="text-[10px] font-medium text-[#B6BECB] text-[#B6BECB] leading-tight">
                 Nearby
               </span>
             </button>
-            <button className="flex flex-col items-center gap-1.5 p-2 rounded-full bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
-              <Share2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300 leading-tight">
+            <button className="flex flex-col items-center gap-1.5 p-2 rounded-full bg-[#0C1416] dark:bg-[#0C1416]/30 hover:bg-[#0C1416] dark:hover:bg-[#0C1416]/50 transition-colors">
+              <Share2 className="h-5 w-5 text-[#E6EAF0] dark:text-[#E6EAF0]" />
+              <span className="text-[10px] font-medium text-[#B6BECB] text-[#B6BECB] leading-tight">
                 Share
               </span>
             </button>
@@ -149,11 +149,11 @@ export function MapDetailsPanel({ country, onClose }: MapDetailsPanelProps) {
 
         {/* Quick Facts */}
         <div className="px-6 py-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+          <h3 className="text-lg font-semibold text-[#E6EAF0] text-[#E6EAF0] mb-3">
             Quick facts
           </h3>
           {countryInfo ? (
-            <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+            <div className="space-y-3 text-sm text-[#B6BECB] text-[#B6BECB]">
               <p>
                 {countryInfo.name?.official || countryName} is a country
                 {countryInfo.region && ` in ${countryInfo.region}`}
@@ -165,7 +165,7 @@ export function MapDetailsPanel({ country, onClose }: MapDetailsPanelProps) {
               <div className="grid grid-cols-2 gap-3 pt-2">
                 {countryInfo.population && (
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-[#B6BECB] text-[#5B6E7F]">
                       Population
                     </p>
                     <p className="font-medium">
@@ -175,7 +175,7 @@ export function MapDetailsPanel({ country, onClose }: MapDetailsPanelProps) {
                 )}
                 {countryInfo.area && (
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-[#B6BECB] text-[#5B6E7F]">
                       Area
                     </p>
                     <p className="font-medium">
@@ -185,7 +185,7 @@ export function MapDetailsPanel({ country, onClose }: MapDetailsPanelProps) {
                 )}
                 {countryInfo.capital?.[0] && (
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-[#B6BECB] text-[#5B6E7F]">
                       Capital
                     </p>
                     <p className="font-medium">{countryInfo.capital[0]}</p>
@@ -193,7 +193,7 @@ export function MapDetailsPanel({ country, onClose }: MapDetailsPanelProps) {
                 )}
                 {countryInfo.currencies && (
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-[#B6BECB] text-[#5B6E7F]">
                       Currency
                     </p>
                     <p className="font-medium">
@@ -205,7 +205,7 @@ export function MapDetailsPanel({ country, onClose }: MapDetailsPanelProps) {
 
               {countryInfo.languages && (
                 <div className="pt-2">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  <p className="text-xs text-[#B6BECB] text-[#5B6E7F] mb-1">
                     Languages
                   </p>
                   <p className="font-medium">
@@ -216,17 +216,17 @@ export function MapDetailsPanel({ country, onClose }: MapDetailsPanelProps) {
             </div>
           ) : (
             <div className="animate-pulse space-y-2">
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6" />
+              <div className="h-4 bg-[#0C1416] bg-[#0C1416] rounded w-3/4" />
+              <div className="h-4 bg-[#0C1416] bg-[#0C1416] rounded w-full" />
+              <div className="h-4 bg-[#0C1416] bg-[#0C1416] rounded w-5/6" />
             </div>
           )}
         </div>
 
         {/* Photos Section */}
         {countryInfo?.flags?.svg && (
-          <div className="px-6 py-4 border-t dark:border-gray-800">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+          <div className="px-6 py-4 border-t border-[#E6EAF0]/12">
+            <h3 className="text-lg font-semibold text-[#E6EAF0] text-[#E6EAF0] mb-3">
               Flag
             </h3>
             <div className="relative rounded-lg overflow-hidden shadow-md border h-40">
@@ -258,10 +258,10 @@ export function MapDetailsPanel({ country, onClose }: MapDetailsPanelProps) {
       >
         <Drawer.Portal>
           <Drawer.Content
-            className="fixed flex flex-col bg-white dark:bg-gray-900 rounded-t-[10px] bottom-0 left-0 right-0 h-full max-h-[97%] !z-[1100] shadow-[0_-10px_40px_rgba(0,0,0,0.2)]"
+            className="fixed flex flex-col bg-[#0C1416] bg-[#0C1416] rounded-t-[10px] bottom-0 left-0 right-0 h-full max-h-[97%] !z-[1100] shadow-[0_-10px_40px_rgba(0,0,0,0.2)]"
             aria-describedby={undefined}
           >
-            <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-gray-300 dark:bg-gray-600" />
+            <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-[#0C1416] dark:bg-[#0C1416]" />
             <div className="flex-1 overflow-hidden">
               <Drawer.Title className="sr-only">
                 {String(countryName)}
@@ -277,17 +277,17 @@ export function MapDetailsPanel({ country, onClose }: MapDetailsPanelProps) {
   // Desktop: Side Panel
   return (
     <div
-      className={`absolute top-0 left-0 h-full w-96 bg-white dark:bg-gray-900 shadow-2xl z-[1000] transform transition-transform duration-300 ${
+      className={`absolute top-0 left-0 h-full w-96 bg-[#0C1416] bg-[#0C1416] shadow-2xl z-[1000] transform transition-transform duration-300 ${
         country ? "translate-x-0" : "-translate-x-full"
       }`}
     >
       {/* Close Button */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 shadow-lg transition-colors"
+        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/90 bg-[#0C1416]/90 hover:bg-[#0C1416] dark:hover:bg-[#0C1416] shadow-lg transition-colors"
         aria-label="Close"
       >
-        <X className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+        <X className="h-5 w-5 text-[#B6BECB] text-[#B6BECB]" />
       </button>
 
       {content}

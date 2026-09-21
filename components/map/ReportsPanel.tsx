@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Reports tab — Velocity Dark drawer for user-submitted speed bump reports.
+ * Reports tab — Nocturne drawer for user-submitted speed bump reports.
  * Reports persist locally, render as blue map markers, and count in
  * bump-avoidance routing.
  */
@@ -33,9 +33,9 @@ const snapPoints = ['150px', 0.6, 0.92];
 const SEVERITY_LABELS = ['Gentle', 'Mild', 'Moderate', 'Harsh', 'Brutal'];
 
 function severityChipClasses(severity: number): string {
-  if (severity >= 4) return 'bg-[#FF6B00]/20 text-[#FF6B00]';
-  if (severity === 3) return 'bg-[#9ecaff]/15 text-[#9ecaff]';
-  return 'bg-[#282a30] text-[#bfc7d4]';
+  if (severity >= 4) return 'text-[#E8662E] border border-[#E8662E]/50';
+  if (severity === 3) return 'text-[#E6EAF0] border border-[#E6EAF0]/30';
+  return 'text-[#5B6E7F] border border-[#E6EAF0]/15';
 }
 
 export function ReportsPanel({
@@ -101,31 +101,33 @@ export function ReportsPanel({
       <Drawer.Portal>
         <Drawer.Content
           aria-describedby={undefined}
-          className="fixed bottom-0 left-0 right-0 !z-[1055] h-full flex flex-col rounded-t-[24px] bg-sb-surface-container-low shadow-[0_-20px_60px_rgba(0,0,0,0.5)] border-t border-sb-outline-variant/30 outline-none pb-[max(1rem,env(safe-area-inset-bottom))]"
+          className="nv-frame nv-sheet nv-lift fixed bottom-0 left-0 right-0 !z-[1055] h-full flex flex-col rounded-t-[24px] outline-none pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
           <Drawer.Title className="sr-only">Reports</Drawer.Title>
-          <div className="mx-auto mt-4 mb-4 h-1.5 w-12 shrink-0 rounded-full bg-[#89919d]/70" />
+          <div className="mx-auto mt-3 mb-4 h-1 w-10 shrink-0 rounded-full bg-[#5B6E7F]/60" />
 
           {/* Header */}
-          <div className="flex items-center gap-4 px-6 mb-4 shrink-0">
+          <div className="px-6 mb-5 shrink-0">
             {view === 'add' && (
               <button
                 onClick={() => { resetForm(); setView('list'); }}
-                className="p-2 -ml-2 rounded-full bg-[#282a30] text-[#bfc7d4] hover:bg-[#33343b] transition-colors active:scale-90"
+                className="flex items-center gap-2 mb-3 kicker hover:text-[#E6EAF0] transition-colors active:scale-95"
                 aria-label="Back to reports list"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Back
               </button>
             )}
-            <div className="w-1.5 h-8 bg-[#FF6B00] rounded-full" />
-            <h2 className="sb-display-sm uppercase text-[#e2e2eb]">
-              {view === 'list' ? 'My reports' : 'Report a bump'}
-            </h2>
-            {view === 'list' && (
-              <span className="sb-eyebrow text-[#bfc7d4]">
-                {reports.length} report{reports.length !== 1 ? 's' : ''}
-              </span>
-            )}
+            <div className="min-w-0">
+              <h2 className="mast mast-2 text-[#E6EAF0]">
+                {view === 'list' ? 'Reports' : 'Report a bump'}
+              </h2>
+              <p className="caption mt-2">
+                {view === 'list'
+                  ? `${reports.length} report${reports.length !== 1 ? 's' : ''} from you.`
+                  : 'one tap. we verify later.'}
+              </p>
+            </div>
           </div>
 
           {view === 'list' ? (
@@ -133,10 +135,10 @@ export function ReportsPanel({
               <div className="px-6 mb-4 shrink-0">
                 <button
                   onClick={() => setView('add')}
-                  className="w-full flex items-center justify-center gap-2 py-4 rounded-full sb-title uppercase bg-gradient-to-br from-[#9ecaff] to-[#2196F3] text-[#003258] shadow-xl shadow-[#2196F3]/20 transition-all active:scale-[0.98]"
+                  className="w-full flex items-center justify-between gap-2 py-3 nv-hairline-t nv-hairline-b transition-opacity active:opacity-60"
                 >
-                  <TriangleAlert className="w-4 h-4" />
-                  Report a bump
+                  <span className="mast mast-3 text-[#E6EAF0]">Report a bump</span>
+                  <TriangleAlert className="w-4 h-4 text-[#E8662E]" />
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto hide-scrollbar px-4 pb-32 space-y-2">
@@ -149,26 +151,26 @@ export function ReportsPanel({
                   />
                 ) : (
                   reports.map((report) => (
-                    <div key={report.id} className="flex items-center gap-3 p-4 rounded-2xl bg-[#1e1f26] hover:bg-[#282a30] transition-colors">
+                    <div key={report.id} className="nv-frame flex items-center gap-3 px-2 py-4 nv-hairline-b">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${severityChipClasses(report.severity)}`}>
+                          <span className={`px-2.5 py-1 rounded-full kicker ${severityChipClasses(report.severity)}`}>
                             {report.severity} · {SEVERITY_LABELS[report.severity - 1] ?? 'Moderate'}
                           </span>
-                          <span className="text-xs text-[#bfc7d4]">
+                          <span className="ui-sm text-[#5B6E7F]">
                             {new Date(report.createdAt).toLocaleDateString()}
                           </span>
                         </div>
-                        <div className="text-xs text-[#bfc7d4] mt-1.5 font-mono">
+                        <div className="kicker mt-2">
                           {report.location.lat.toFixed(5)}, {report.location.lng.toFixed(5)}
                         </div>
                         {report.note && (
-                          <p className="text-sm text-[#e2e2eb] mt-1.5">{report.note}</p>
+                          <p className="ui-sm text-[#B6BECB] mt-2">{report.note}</p>
                         )}
                       </div>
                       <button
                         onClick={() => onDeleteReport(report.id)}
-                        className="p-2.5 rounded-full bg-[#282a30] text-[#bfc7d4] hover:bg-[#93000a]/30 hover:text-[#ffb4ab] transition-colors active:scale-90 shrink-0"
+                        className="p-2.5 rounded-full bg-[#0C1416] text-[#B6BECB] hover:bg-[#0C1416]/30 hover:text-[#E8662E] transition-colors active:scale-90 shrink-0"
                         aria-label="Delete report"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -182,15 +184,15 @@ export function ReportsPanel({
             <div className="flex-1 overflow-y-auto hide-scrollbar px-6 pb-32 space-y-6">
               {/* Location */}
               <div>
-                <div className="text-xs font-bold text-[#bfc7d4] uppercase tracking-wider mb-2">Location</div>
+                <div className="kicker mb-3">Location</div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => { if (userLocation) { setLocation(userLocation); onClearPickedLocation(); } }}
                     disabled={!userLocation}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-bold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`nv-chip mono-bar flex-1 flex items-center justify-center gap-2 py-3 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
                       location && !isPickingLocation && userLocation && location.lat === userLocation.lat && location.lng === userLocation.lng
-                        ? 'bg-[#2196F3]/20 text-[#9ecaff]'
-                        : 'bg-[#282a30] text-[#e2e2eb] hover:bg-[#33343b]'
+                        ? 'nv-chip-on'
+                        : 'hover:text-[#E6EAF0]'
                     }`}
                     title={userLocation ? 'Use my GPS position' : 'Location unavailable'}
                   >
@@ -199,10 +201,8 @@ export function ReportsPanel({
                   </button>
                   <button
                     onClick={onTogglePickLocation}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-bold transition-all active:scale-95 ${
-                      isPickingLocation
-                        ? 'bg-[#FF6B00]/20 text-[#FF6B00]'
-                        : 'bg-[#282a30] text-[#e2e2eb] hover:bg-[#33343b]'
+                    className={`nv-chip mono-bar flex-1 flex items-center justify-center gap-2 py-3 transition-all active:scale-95 ${
+                      isPickingLocation ? 'nv-ember-edge text-[#E8662E]' : 'hover:text-[#E6EAF0]'
                     }`}
                   >
                     <MapPin className="w-4 h-4" />
@@ -210,7 +210,7 @@ export function ReportsPanel({
                   </button>
                 </div>
                 {location && (
-                  <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1e1f26] text-xs font-mono text-[#9ecaff]">
+                  <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full nv-hairline kicker text-[#B6BECB]">
                     <MapPin className="w-3 h-3" />
                     {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
                   </div>
@@ -219,20 +219,18 @@ export function ReportsPanel({
 
               {/* Severity */}
               <div>
-                <div className="text-xs font-bold text-[#bfc7d4] uppercase tracking-wider mb-2">Severity</div>
+                <div className="kicker mb-3">How harsh</div>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((s) => (
                     <button
                       key={s}
                       onClick={() => setSeverity(s)}
-                      className={`flex-1 flex flex-col items-center py-2.5 rounded-2xl transition-all active:scale-95 ${
-                        severity === s
-                          ? 'bg-[#FF6B00]/20 text-[#FF6B00]'
-                          : 'bg-[#282a30] text-[#bfc7d4] hover:bg-[#33343b]'
+                      className={`nv-frame nv-hairline flex-1 flex flex-col items-center py-3 rounded-2xl transition-all active:scale-95 ${
+                        severity === s ? 'nv-ember-edge' : 'hover:bg-white/[0.03]'
                       }`}
                     >
-                      <span className="text-base font-[var(--font-headline)] font-extrabold">{s}</span>
-                      <span className="text-[9px] font-semibold uppercase tracking-wider">{SEVERITY_LABELS[s - 1]}</span>
+                      <span className={`mast mast-3 mast-num ${severity === s ? 'text-[#E8662E]' : 'text-[#B6BECB]'}`}>{s}</span>
+                      <span className="kicker mt-1.5 text-[8px] tracking-[0.06em] truncate max-w-full px-1">{SEVERITY_LABELS[s - 1]}</span>
                     </button>
                   ))}
                 </div>
@@ -240,24 +238,27 @@ export function ReportsPanel({
 
               {/* Note */}
               <div>
-                <div className="text-xs font-bold text-[#bfc7d4] uppercase tracking-wider mb-2">Note (optional)</div>
+                <div className="kicker mb-3">Note</div>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
                   maxLength={200}
                   placeholder="e.g. Unmarked bump right after the corner"
-                  className="w-full bg-[#282a30] border-none rounded-2xl px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#89919d] focus:outline-none focus:ring-2 focus:ring-[#2196F3]/40 resize-none"
+                  className="w-full bg-transparent nv-hairline rounded-2xl px-4 py-3 ui-text text-[#E6EAF0] placeholder:text-[#5B6E7F] focus:outline-none focus:border-[#E6EAF0]/50 resize-none"
                 />
               </div>
 
-              <button
-                onClick={handleSubmit}
-                disabled={!location}
-                className="w-full py-4 rounded-full text-sm font-bold bg-gradient-to-br from-[#9ecaff] to-[#2196F3] text-[#003258] shadow-xl shadow-[#2196F3]/20 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Submit report
-              </button>
+              <div>
+                <div className="nv-rule mb-4" />
+                <button
+                  onClick={handleSubmit}
+                  disabled={!location}
+                  className="mast mast-2 text-[#E6EAF0] w-full text-left py-1 transition-opacity active:opacity-60 disabled:text-[#5B6E7F] disabled:cursor-not-allowed"
+                >
+                  Send
+                </button>
+              </div>
             </div>
           )}
         </Drawer.Content>

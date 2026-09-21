@@ -26,19 +26,19 @@ export function EmptyState({
         className
       )}
     >
-      <div className="w-16 h-16 rounded-full bg-sb-surface-container flex items-center justify-center border border-sb-outline-variant/30 text-sb-outline">
+      <div className="w-14 h-14 rounded-full nv-hairline flex items-center justify-center text-[#5B6E7F]">
         {icon}
       </div>
-      <div className="text-base font-[var(--font-headline)] font-bold text-sb-on-surface">
+      <div className="mast mast-3 text-[#E6EAF0] mt-1">
         {title}
       </div>
-      <p className="text-sm text-sb-on-surface-variant max-w-xs font-[var(--font-body)]">
+      <p className="ui-sm text-[#5B6E7F] max-w-xs">
         {hint}
       </p>
       {action && (
         <button
           onClick={action.onClick}
-          className="mt-2 px-5 py-2 rounded-full bg-sb-primary/15 hover:bg-sb-primary/25 border border-sb-primary/30 text-sb-primary text-xs font-bold tracking-wide transition-all active:scale-95"
+          className="nv-chip mono-bar mt-2 px-5 py-2.5 hover:text-[#E6EAF0] transition-all active:scale-95"
         >
           {action.label}
         </button>
