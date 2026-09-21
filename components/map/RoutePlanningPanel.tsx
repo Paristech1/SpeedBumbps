@@ -1,14 +1,14 @@
 'use client';
 
 /**
- * Route planning panel — Velocity Dark slide-up sheet.
+ * Route planning panel — Nocturne slide-up sheet.
  * Matches the route_planner stitch: dark bottom sheet with glassmorphism,
  * vehicle selector pills, routing strategy cards, and gradient CTA.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MapPin, Navigation, X, Loader2, ArrowUpDown, History, Trash2, Store, Home, Route as RouteIcon } from 'lucide-react';
+import { MapPin, Navigation, X, Loader2, ArrowUpDown, History, Trash2 } from 'lucide-react';
 import { sheetVariants, scrimVariants, fadeScaleVariants } from '@/lib/motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { searchAddress } from '@/lib/nominatim-service';
@@ -47,20 +47,22 @@ interface RoutePlanningPanelProps {
   locationError?: string | null;
   /** Search bias when there's no GPS fix (the visible map center). */
   getMapCenter?: () => LatLng | null;
+  /** "Drop a pin" — hand the map over so the block can be tapped instead. */
+  onDropPin?: () => void;
 }
 
-export const VEHICLE_OPTIONS: { id: VehicleProfile; label: string; emoji: string }[] = [
-  { id: 'sedan', label: 'Sedan', emoji: '🚗' },
-  { id: 'suv', label: 'SUV', emoji: '🚙' },
-  { id: 'lowered', label: 'Lowered', emoji: '🏎️' },
-  { id: 'motorcycle', label: 'Motorcycle', emoji: '🏍️' },
-  { id: 'bicycle', label: 'Bicycle', emoji: '🚲' },
+export const VEHICLE_OPTIONS: { id: VehicleProfile; label: string }[] = [
+  { id: 'sedan', label: 'Sedan' },
+  { id: 'suv', label: 'SUV' },
+  { id: 'lowered', label: 'Lowered' },
+  { id: 'motorcycle', label: 'Motorcycle' },
+  { id: 'bicycle', label: 'Bicycle' },
 ];
 
-export const MODE_OPTIONS: { id: RoutePreferenceMode; label: string; description: string; icon: string }[] = [
-  { id: 'smoothRide', label: 'Smooth Ride', description: 'Detour up to ~60% longer to dodge bumps', icon: '🛣️' },
-  { id: 'balanced', label: 'Balanced', description: 'Detour up to ~25% longer for fewer bumps', icon: '⚖️' },
-  { id: 'fastest', label: 'Fastest', description: 'Quickest route — bumps shown, not avoided', icon: '⚡' },
+export const MODE_OPTIONS: { id: RoutePreferenceMode; label: string; description: string }[] = [
+  { id: 'smoothRide', label: 'Smooth Ride', description: 'Detour up to ~60% longer to dodge bumps' },
+  { id: 'balanced', label: 'Balanced', description: 'Detour up to ~25% longer for fewer bumps' },
+  { id: 'fastest', label: 'Fastest', description: 'Quickest route — bumps shown, not avoided' },
 ];
 
 const MY_LOCATION_LABEL = 'My Location';
@@ -93,6 +95,7 @@ export function RoutePlanningPanel({
   locationPermission = null,
   locationError = null,
   getMapCenter,
+  onDropPin,
 }: RoutePlanningPanelProps) {
   const [useMyLocation, setUseMyLocation] = useState(true);
   const [originQuery, setOriginQuery] = useState('');
@@ -345,10 +348,18 @@ export function RoutePlanningPanel({
   }, [useMyLocation, userLocation, selectedOrigin, selectedDest]);
 
   const NO_MATCHES_HINT = 'No matches yet — try adding a city or ZIP';
+
   const originNoMatches =
     !originLoading && originQuery.trim() !== '' && originResults.length === 0 && originResultsFor === originQuery.trim();
   const destNoMatches =
     !destLoading && destQuery.trim() !== '' && destResults.length === 0 && destResultsFor === destQuery.trim();
+
+  /**
+   * While a destination search is running the sheet IS the search screen:
+   * results fill it, and the planner's own controls step aside until a
+   * destination is chosen.
+   */
+  const isSearchingDest = !selectedDest && (destResults.length > 0 || destLoading || destNoMatches);
 
   const canSwap = !!selectedDest || (!useMyLocation && !!selectedOrigin);
   const canPlanRoute =
@@ -382,21 +393,24 @@ export function RoutePlanningPanel({
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="relative pointer-events-auto w-full max-w-2xl mx-auto bg-sb-surface-container-low rounded-t-[24px] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] max-h-[90vh] overflow-y-auto hide-scrollbar pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+            className="nv-frame nv-sheet nv-lift relative pointer-events-auto w-full max-w-2xl mx-auto rounded-t-[24px] max-h-[90vh] overflow-y-auto hide-scrollbar pb-[max(1.5rem,env(safe-area-inset-bottom))]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drag Handle */}
-            <div className="w-12 h-1.5 bg-[#89919d]/70 rounded-full mx-auto mt-3 mb-6" />
+            <div className="w-10 h-1 bg-[#5B6E7F]/60 rounded-full mx-auto mt-3 mb-5" />
 
             {/* Header */}
-            <div className="flex justify-between items-center px-6 mb-8">
-              <h2 className="font-[var(--font-headline)] text-2xl font-bold tracking-tight text-[#e2e2eb]">Plan Route</h2>
+            <div className="flex justify-between items-start px-6 mb-6">
+              <div>
+                <h2 className="mast mast-2 text-[#E6EAF0]">Where</h2>
+                <p className="caption mt-2">exact first. places after.</p>
+              </div>
               <button
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-[#33343b] transition-colors"
+                className="p-2 -mr-2 rounded-full hover:bg-white/5 transition-colors"
                 aria-label="Close"
               >
-                <X className="w-5 h-5 text-[#bfc7d4]" />
+                <X className="w-5 h-5 text-[#5B6E7F]" />
               </button>
             </div>
 
@@ -408,23 +422,23 @@ export function RoutePlanningPanel({
               {useMyLocation ? (
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    <Navigation className="w-5 h-5 text-[#3ce36a]" />
+                    <Navigation className="w-5 h-5 text-[#B6BECB]" />
                   </div>
                   <input
-                    className="w-full h-14 bg-[#00a844]/10 border-none rounded-2xl pl-12 pr-20 font-semibold text-[#3ce36a] focus:ring-2 focus:ring-[#3ce36a]"
+                    className="w-full h-14 bg-transparent nv-hairline rounded-2xl pl-12 pr-24 ui-text text-[#E6EAF0] focus:outline-none focus:border-[#E6EAF0]/50"
                     readOnly
                     type="text"
                     value={originStatus === 'ready' ? MY_LOCATION_LABEL : 'Locating…'}
                   />
                   {originStatus === 'locating' && (
-                    <Loader2 className="absolute right-20 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3ce36a]/70 animate-spin" />
+                    <Loader2 className="absolute right-20 top-1/2 -translate-y-1/2 w-4 h-4 text-[#E6EAF0]/70 animate-spin" />
                   )}
                   <button
                     onClick={() => {
                       setUseMyLocation(false);
                       setTimeout(() => originInputRef.current?.focus(), 50);
                     }}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[#89919d] hover:text-[#e2e2eb]"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 kicker hover:text-[#E6EAF0]"
                   >
                     Change
                   </button>
@@ -432,7 +446,7 @@ export function RoutePlanningPanel({
               ) : (
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    <Navigation className="w-5 h-5 text-[#3ce36a]" />
+                    <Navigation className="w-5 h-5 text-[#E6EAF0]" />
                   </div>
                   <input
                     ref={originInputRef}
@@ -452,16 +466,16 @@ export function RoutePlanningPanel({
                         commitOriginFromKeyboard();
                       }
                     }}
-                    placeholder={originStatus === 'unavailable' ? 'Location unavailable — type a start address' : 'Address, store, or place'}
-                    className="w-full h-14 bg-[#282a30] border-none rounded-2xl pl-12 pr-10 font-medium text-[#e2e2eb] placeholder:text-[#89919d] focus:ring-2 focus:ring-[#9ecaff]"
+                    placeholder={originStatus === 'unavailable' ? 'Type a start address' : 'Address or place'}
+                    className="w-full h-14 bg-transparent nv-hairline rounded-2xl pl-12 pr-10 ui-text text-[#E6EAF0] placeholder:text-[#5B6E7F] focus:outline-none focus:border-[#E6EAF0]/50"
                   />
                   {originLoading && (
-                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#89919d] animate-spin" />
+                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5B6E7F] animate-spin" />
                   )}
                   {selectedOrigin && !originLoading && (
                     <button
                       onClick={() => { setSelectedOrigin(null); setOriginQuery(''); }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[#89919d] hover:text-[#e2e2eb]"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[#5B6E7F] hover:text-[#E6EAF0]"
                       aria-label="Clear origin"
                     >
                       <X className="w-4 h-4" />
@@ -479,7 +493,7 @@ export function RoutePlanningPanel({
                   )}
                   {originStatus === 'unavailable' ? (
                     !selectedOrigin && (
-                      <p className="mt-1 px-1 text-xs text-[#89919d]">
+                      <p className="mt-2 px-1 ui-sm text-[#5B6E7F]">
                         {locationError ?? 'GPS hasn’t found you yet'}
                       </p>
                     )
@@ -487,7 +501,7 @@ export function RoutePlanningPanel({
                     // A late GPS fix is offered, never forced over a typed origin
                     <button
                       onClick={() => setUseMyLocation(true)}
-                      className="mt-1 text-xs text-[#2196F3] hover:underline"
+                      className="mt-2 kicker hover:text-[#E6EAF0] transition-colors"
                     >
                       Use my location
                     </button>
@@ -498,7 +512,7 @@ export function RoutePlanningPanel({
               {/* TO Field */}
               <div className="relative mt-2">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                  <MapPin className="w-5 h-5 text-[#ffb4ab]" />
+                  <MapPin className="w-5 h-5 text-[#5B6E7F]" />
                 </div>
                 <input
                   ref={destInputRef}
@@ -523,30 +537,20 @@ export function RoutePlanningPanel({
                     }
                   }}
                   enterKeyHint="search"
-                  placeholder="Search an address, store, or place"
-                  className="w-full h-14 bg-[#282a30] border-none rounded-2xl pl-12 pr-10 font-medium text-[#e2e2eb] placeholder:text-[#89919d]/50 focus:ring-2 focus:ring-[#9ecaff]"
+                  placeholder="Address, store, or place"
+                  className="w-full h-14 bg-transparent nv-hairline rounded-2xl pl-12 pr-10 ui-text text-[#E6EAF0] placeholder:text-[#5B6E7F] focus:outline-none focus:border-[#E6EAF0]/50"
                 />
                 {destLoading && (
-                  <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#89919d] animate-spin" />
+                  <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5B6E7F] animate-spin" />
                 )}
                 {selectedDest && !destLoading && (
                   <button
                     onClick={() => { setSelectedDest(null); setDestQuery(''); setTimeout(() => destInputRef.current?.focus(), 50); }}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#89919d] hover:text-[#e2e2eb]"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#5B6E7F] hover:text-[#E6EAF0]"
                     aria-label="Clear destination"
                   >
                     <X className="w-4 h-4" />
                   </button>
-                )}
-                {(destResults.length > 0 || destLoading || destNoMatches) && !selectedDest && (
-                  <AddressDropdown
-                    results={destResults}
-                    isLoading={destLoading}
-                    emptyMessage={destNoMatches ? NO_MATCHES_HINT : undefined}
-                    activeIndex={destActive}
-                    userLocation={userLocation}
-                    onSelect={(r) => { setSelectedDest(r); setDestQuery(''); setDestResults([]); }}
-                  />
                 )}
                 {showRecents && (
                   <RecentsDropdown
@@ -562,7 +566,7 @@ export function RoutePlanningPanel({
             <button
               onClick={handleSwap}
               disabled={!canSwap}
-              className="self-center w-11 h-11 shrink-0 rounded-full bg-[#282a30] text-[#bfc7d4] flex items-center justify-center hover:bg-[#33343b] hover:text-[#e2e2eb] active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              className="self-center w-11 h-11 shrink-0 rounded-full nv-hairline text-[#5B6E7F] flex items-center justify-center hover:text-[#E6EAF0] active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               aria-label="Swap origin and destination"
               title="Swap"
             >
@@ -578,13 +582,13 @@ export function RoutePlanningPanel({
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                className="-mt-4 px-4 py-2.5 bg-[#93000a]/30 text-[#ffb4ab] text-xs rounded-xl flex items-start justify-between gap-2"
+                className="-mt-4 px-4 py-3 nv-hairline rounded-xl ui-sm text-[#E8662E] flex items-start justify-between gap-2"
               >
                 <span className="flex-1">{searchError}</span>
                 <button
                   type="button"
                   onClick={() => setSearchError(null)}
-                  className="p-0.5 rounded-full hover:bg-[#ffb4ab]/10 shrink-0"
+                  className="p-0.5 rounded-full hover:bg-[#E8662E]/10 shrink-0"
                   aria-label="Dismiss search error"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -593,24 +597,34 @@ export function RoutePlanningPanel({
             )}
           </AnimatePresence>
 
+          {isSearchingDest ? (
+            <ResultSections
+              results={destResults}
+              isLoading={destLoading}
+              emptyMessage={destNoMatches ? NO_MATCHES_HINT : undefined}
+              activeIndex={destActive}
+              userLocation={userLocation}
+              onSelect={(r) => { setSelectedDest(r); setDestQuery(''); setDestResults([]); }}
+              onDropPin={onDropPin}
+            />
+          ) : (
+          <>
+
           {/* Vehicle Profile */}
           <div>
-            <label className="block font-[var(--font-headline)] text-xs font-bold uppercase tracking-widest text-[#bfc7d4] mb-4 px-1">
-              Vehicle Profile
+            <label className="block kicker mb-3 px-1">
+              Vehicle
             </label>
             <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
               {VEHICLE_OPTIONS.map((v) => (
                 <button
                   key={v.id}
                   onClick={() => setVehicle(v.id)}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-full whitespace-nowrap transition-all active:scale-95 duration-150 ${
-                    vehicle === v.id
-                      ? 'bg-[#9ecaff] text-[#003258] shadow-lg shadow-[#9ecaff]/20'
-                      : 'bg-[#33343b] text-[#e2e2eb] hover:bg-[#373940]'
+                  className={`nv-chip mono-bar px-5 py-2.5 whitespace-nowrap transition-all active:scale-95 duration-150 ${
+                    vehicle === v.id ? 'nv-chip-on' : 'hover:text-[#E6EAF0]'
                   }`}
                 >
-                  <span>{v.emoji}</span>
-                  <span className="font-bold text-sm">{v.label}</span>
+                  {v.label}
                 </button>
               ))}
             </div>
@@ -618,52 +632,38 @@ export function RoutePlanningPanel({
 
           {/* Route Preferences */}
           <div className="space-y-3">
-            <label className="block font-[var(--font-headline)] text-xs font-bold uppercase tracking-widest text-[#bfc7d4] mb-4 px-1">
-              Routing Strategy
+            <label className="block kicker mb-3 px-1">
+              Routing
             </label>
             {MODE_OPTIONS.map((m) => (
               <button
                 key={m.id}
                 onClick={() => setMode(m.id)}
-                className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
-                  mode === m.id
-                    ? 'bg-[#2196F3]/10 border-2 border-[#2196F3] shadow-xl shadow-[#2196F3]/5'
-                    : 'bg-[#282a30] border border-transparent hover:border-[#404752]/30'
+                className={`w-full flex items-center justify-between gap-4 px-4 py-4 rounded-2xl text-left transition-all nv-hairline ${
+                  mode === m.id ? 'nv-ember-edge' : 'hover:bg-white/[0.03]'
                 }`}
               >
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
-                    mode === m.id ? 'bg-[#2196F3]' : 'bg-[#33343b]'
-                  }`}>
-                    {m.icon}
-                  </div>
-                  <div className="text-left">
-                    <h4 className={`font-bold ${mode === m.id ? 'text-[#9ecaff]' : 'text-[#e2e2eb]'}`}>
-                      {m.label}
-                    </h4>
-                    <p className={`text-sm ${mode === m.id ? 'text-[#9ecaff]/70' : 'text-[#bfc7d4]'}`}>
-                      {m.description}
-                    </p>
-                  </div>
+                <div className="min-w-0">
+                  <h4 className={`mast mast-3 ${mode === m.id ? 'text-[#E8662E]' : 'text-[#E6EAF0]'}`}>{m.label}</h4>
+                  <p className="ui-sm text-[#5B6E7F] mt-1.5">{m.description}</p>
                 </div>
-                {mode === m.id ? (
-                  <svg className="w-6 h-6 text-[#9ecaff]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                ) : (
-                  <svg className="w-6 h-6 text-[#404752]/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-                )}
               </button>
             ))}
           </div>
 
           {/* Main CTA — Gradient button */}
-          <button
-            onClick={handlePlanRoute}
-            disabled={!canPlanRoute}
-            className="w-full h-14 bg-gradient-to-r from-[#2196F3] to-[#00BCD4] rounded-full font-[var(--font-headline)] text-lg font-extrabold text-white shadow-xl shadow-[#00BCD4]/20 flex items-center justify-center gap-3 active:scale-95 transition-transform duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Find Route
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
-          </button>
+          <div>
+            <div className="nv-rule mb-5" />
+            <button
+              onClick={handlePlanRoute}
+              disabled={!canPlanRoute}
+              className="mast mast-2 text-[#E6EAF0] w-full text-left py-1 transition-opacity active:opacity-60 disabled:text-[#5B6E7F] disabled:cursor-not-allowed"
+            >
+              Plot route
+            </button>
+          </div>
+          </>
+          )}
         </div>
           </motion.div>
         </div>
@@ -672,12 +672,150 @@ export function RoutePlanningPanel({
   );
 }
 
-const KIND_ICONS = {
-  place: Store,
-  address: Home,
-  street: RouteIcon,
-  area: MapPin,
-} as const;
+/**
+ * The search screen's body: exact addresses first, then places, each row a
+ * hairline apart. The one ember is the dot beside the top hit.
+ */
+function ResultSections({
+  results,
+  isLoading,
+  activeIndex,
+  userLocation,
+  emptyMessage,
+  onSelect,
+  onDropPin,
+}: {
+  results: GeocodingResult[];
+  isLoading: boolean;
+  activeIndex: number;
+  userLocation?: LatLng | null;
+  emptyMessage?: string;
+  onSelect: (r: GeocodingResult) => void;
+  onDropPin?: () => void;
+}) {
+  const addresses: { result: GeocodingResult; index: number }[] = [];
+  const places: { result: GeocodingResult; index: number }[] = [];
+  results.forEach((result, index) => {
+    const kind = result.kind ?? 'area';
+    (kind === 'address' || kind === 'street' ? addresses : places).push({ result, index });
+  });
+
+  const topRow = (addresses[0] ?? places[0])?.index ?? -1;
+
+  return (
+    <div className="-mt-3">
+      {isLoading && results.length === 0 && (
+        <div className="space-y-4 py-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-6 w-3/4 bg-white/5" />
+              <Skeleton className="h-3 w-1/2 bg-white/5" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!isLoading && results.length === 0 && emptyMessage && (
+        <p className="ui-sm text-[#5B6E7F] py-2">{emptyMessage}</p>
+      )}
+
+      {addresses.length > 0 && (
+        <ResultGroup
+          label="Addresses"
+          rows={addresses}
+          activeIndex={activeIndex}
+          topRow={topRow}
+          userLocation={userLocation}
+          onSelect={onSelect}
+        />
+      )}
+
+      {places.length > 0 && (
+        <ResultGroup
+          label="Places"
+          rows={places}
+          activeIndex={activeIndex}
+          topRow={topRow}
+          userLocation={userLocation}
+          onSelect={onSelect}
+        />
+      )}
+
+      {onDropPin && (
+        <div className="mt-8">
+          <div className="nv-rule mb-5" />
+          <button
+            onClick={onDropPin}
+            className="mast mast-2 text-[#E6EAF0] text-left transition-opacity active:opacity-60"
+          >
+            Drop a pin
+          </button>
+          <p className="caption mt-2">if the block is not listed.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ResultGroup({
+  label,
+  rows,
+  activeIndex,
+  topRow,
+  userLocation,
+  onSelect,
+}: {
+  label: string;
+  rows: { result: GeocodingResult; index: number }[];
+  activeIndex: number;
+  /** Flat index of the first row as displayed — the one that gets the ember. */
+  topRow: number;
+  userLocation?: LatLng | null;
+  onSelect: (r: GeocodingResult) => void;
+}) {
+  return (
+    <div className="mt-6 first:mt-2">
+      <div className="kicker mb-1">{label}</div>
+      {rows.map(({ result, index }) => {
+        const distance = userLocation
+          ? formatDistance(haversineDistance(userLocation, result.location))
+          : null;
+        const isExact = result.kind === 'address' && !result.approximate;
+        return (
+          <button
+            key={`${result.shortName}-${result.location.lat}-${result.location.lng}`}
+            role="option"
+            aria-selected={index === activeIndex}
+            // onMouseDown + preventDefault keeps the input focused, so the
+            // sheet doesn't dismiss the list before the tap lands.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onSelect(result)}
+            className={`w-full flex items-center gap-3 py-3.5 text-left nv-hairline-b transition-colors ${
+              index === activeIndex ? 'bg-white/[0.04]' : ''
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${index === topRow ? 'bg-[#E8662E]' : 'bg-transparent'}`}
+              aria-hidden
+            />
+            <span className="min-w-0 flex-1">
+              <span className="mast mast-3 text-[#E6EAF0] truncate block">{result.shortName}</span>
+              <span className="ui-sm text-[#5B6E7F] truncate block mt-1">
+                {[result.category, distance, result.displayName].filter(Boolean).join(' · ')}
+                {result.approximate && ' · approx.'}
+              </span>
+            </span>
+            {isExact && (
+              <span className="kicker nv-hairline rounded-full px-2.5 py-1.5 shrink-0 text-[#B6BECB]">
+                Exact
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function AddressDropdown({
   results,
@@ -704,7 +842,7 @@ function AddressDropdown({
   if (results.length === 0 && !isLoading && !emptyMessage) return null;
   if (results.length === 0 && !isLoading) {
     return (
-      <div className="absolute left-0 right-0 top-full mt-1 bg-[#1e1f26] border border-[#404752]/20 rounded-2xl shadow-lg z-50 px-4 py-3 text-sm text-[#89919d]">
+      <div className="nv-sheet nv-hairline absolute left-0 right-0 top-full mt-2 rounded-2xl z-50 px-4 py-4 ui-sm text-[#5B6E7F]">
         {emptyMessage}
       </div>
     );
@@ -713,11 +851,13 @@ function AddressDropdown({
     <div
       ref={listRef}
       role="listbox"
-      className="absolute left-0 right-0 top-full mt-1 bg-[#1e1f26] border border-[#404752]/20 rounded-2xl shadow-lg z-50 max-h-72 overflow-y-auto hide-scrollbar"
+      className="nv-frame nv-sheet nv-hairline absolute left-0 right-0 top-full mt-2 rounded-2xl z-50 max-h-[22rem] overflow-y-auto hide-scrollbar"
     >
       {results.map((r, i) => {
-        const Icon = KIND_ICONS[r.kind ?? 'area'];
         const distance = userLocation ? formatDistance(haversineDistance(userLocation, r.location)) : null;
+        // One ember on the list: the dot beside the top hit.
+        const isTop = i === 0;
+        const isExact = r.kind === 'address' && !r.approximate;
         return (
           <button
             key={`${r.shortName}-${r.location.lat}-${r.location.lng}`}
@@ -727,43 +867,35 @@ function AddressDropdown({
             // firing before onClick on mobile, which would dismiss the dropdown
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onSelect(r)}
-            className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[#373940] transition-colors ${
-              i === activeIndex ? 'bg-[#373940]' : ''
+            className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors nv-hairline-b last:border-b-0 ${
+              i === activeIndex ? 'bg-white/[0.04]' : 'hover:bg-white/[0.03]'
             }`}
           >
-            <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${r.kind === 'place' ? 'text-[#9ecaff]' : 'text-[#89919d]'}`} />
+            <span
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${isTop ? 'bg-[#E8662E]' : 'bg-transparent'}`}
+              aria-hidden
+            />
             <div className="min-w-0 flex-1">
-              <div className="flex items-baseline gap-2">
-                <span className="text-sm font-medium text-[#e2e2eb] truncate">{r.shortName}</span>
-                {r.category && (
-                  <span className="text-[11px] text-[#9ecaff]/80 whitespace-nowrap">{r.category}</span>
-                )}
-                {r.approximate && (
-                  <span
-                    className="text-[10px] leading-4 px-1.5 rounded-full border border-[#404752]/60 text-[#89919d] whitespace-nowrap"
-                    title="Pinned at the nearest known address"
-                  >
-                    approx.
-                  </span>
-                )}
+              <div className="mast mast-3 text-[#E6EAF0] truncate">{r.shortName}</div>
+              <div className="ui-sm text-[#5B6E7F] truncate mt-1">
+                {[r.category, distance, r.displayName].filter(Boolean).join(' · ')}
+                {r.approximate && ' · approx.'}
               </div>
-              {r.displayName && <div className="text-xs text-[#89919d] truncate">{r.displayName}</div>}
             </div>
-            {distance && (
-              <span className="text-[11px] text-[#89919d] whitespace-nowrap mt-0.5 tabular-nums">{distance}</span>
+            {isExact && (
+              <span className="kicker nv-hairline rounded-full px-2.5 py-1.5 shrink-0 text-[#B6BECB]">
+                Exact
+              </span>
             )}
           </button>
         );
       })}
       {isLoading && results.length === 0 && (
-        <div className="px-4 py-2 space-y-2">
+        <div className="px-4 py-3 space-y-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="flex items-start gap-3 py-2">
-              <Skeleton className="w-4 h-4 rounded mt-0.5 shrink-0" />
-              <div className="flex-1 space-y-1.5">
-                <Skeleton className="h-3.5 w-3/4" />
-                <Skeleton className="h-3 w-full" />
-              </div>
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-5 w-3/4 bg-white/5" />
+              <Skeleton className="h-3 w-1/2 bg-white/5" />
             </div>
           ))}
         </div>
@@ -782,26 +914,26 @@ function RecentsDropdown({
   onRemove?: (r: GeocodingResult) => void;
 }) {
   return (
-    <div className="absolute left-0 right-0 top-full mt-1 bg-[#1e1f26] border border-[#404752]/20 rounded-2xl shadow-lg z-50 max-h-56 overflow-y-auto hide-scrollbar">
-      <div className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-[#89919d]">Recent</div>
+    <div className="nv-frame nv-sheet nv-hairline absolute left-0 right-0 top-full mt-2 rounded-2xl z-50 max-h-72 overflow-y-auto hide-scrollbar">
+      <div className="px-4 pt-4 pb-2 kicker">Recent</div>
       {recents.map((r, i) => (
-        <div key={i} className="flex items-center hover:bg-[#373940] transition-colors">
+        <div key={i} className="flex items-center hover:bg-white/[0.03] transition-colors nv-hairline-b last:border-b-0">
           <button
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onSelect(r)}
-            className="flex-1 flex items-start gap-3 px-4 py-3 text-left min-w-0"
+            className="flex-1 flex items-start gap-3 px-4 py-3.5 text-left min-w-0"
           >
-            <History className="w-4 h-4 text-[#89919d] mt-0.5 shrink-0" />
+            <History className="w-4 h-4 text-[#5B6E7F] mt-1.5 shrink-0" />
             <div className="min-w-0">
-              <div className="text-sm font-medium text-[#e2e2eb] truncate">{r.shortName}</div>
-              <div className="text-xs text-[#89919d] truncate">{r.displayName}</div>
+              <div className="mast mast-3 text-[#E6EAF0] truncate">{r.shortName}</div>
+              <div className="ui-sm text-[#5B6E7F] truncate mt-1">{r.displayName}</div>
             </div>
           </button>
           {onRemove && (
             <button
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => onRemove(r)}
-              className="p-3 mr-1 text-[#89919d] hover:text-[#ffb4ab] shrink-0"
+              className="p-3 mr-1 text-[#5B6E7F] hover:text-[#E8662E] shrink-0"
               aria-label={`Remove ${r.shortName} from recents`}
             >
               <Trash2 className="w-3.5 h-3.5" />

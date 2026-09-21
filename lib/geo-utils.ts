@@ -192,9 +192,12 @@ export function formatDuration(seconds: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-/** Polyline color based on bump count (matching Flutter color logic). */
-export function routeColor(bumpCount: number, isSpeedBumpFree: boolean): string {
-  if (isSpeedBumpFree) return '#00C853'; // green
-  if (bumpCount >= 5) return '#FF1744'; // red
-  return '#2196F3'; // blue
+/**
+ * Route line colour. In preview the chosen route carries the ember; once
+ * you're driving it turns chrome and the ember moves to the next bump, so
+ * the map never shows two accents at once.
+ */
+export function routeColor(isSelected: boolean, isNavigating = false): string {
+  if (!isSelected) return '#5B6E7F';
+  return isNavigating ? '#E6EAF0' : '#E8662E';
 }

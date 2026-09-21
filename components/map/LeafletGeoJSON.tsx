@@ -18,9 +18,9 @@ interface LeafletGeoJSONProps {
 
 // Default style values
 const DEFAULT_STYLE: Required<GeoJSONStyle> = {
-  fillColor: "#3b82f6",
+  fillColor: "#E6EAF0",
   fillOpacity: 0.2,
-  color: "#2563eb",
+  color: "#E6EAF0",
   weight: 2,
 };
 

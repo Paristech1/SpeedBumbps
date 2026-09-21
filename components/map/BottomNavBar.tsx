@@ -22,20 +22,20 @@ function NavItem({ active, label, icon, onClick }: NavItemProps) {
     <button
       onClick={onClick}
       aria-label={label}
-      className="relative flex flex-col items-center justify-center px-4 py-2 text-sb-outline hover:text-sb-primary active:scale-95 transition-colors"
+      className="relative flex flex-col items-center justify-center px-2.5 py-2 text-[#5B6E7F] hover:text-[#E6EAF0] active:scale-95 transition-colors"
     >
       {active && (
         <motion.div
           layoutId="bottom-nav-active-pill"
-          className="absolute inset-0 bg-sb-primary/15 border border-sb-primary/30 rounded-[20px]"
+          className="absolute inset-0 rounded-[20px] bg-white/[0.06] nv-hairline"
           transition={{ type: "spring", stiffness: 400, damping: 35 }}
         />
       )}
-      <div className={`relative z-10 transition-colors ${active ? "text-sb-primary" : "text-sb-outline"}`}>
+      <div className={`relative z-10 transition-colors ${active ? "text-[#E6EAF0]" : "text-[#5B6E7F]"}`}>
         {icon}
       </div>
-      <span className={`relative z-10 font-[var(--font-body)] text-[10px] font-semibold uppercase tracking-widest mt-0.5 transition-colors ${
-        active ? "text-sb-primary" : "text-sb-outline"
+      <span className={`relative z-10 kicker text-[9px] tracking-[0.1em] mt-1 transition-colors ${
+        active ? "text-[#E6EAF0]" : "text-[#5B6E7F]"
       }`}>
         {label}
       </span>
@@ -44,7 +44,7 @@ function NavItem({ active, label, icon, onClick }: NavItemProps) {
 }
 
 /**
- * Bottom navigation — Velocity Dark shared component.
+ * Bottom navigation — Nocturne shared component.
  * Sits above tab drawers (z-1060) so tabs stay tappable while one is open.
  * Includes layoutId sliding pill for active tab and safe-area padding.
  */
@@ -53,7 +53,7 @@ export function BottomNavBar({ activeTab, onTabChange, onFabClick }: BottomNavBa
   const handleTab = (tab: TabId) => onTabChange(activeTab === tab ? "explore" : tab);
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full z-[1060] flex justify-around items-center px-4 pt-3 pb-[max(1.75rem,env(safe-area-inset-bottom))] bg-sb-surface/85 backdrop-blur-xl rounded-t-[28px] border-t border-sb-outline-variant/30 shadow-[0_-8px_30px_rgb(0,0,0,0.5)]">
+    <nav className="nv-glass fixed bottom-0 left-0 w-full z-[1060] flex justify-around items-center px-4 pt-3 pb-[max(1.75rem,env(safe-area-inset-bottom))] rounded-t-[28px] border-x-0 border-b-0">
       <NavItem
         active={activeTab === "explore"}
         label="Explore"
@@ -80,7 +80,7 @@ export function BottomNavBar({ activeTab, onTabChange, onFabClick }: BottomNavBa
       <div className="relative -top-6">
         <button
           onClick={onFabClick}
-          className="w-14 h-14 rounded-full bg-gradient-to-br from-sb-primary to-sb-primary-container flex items-center justify-center text-sb-on-primary-container shadow-[0_0_24px_rgba(33,150,243,0.45)] border-4 border-sb-surface active:scale-90 transition-transform"
+          className="w-14 h-14 rounded-full bg-[#E6EAF0] flex items-center justify-center text-[#07090A] border-4 border-[#07090A] active:scale-90 transition-transform"
           aria-label="Plan route"
         >
           <MapPin className="w-6 h-6" />

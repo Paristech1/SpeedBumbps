@@ -11,7 +11,7 @@ interface MapTileSwitcherProps {
 }
 
 /**
- * MapTileSwitcher — Velocity Dark glass-panel tile layer selector.
+ * MapTileSwitcher — Nocturne glass tile layer selector.
  */
 export function MapTileSwitcher({
   selectedProviderId,
@@ -22,6 +22,12 @@ export function MapTileSwitcher({
 
   // Map tile providers to display options with PNG previews
   const layerOptions = [
+    {
+      id: "nocturne",
+      label: "Nocturne",
+      image: "/map-dark.png",
+      provider: TILE_PROVIDERS.find((p) => p.id === "nocturne"),
+    },
     {
       id: "osm",
       label: "Basic",
@@ -63,8 +69,8 @@ export function MapTileSwitcher({
               disabled={!layer.provider}
               className={`flex flex-col items-center gap-1.5 px-2 sm:px-3 py-2 rounded-xl transition-all ${
                 selectedProviderId === layer.id
-                  ? "bg-[#2196F3]/20 ring-2 ring-[#2196F3]"
-                  : "hover:bg-[#373940]"
+                  ? "bg-[#E6EAF0]/20 ring-2 ring-[#E6EAF0]"
+                  : "hover:bg-[#0C1416]"
               } ${!layer.provider ? "opacity-50 cursor-not-allowed" : ""}`}
               title={layer.label}
             >
@@ -74,10 +80,10 @@ export function MapTileSwitcher({
                   alt={`${layer.label} map preview`}
                   fill
                   sizes="(max-width: 640px) 40px, 48px"
-                  className="object-cover"
+                  className="object-cover nv-map-thumb"
                 />
               </div>
-              <span className="text-[10px] sm:text-xs font-medium text-[#bfc7d4]">
+              <span className="kicker text-[9px] tracking-[0.12em]">
                 {layer.label}
               </span>
             </button>
@@ -97,10 +103,10 @@ export function MapTileSwitcher({
               alt={`${selectedLayer.label} map preview`}
               fill
               sizes="(max-width: 640px) 64px, 80px"
-              className="object-cover"
+              className="object-cover nv-map-thumb"
             />
           </div>
-          <span className="block glass-panel px-2 py-1 text-[10px] sm:text-xs font-medium text-[#bfc7d4]">
+          <span className="block glass-panel px-2 py-1.5 kicker text-[9px] tracking-[0.12em]">
             {selectedLayer.label}
           </span>
         </button>

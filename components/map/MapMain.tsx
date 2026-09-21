@@ -29,11 +29,13 @@ import { useRouteDeviation } from "@/hooks/useRouteDeviation";
 import { useNavigationCamera } from "@/hooks/useNavigationCamera";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { primeVoice, speak, isSpeechSupported } from "@/lib/voice-guidance";
+import { nextBumpAhead } from "@/lib/bump-ahead";
 import { log } from "@/lib/app-logger";
 import { useSavedRoutes } from "@/hooks/useSavedRoutes";
 import { useUserReports } from "@/hooks/useUserReports";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useRecentSearches } from "@/hooks/useRecentSearches";
+import { useNearbyBumpCount } from "@/hooks/useNearbyBumpCount";
 import { RoutingProvider, useRouting, useSelectedRoute } from "@/contexts/RoutingContext";
 import { useLeafletMap } from "@/hooks/useLeafletMap";
 import { reverseGeocode, coordinateLabel } from "@/lib/nominatim-service";
@@ -64,8 +66,17 @@ function SpeedBumpsMap({
   const routing = useRouting();
   const selectedRoute = useSelectedRoute();
 
-  // Speed bump markers (viewport-based, canvas renderer); on-route bumps emphasised
-  useSpeedBumpMarkers(map, { onRouteBumps: selectedRoute?.bumpsOnRoute ?? null });
+  // Speed bump markers (viewport-based, canvas renderer); on-route bumps emphasised.
+  // The next bump ahead is the single ember on the map.
+  const nextBump = nextBumpAhead(
+    selectedRoute?.bumpsOnRoute,
+    location?.position ?? null,
+    selectedRoute?.polylinePoints,
+  );
+  useSpeedBumpMarkers(map, {
+    onRouteBumps: selectedRoute?.bumpsOnRoute ?? null,
+    nextBumpId: nextBump?.bump.id ?? null,
+  });
 
   // Route polyline rendering — follow-cam owns the camera during navigation
   useRoutePolyline({
@@ -99,9 +110,9 @@ function SpeedBumpsMap({
       const L = (await import("leaflet")).default;
       if (!mounted) return;
 
-      const dotHtml = `<div style="width:14px;height:14px;background:#2196F3;border:3px solid white;border-radius:50%;box-shadow:0 0 12px rgba(33,150,243,0.6), 0 0 24px rgba(33,150,243,0.3)"></div>`;
+      const dotHtml = `<div style="width:14px;height:14px;background:#E6EAF0;border:3px solid #07090A;border-radius:50%;box-shadow:0 0 0 1px rgba(230,234,240,0.35), 0 0 18px rgba(230,234,240,0.25)"></div>`;
       // Upward chevron rotated to the travel heading (north-up map)
-      const arrowHtml = `<div style="transform:rotate(${heading ?? 0}deg);width:30px;height:30px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 8px rgba(33,150,243,0.7))"><svg width="30" height="30" viewBox="0 0 24 24" fill="#2196F3" stroke="white" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2L20 21L12 16L4 21L12 2Z"/></svg></div>`;
+      const arrowHtml = `<div style="transform:rotate(${heading ?? 0}deg);width:30px;height:30px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 10px rgba(230,234,240,0.35))"><svg width="30" height="30" viewBox="0 0 24 24" fill="#E6EAF0" stroke="#07090A" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2L20 21L12 16L4 21L12 2Z"/></svg></div>`;
       const icon = L.divIcon({
         html: showArrow ? arrowHtml : dotHtml,
         className: "user-location-marker",
@@ -146,7 +157,7 @@ function SpeedBumpsMap({
 }
 
 /**
- * Outer component with all UI overlays — Velocity Dark design.
+ * Outer component with all UI overlays — Nocturne Velocity design.
  */
 function MapMainInner() {
   const [isMeasurementOpen, setIsMeasurementOpen] = useState(false);
@@ -172,6 +183,8 @@ function MapMainInner() {
   const [originIsCurrentLocation, setOriginIsCurrentLocation] = useState(false);
   // Destination preset by "Route here" on the map
   const [routeHereDestination, setRouteHereDestination] = useState<GeocodingResult | null>(null);
+  // "Drop a pin" from the search screen: the map takes the next tap.
+  const [isPickingDestination, setIsPickingDestination] = useState(false);
 
   const routing = useRouting();
   const { recents, addRecent, removeRecent } = useRecentSearches();
@@ -348,6 +361,11 @@ function MapMainInner() {
   }, []);
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
+    if (isPickingDestination) {
+      setIsPickingDestination(false);
+      handleRouteHere(lat, lng);
+      return;
+    }
     if (isSelectingReportLocation) {
       setReportPickedCoords({ lat, lng });
       setIsSelectingReportLocation(false);
@@ -358,7 +376,7 @@ function MapMainInner() {
       setIsSelectingPOILocation(false);
       setCursorCoords(null);
     }
-  }, [isSelectingPOILocation, isSelectingReportLocation]);
+  }, [isSelectingPOILocation, isSelectingReportLocation, isPickingDestination, handleRouteHere]);
 
   const handleMapMouseMove = useCallback((lat: number, lng: number) => {
     if (isSelectingPOILocation) setCursorCoords({ lat, lng });
@@ -387,6 +405,7 @@ function MapMainInner() {
   }, [importGeoJSON]);
 
   const hasRoute = routing.status === "success" && !!routing.result;
+  const nearbyBumps = useNearbyBumpCount(location?.position ?? null);
 
   // Keep the screen on while navigating (GPS and speech die when it locks)
   useWakeLock(routing.isNavigating);
@@ -428,16 +447,17 @@ function MapMainInner() {
   const controlsBottom = routeSheetVisible ? snapToPx(routeSnap) + 16 : 128;
   const controlsHidden =
     (routeSheetVisible && typeof routeSnap === "number" && routeSnap >= 0.8) ||
-    activeTab !== "explore";
+    activeTab !== "explore" ||
+    routing.isNavigating;
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-[#111319]">
+    <div className="relative h-screen w-full overflow-hidden bg-[#07090A]">
       {/* Map */}
       <LeafletMap
         className="w-full h-full"
         onClick={handleMapClick}
         onMouseMove={handleMapMouseMove}
-        cursorStyle={isSelectingPOILocation || isSelectingReportLocation ? "crosshair" : "grab"}
+        cursorStyle={isSelectingPOILocation || isSelectingReportLocation || isPickingDestination ? "crosshair" : "grab"}
       >
         <LeafletTileLayer
           url={tileLayerProps.url}
@@ -464,21 +484,17 @@ function MapMainInner() {
             exit="exit"
             className="fixed top-0 w-full z-[1002] flex justify-between items-center px-6 py-4 bg-transparent pt-[env(safe-area-inset-top)]"
           >
-            <div className="flex items-center gap-3">
-              <svg className="w-7 h-7 text-[#2196F3]" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-              </svg>
-              <h1 className="font-[var(--font-headline)] font-bold tracking-tight text-2xl text-slate-100">
-                SpeedBumps
-              </h1>
+            <div className="leading-none">
+              <h1 className="mast mast-2 text-[#E6EAF0]">Speed</h1>
+              <h1 className="mast mast-2 text-[#5B6E7F] -mt-1">Bumps</h1>
             </div>
             <div className="flex items-center gap-4">
               <button
                 onClick={() => handleTabChange(activeTab === "profile" ? "explore" : "profile")}
-                className="w-10 h-10 rounded-full border-2 border-[#2196F3]/20 overflow-hidden shadow-2xl shadow-blue-500/10 active:scale-95 transition-transform"
+                className="w-10 h-10 rounded-full nv-hairline overflow-hidden active:scale-95 transition-transform"
                 aria-label="Open profile"
               >
-                <div className="w-full h-full bg-gradient-to-br from-[#2196F3] to-[#00BCD4] flex items-center justify-center text-white font-bold text-sm">
+                <div className="w-full h-full flex items-center justify-center mono-bar text-[#B6BECB]">
                   {profile.displayName.charAt(0).toUpperCase() || "P"}
                 </div>
               </button>
@@ -499,6 +515,7 @@ function MapMainInner() {
           speedBumps={selectedRoute.bumpsOnRoute}
           gpsAccuracy={location?.accuracy ?? null}
           speedMps={location?.speed ?? null}
+          onReportBump={() => handleTabChange("reports")}
         />
       )}
 
@@ -506,7 +523,7 @@ function MapMainInner() {
       {routing.isNavigating && !isFollowing && (
         <button
           onClick={() => setIsFollowing(true)}
-          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[1100] flex items-center gap-2 px-5 py-3 rounded-full glass-panel ghost-border shadow-2xl text-[#9ecaff] font-bold text-sm active:scale-95 transition-all"
+          className="fixed bottom-40 left-1/2 -translate-x-1/2 z-[1100] flex items-center gap-2 px-5 py-2.5 rounded-full nv-glass mono-bar text-[#E6EAF0] active:scale-95 transition-all"
           aria-label="Recenter on my location"
         >
           <LocateFixed className="w-4 h-4" />
@@ -514,7 +531,7 @@ function MapMainInner() {
         </button>
       )}
 
-      {/* Search / Route bar — Velocity Dark glass style. Stays put (stable);
+      {/* Search / Route bar — Nocturne glass style. Stays put (stable);
           hidden only in opt-in immersive mode */}
       <AnimatePresence>
         {!routing.isNavigating && !isImmersive && (
@@ -527,7 +544,7 @@ function MapMainInner() {
             className="absolute left-0 right-0 sm:left-6 sm:right-auto top-[calc(5rem+env(safe-area-inset-top))] z-[1050] px-4 sm:px-0"
           >
             <div className="flex items-center gap-3">
-            <div className="flex items-center gap-3 glass-panel ghost-border px-5 py-4 shadow-2xl rounded-full w-full sm:w-[380px]">
+            <div className="flex items-center gap-3 nv-glass px-5 py-4 rounded-full w-full sm:w-[380px]">
               {hasRoute ? (
                 <>
                   <button
@@ -535,26 +552,26 @@ function MapMainInner() {
                     className="flex items-center gap-2 flex-1 text-left min-w-0"
                     aria-label="Edit route"
                   >
-                    <Navigation className="w-5 h-5 text-[#44d8f1] shrink-0" />
+                    <Navigation className="w-5 h-5 text-[#B6BECB] shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-[#e2e2eb] truncate">
+                      <div className="ui-text text-[#E6EAF0] truncate">
                         {routing.originLabel} → {routing.destinationLabel}
                       </div>
                     </div>
                   </button>
                   <button
                     onClick={() => setIsRoutePlanningOpen(true)}
-                    className="p-1.5 hover:bg-[#373940] rounded-full shrink-0 transition-colors"
+                    className="p-1.5 hover:bg-[#0C1416] rounded-full shrink-0 transition-colors"
                     aria-label="Edit route"
                   >
-                    <Pencil className="w-3.5 h-3.5 text-[#89919d]" />
+                    <Pencil className="w-3.5 h-3.5 text-[#5B6E7F]" />
                   </button>
                   <button
                     onClick={() => { routing.clearRoute(); setIsRoutePlanningOpen(false); }}
-                    className="p-1.5 hover:bg-[#373940] rounded-full shrink-0 transition-colors"
+                    className="p-1.5 hover:bg-[#0C1416] rounded-full shrink-0 transition-colors"
                     aria-label="Clear route"
                   >
-                    <X className="w-4 h-4 text-[#89919d]" />
+                    <X className="w-4 h-4 text-[#5B6E7F]" />
                   </button>
                 </>
               ) : routing.status === "loading" ? (
@@ -571,14 +588,14 @@ function MapMainInner() {
                   className="flex items-center gap-3 flex-1 text-left"
                   aria-label="Plan route"
                 >
-                  <svg className="w-5 h-5 text-[#9ecaff] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg className="w-5 h-5 text-[#5B6E7F] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="11" cy="11" r="8" />
                     <path d="m21 21-4.35-4.35" />
                   </svg>
-                  <span className="text-sm font-medium text-[#bfc7d4] flex-1">
-                    Where to in Philly?
+                  <span className="mast mast-4 text-[#B6BECB] flex-1">
+                    Where to
                   </span>
-                  <svg className="w-5 h-5 text-[#bfc7d4] shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="w-5 h-5 text-[#5B6E7F] shrink-0" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                     <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                   </svg>
@@ -589,15 +606,20 @@ function MapMainInner() {
             {!showBrand && (
               <button
                 onClick={() => handleTabChange(activeTab === "profile" ? "explore" : "profile")}
-                className="w-11 h-11 shrink-0 rounded-full border-2 border-[#2196F3]/20 overflow-hidden shadow-2xl shadow-blue-500/10 active:scale-95 transition-transform animate-in fade-in duration-500"
+                className="w-11 h-11 shrink-0 rounded-full nv-glass overflow-hidden active:scale-95 transition-transform animate-in fade-in duration-500"
                 aria-label="Open profile"
               >
-                <div className="w-full h-full bg-gradient-to-br from-[#2196F3] to-[#00BCD4] flex items-center justify-center text-white font-bold text-sm">
+                <div className="w-full h-full flex items-center justify-center mono-bar text-[#B6BECB]">
                   {profile.displayName.charAt(0).toUpperCase() || "P"}
                 </div>
               </button>
             )}
             </div>
+            {!hasRoute && nearbyBumps !== null && (
+              <p className="caption mt-3 pl-5 sm:pl-2">
+                {nearbyBumps} bump{nearbyBumps === 1 ? '' : 's'} within 1 mi.
+              </p>
+            )}
             <AnimatePresence>
               {routing.status === "error" && routing.error && !routeErrorDismissed && (
                 <motion.div
@@ -606,13 +628,13 @@ function MapMainInner() {
                   initial="hidden"
                   animate="visible"
                   exit="exit"
-                  className="mt-2 px-4 py-2.5 bg-[#93000a]/30 text-[#ffb4ab] text-sm rounded-xl shadow ghost-border flex items-start justify-between gap-2"
+                  className="mt-2 px-4 py-3 rounded-xl nv-glass ui-sm text-[#E8662E] flex items-start justify-between gap-2"
                 >
                   <span className="flex-1">{routing.error}</span>
                   <button
                     type="button"
                     onClick={() => setRouteErrorDismissed(true)}
-                    className="p-0.5 rounded-full hover:bg-[#ffb4ab]/10 shrink-0"
+                    className="p-0.5 rounded-full hover:bg-[#E8662E]/10 shrink-0"
                     aria-label="Dismiss route error"
                   >
                     <X className="w-4 h-4" />
@@ -624,7 +646,7 @@ function MapMainInner() {
         )}
       </AnimatePresence>
 
-      {/* Location tracking badge — Velocity Dark style */}
+      {/* Location tracking badge — Nocturne style */}
       <AnimatePresence>
         {!isImmersive && locationError && (
           <motion.button
@@ -635,7 +657,7 @@ function MapMainInner() {
             animate="visible"
             exit="exit"
             onClick={() => startTracking(routing.isNavigating)}
-            className="absolute top-[calc(4rem+env(safe-area-inset-top))] right-4 z-[1050] px-3 py-1.5 glass-panel ghost-border text-sb-error text-xs font-bold rounded-full shadow uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-transform"
+            className="absolute top-[calc(4.5rem+env(safe-area-inset-top))] right-4 z-[1050] px-3 py-2 nv-glass kicker text-[#E8662E] rounded-full flex items-center gap-1.5 active:scale-95 transition-transform"
           >
             <LocateFixed className="w-3 h-3" />
             GPS error — tap to retry
@@ -648,7 +670,7 @@ function MapMainInner() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="absolute top-[calc(4rem+env(safe-area-inset-top))] right-4 z-[1050] px-3 py-1.5 glass-panel ghost-border text-sb-warning-orange text-xs font-bold rounded-full shadow uppercase tracking-wider"
+            className="absolute top-[calc(4.5rem+env(safe-area-inset-top))] right-4 z-[1050] px-3 py-2 nv-glass kicker rounded-full"
           >
             Location off
           </motion.div>
@@ -660,19 +682,46 @@ function MapMainInner() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="absolute top-[calc(4rem+env(safe-area-inset-top))] right-4 z-[1050] px-3 py-1.5 glass-panel ghost-border text-sb-warning-orange text-xs font-bold rounded-full shadow uppercase tracking-wider"
+            className="absolute top-[calc(4.5rem+env(safe-area-inset-top))] right-4 z-[1050] px-3 py-2 nv-glass kicker rounded-full"
           >
             GPS: {Math.round(location.accuracy)}m
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Drop-a-pin prompt — type on the map, nothing boxed */}
+      <AnimatePresence>
+        {isPickingDestination && (
+          <motion.div
+            key="pick-destination"
+            variants={fadeScaleVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="nv-frame fixed left-5 right-5 top-[calc(env(safe-area-inset-top)+1.5rem)] z-[1100] flex items-start justify-between gap-4"
+          >
+            <div className="min-w-0">
+              <p className="mast mast-2 text-[#E6EAF0]">Tap the block</p>
+              <p className="caption mt-2">we&rsquo;ll name it for you.</p>
+            </div>
+            <button
+              onClick={() => { setIsPickingDestination(false); setIsRoutePlanningOpen(true); }}
+              className="mono-bar text-[#5B6E7F] hover:text-[#E6EAF0] shrink-0 pt-1 transition-colors"
+            >
+              Cancel
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Tile Switcher */}
-      <MapTileSwitcher
-        selectedProviderId={currentProviderId}
-        onProviderChange={setProviderId}
-        bottomOffset={controlsBottom}
-      />
+      {!routing.isNavigating && (
+        <MapTileSwitcher
+          selectedProviderId={currentProviderId}
+          onProviderChange={setProviderId}
+          bottomOffset={controlsBottom}
+        />
+      )}
 
       {/* Map Controls */}
       <MapControls
@@ -734,6 +783,7 @@ function MapMainInner() {
         locationPermission={hasPermission}
         locationError={locationError}
         getMapCenter={getMapCenter}
+        onDropPin={() => { setIsRoutePlanningOpen(false); setIsPickingDestination(true); }}
       />
 
       {/* Route Result Card — hidden during active navigation */}
@@ -788,7 +838,7 @@ function MapMainInner() {
         isLoaded={isProfileLoaded}
       />
 
-      {/* === BOTTOM NAVIGATION BAR (Velocity Dark shared component) === */}
+      {/* === BOTTOM NAVIGATION BAR (Nocturne shared component) === */}
       {!routing.isNavigating && (
         <BottomNavBar
           activeTab={activeTab}

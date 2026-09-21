@@ -1,3 +1,5 @@
+> Superseded by Nocturne Velocity — see `nocturne/DESIGN.md`. Kept for history.
+
 # Design System Specification: The Kinetic Luminescence
 
 ## 1. Overview & Creative North Star

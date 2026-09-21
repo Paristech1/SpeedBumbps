@@ -88,7 +88,7 @@ const POIListItem = memo(function POIListItem({
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+      className="flex items-center gap-3 w-full px-4 py-3 hover:bg-[#0C1416] dark:hover:bg-[#0C1416] transition-colors group"
     >
       {/* Category Icon - Clickable to fly to */}
       <button
@@ -102,10 +102,10 @@ const POIListItem = memo(function POIListItem({
 
       {/* Content - Clickable to fly to */}
       <button onClick={onFlyTo} className="flex-1 min-w-0 text-left">
-        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+        <div className="text-sm font-medium text-[#E6EAF0] text-[#E6EAF0] truncate">
           {poi.title}
         </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
+        <div className="text-xs text-[#B6BECB] text-[#5B6E7F]">
           {formatDecimalDegrees([poi.lat, poi.lng], 4)}
         </div>
       </button>
@@ -118,20 +118,20 @@ const POIListItem = memo(function POIListItem({
               e.stopPropagation();
               onEdit();
             }}
-            className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="p-1.5 rounded hover:bg-[#0C1416] dark:hover:bg-[#0C1416] transition-colors"
             title="Edit"
           >
-            <Edit2 className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+            <Edit2 className="h-4 w-4 text-[#B6BECB] text-[#B6BECB]" />
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
               onDelete();
             }}
-            className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+            className="p-1.5 rounded hover:bg-[#0C1416] dark:hover:bg-[#0C1416]/30 transition-colors"
             title="Delete"
           >
-            <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <Trash2 className="h-4 w-4 text-[#E8662E] dark:text-[#E8662E]" />
           </button>
         </div>
       )}
@@ -405,10 +405,10 @@ export const MapPOIPanel = memo(function MapPOIPanel({
     // Form view (Add/Edit)
     if (viewMode === "add" || viewMode === "edit") {
       return (
-        <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900 scrollbar-thin px-6 py-4">
+        <div className="flex-1 overflow-y-auto bg-[#0C1416] bg-[#0C1416] scrollbar-thin px-6 py-4">
           {/* Coordinates Section */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[#B6BECB] text-[#B6BECB] mb-2">
               Coordinates
             </label>
             {formData.lat && formData.lng && !isSelectingLocationProp ? (
@@ -421,7 +421,7 @@ export const MapPOIPanel = memo(function MapPOIPanel({
                       setFormData((prev) => ({ ...prev, lat: e.target.value }))
                     }
                     placeholder="Latitude"
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                    className="px-3 py-2 border border-[#E6EAF0]/12 border-[#E6EAF0]/12 rounded-lg bg-[#0C1416] bg-[#0C1416] text-[#E6EAF0] text-[#E6EAF0] text-sm"
                   />
                   <input
                     type="text"
@@ -430,15 +430,15 @@ export const MapPOIPanel = memo(function MapPOIPanel({
                       setFormData((prev) => ({ ...prev, lng: e.target.value }))
                     }
                     placeholder="Longitude"
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                    className="px-3 py-2 border border-[#E6EAF0]/12 border-[#E6EAF0]/12 rounded-lg bg-[#0C1416] bg-[#0C1416] text-[#E6EAF0] text-[#E6EAF0] text-sm"
                   />
                 </div>
                 <button
                   onClick={handleClearCoordinates}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="p-2 rounded-lg hover:bg-[#0C1416] dark:hover:bg-[#0C1416] transition-colors"
                   title="Clear coordinates"
                 >
-                  <XCircle className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                  <XCircle className="h-5 w-5 text-[#B6BECB] text-[#5B6E7F]" />
                 </button>
               </div>
             ) : (
@@ -447,8 +447,8 @@ export const MapPOIPanel = memo(function MapPOIPanel({
                   onClick={handleToggleLocationSelection}
                   className={`w-full px-4 py-3 border-2 border-dashed rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                     isSelectingLocationProp
-                      ? "border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm"
-                      : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10"
+                      ? "border-[#E6EAF0]/40 dark:border-[#E6EAF0]/40 bg-[#0C1416] dark:bg-[#0C1416]/20 text-[#E6EAF0] dark:text-[#E6EAF0] shadow-sm"
+                      : "border-[#E6EAF0]/12 border-[#E6EAF0]/12 bg-[#0C1416] bg-[#0C1416] text-[#B6BECB] text-[#5B6E7F] hover:border-[#E6EAF0]/40 dark:hover:border-[#E6EAF0]/40 hover:bg-[#0C1416] dark:hover:bg-[#0C1416]/10"
                   }`}
                 >
                   <MapPin
@@ -461,8 +461,8 @@ export const MapPOIPanel = memo(function MapPOIPanel({
                     : "Click to select location on map"}
                 </button>
                 {isSelectingLocationProp && cursorLat && cursorLng && (
-                  <div className="mt-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <div className="text-xs text-blue-600 dark:text-blue-400 font-mono">
+                  <div className="mt-2 px-3 py-2 bg-[#0C1416] dark:bg-[#0C1416]/20 border border-[#E6EAF0]/40 dark:border-[#E6EAF0]/40 rounded-lg">
+                    <div className="text-xs text-[#E6EAF0] dark:text-[#E6EAF0] font-mono">
                       {cursorLat.toFixed(6)}, {cursorLng.toFixed(6)}
                     </div>
                   </div>
@@ -473,7 +473,7 @@ export const MapPOIPanel = memo(function MapPOIPanel({
 
           {/* Category Selection */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[#B6BECB] text-[#B6BECB] mb-2">
               Category
             </label>
             <select
@@ -484,7 +484,7 @@ export const MapPOIPanel = memo(function MapPOIPanel({
                   category: e.target.value as POICategory,
                 }))
               }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+              className="w-full px-3 py-2 border border-[#E6EAF0]/12 border-[#E6EAF0]/12 rounded-lg bg-[#0C1416] bg-[#0C1416] text-[#E6EAF0] text-[#E6EAF0] text-sm"
             >
               {POI_CATEGORIES.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -496,7 +496,7 @@ export const MapPOIPanel = memo(function MapPOIPanel({
 
           {/* Title Input */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[#B6BECB] text-[#B6BECB] mb-2">
               Title *
             </label>
             <input
@@ -506,13 +506,13 @@ export const MapPOIPanel = memo(function MapPOIPanel({
                 setFormData((prev) => ({ ...prev, title: e.target.value }))
               }
               placeholder="Enter place name"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+              className="w-full px-3 py-2 border border-[#E6EAF0]/12 border-[#E6EAF0]/12 rounded-lg bg-[#0C1416] bg-[#0C1416] text-[#E6EAF0] text-[#E6EAF0] text-sm"
             />
           </div>
 
           {/* Description Input */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[#B6BECB] text-[#B6BECB] mb-2">
               Description
             </label>
             <textarea
@@ -525,7 +525,7 @@ export const MapPOIPanel = memo(function MapPOIPanel({
               }
               placeholder="Add notes or details (optional)"
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm resize-none"
+              className="w-full px-3 py-2 border border-[#E6EAF0]/12 border-[#E6EAF0]/12 rounded-lg bg-[#0C1416] bg-[#0C1416] text-[#E6EAF0] text-[#E6EAF0] text-sm resize-none"
             />
           </div>
         </div>
@@ -536,43 +536,43 @@ export const MapPOIPanel = memo(function MapPOIPanel({
     return (
       <>
         {/* Action Buttons */}
-        <div className="px-6 py-4 border-b dark:border-gray-800">
+        <div className="px-6 py-4 border-b border-[#E6EAF0]/12">
           <div className="grid grid-cols-4 gap-2">
             <button
               onClick={handleAddMode}
-              className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+              className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-[#0C1416] dark:bg-[#0C1416]/30 hover:bg-[#0C1416] dark:hover:bg-[#0C1416]/50 transition-colors"
             >
-              <Plus className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300 leading-tight">
+              <Plus className="h-5 w-5 text-[#E6EAF0] dark:text-[#E6EAF0]" />
+              <span className="text-[10px] font-medium text-[#B6BECB] text-[#B6BECB] leading-tight">
                 Add
               </span>
             </button>
             <button
               onClick={handleImportClick}
-              className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+              className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-[#0C1416] dark:bg-[#0C1416]/30 hover:bg-[#0C1416] dark:hover:bg-[#0C1416]/50 transition-colors"
             >
-              <Upload className="h-5 w-5 text-green-600 dark:text-green-400" />
-              <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300 leading-tight">
+              <Upload className="h-5 w-5 text-[#E6EAF0] dark:text-[#E6EAF0]" />
+              <span className="text-[10px] font-medium text-[#B6BECB] text-[#B6BECB] leading-tight">
                 Import
               </span>
             </button>
             <button
               onClick={onExport}
               disabled={pois.length === 0}
-              className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-1.5 p-2 rounded-lg nv-hairline hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300 leading-tight">
+              <Download className="h-5 w-5 text-[#B6BECB]" />
+              <span className="text-[10px] font-medium text-[#B6BECB] text-[#B6BECB] leading-tight">
                 Export
               </span>
             </button>
             <button
               onClick={handleClearAll}
               disabled={pois.length === 0}
-              className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-[#0C1416] dark:bg-[#0C1416]/30 hover:bg-[#0C1416] dark:hover:bg-[#0C1416]/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
-              <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300 leading-tight">
+              <Trash2 className="h-5 w-5 text-[#E8662E] dark:text-[#E8662E]" />
+              <span className="text-[10px] font-medium text-[#B6BECB] text-[#B6BECB] leading-tight">
                 Clear
               </span>
             </button>
@@ -580,19 +580,19 @@ export const MapPOIPanel = memo(function MapPOIPanel({
         </div>
 
         {/* POI List */}
-        <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto bg-[#0C1416] bg-[#0C1416] scrollbar-thin">
           {displayPOIs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-              <MapPin className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+              <MapPin className="h-12 w-12 text-[#5B6E7F] text-[#5B6E7F] mb-3" />
+              <p className="text-sm text-[#B6BECB] text-[#5B6E7F] mb-1">
                 No places yet
               </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">
+              <p className="text-xs text-[#5B6E7F] text-[#5B6E7F]">
                 Add your first place to get started
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200 dark:divide-gray-800">
+            <div className="divide-y divide-[#E6EAF0]/12">
               {displayPOIs.map((poi) => (
                 <POIListItem
                   key={poi.id}
@@ -613,7 +613,7 @@ export const MapPOIPanel = memo(function MapPOIPanel({
     <div className="flex flex-col h-full">
       {/* Header Image - Hidden on mobile */}
       {!isMobile && (
-        <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-blue-400 to-purple-600">
+        <div className="relative h-48 w-full overflow-hidden bg-[#0C1416]">
           <Image
             src="/poi-bg.png"
             alt="POI Background"
@@ -630,7 +630,7 @@ export const MapPOIPanel = memo(function MapPOIPanel({
 
           {/* Title overlay */}
           <div className="absolute bottom-4 left-6 right-6 z-20">
-            <h2 className="text-3xl font-bold text-white drop-shadow-lg">
+            <h2 className="text-3xl font-bold text-[#E6EAF0] drop-shadow-lg">
               {categoryName}
             </h2>
             <p className="text-sm text-white/90 mt-1 drop-shadow">
@@ -643,11 +643,11 @@ export const MapPOIPanel = memo(function MapPOIPanel({
 
       {/* Mobile Header / Top Bar */}
       {isMobile && viewMode === "list" && (
-        <div className="px-6 py-4 border-b dark:border-gray-800">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+        <div className="px-6 py-4 border-b border-[#E6EAF0]/12">
+          <h2 className="text-2xl font-semibold text-[#E6EAF0] text-[#E6EAF0]">
             {categoryName}
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-[#B6BECB] text-[#5B6E7F] mt-1">
             {displayPOIs.length} {displayPOIs.length === 1 ? "place" : "places"}
           </p>
         </div>
@@ -655,22 +655,22 @@ export const MapPOIPanel = memo(function MapPOIPanel({
 
       {/* Top Bar (for add/edit mode) */}
       {(viewMode === "add" || viewMode === "edit") && (
-        <div className="flex items-center justify-between px-6 py-3 border-b dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-[#E6EAF0]/12 bg-[#0C1416] bg-[#0C1416]">
           <button
             onClick={() => {
               setViewMode("list");
             }}
-            className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="flex items-center gap-2 text-[#B6BECB] text-[#B6BECB] hover:text-[#E6EAF0] dark:hover:text-[#E6EAF0] transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
             <span className="text-sm font-medium">Back</span>
           </button>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-lg font-semibold text-[#E6EAF0] text-[#E6EAF0]">
             {viewMode === "edit" ? "Edit Place" : "Add Place"}
           </h3>
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+            className="flex items-center gap-2 px-4 py-2 bg-[#0C1416] hover:bg-[#0C1416] text-[#E6EAF0] rounded-lg transition-colors text-sm font-medium"
           >
             <Save className="h-4 w-4" />
             {viewMode === "edit" ? "Update" : "Save"}

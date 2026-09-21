@@ -123,7 +123,7 @@ export function useRoutePolyline({
       // Render unselected (dimmed) route first
       if (unselectedRoute && unselectedRoute.polylinePoints.length >= 2) {
         const latlngs = unselectedRoute.polylinePoints.map((p) => [p.lat, p.lng] as [number, number]);
-        const color = routeColor(unselectedRoute.speedBumpCount, unselectedRoute.isSpeedBumpFree);
+        const color = routeColor(false, isNavigating);
         altPolylineRef.current = L.polyline(latlngs, {
           color,
           weight: STROKE_WIDTH,
@@ -134,7 +134,7 @@ export function useRoutePolyline({
 
       // Render selected route on top
       const latlngs = selectedRoute.polylinePoints.map((p) => [p.lat, p.lng] as [number, number]);
-      const color = routeColor(selectedRoute.speedBumpCount, selectedRoute.isSpeedBumpFree);
+      const color = routeColor(true, isNavigating);
       primaryPolylineRef.current = L.polyline(latlngs, {
         color,
         weight: STROKE_WIDTH,
@@ -142,9 +142,9 @@ export function useRoutePolyline({
         className: 'route-glow route-polyline-enter',
       }).addTo(map);
 
-      // Origin marker (green circle)
+      // Origin marker — chrome dot on a void stroke
       const originIcon = L.divIcon({
-        html: `<div style="width:12px;height:12px;background:#00C853;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>`,
+        html: `<div style="width:12px;height:12px;background:#E6EAF0;border:2px solid #07090A;border-radius:50%;box-shadow:0 0 0 1px rgba(230,234,240,0.3)"></div>`,
         className: '',
         iconSize: [12, 12],
         iconAnchor: [6, 6],
@@ -152,9 +152,9 @@ export function useRoutePolyline({
       const first = selectedRoute.polylinePoints[0];
       originMarkerRef.current = L.marker([first.lat, first.lng], { icon: originIcon }).addTo(map);
 
-      // Destination marker (red pin)
+      // Destination marker — hollow chrome ring, so the ember stays on the route
       const destIcon = L.divIcon({
-        html: `<div style="width:14px;height:14px;background:#FF1744;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>`,
+        html: `<div style="width:14px;height:14px;border:2px solid #E6EAF0;border-radius:50%;box-shadow:0 0 0 1px rgba(7,9,10,0.8)"></div>`,
         className: '',
         iconSize: [14, 14],
         iconAnchor: [7, 7],
@@ -174,7 +174,7 @@ export function useRoutePolyline({
     return () => {
       mounted = false;
     };
-  }, [map, primaryRoute, alternativeRoute, selectedRouteIndex]);
+  }, [map, primaryRoute, alternativeRoute, selectedRouteIndex, isNavigating]);
 
   // Re-frame when the preview sheet snaps to a different height (new routes are framed as they're drawn)
   const selectedRouteRef = useRef<AppRoute | undefined>(undefined);
@@ -229,7 +229,7 @@ export function useRoutePolyline({
         traveledPolylineRef.current.setLatLngs(traveled);
       } else {
         traveledPolylineRef.current = L.polyline(traveled, {
-          color: '#5b6472',
+          color: '#5B6E7F',
           weight: STROKE_WIDTH,
           opacity: 0.85,
         }).addTo(map);
@@ -245,7 +245,7 @@ export function useRoutePolyline({
           snapLineRef.current.setLatLngs(connector);
         } else {
           snapLineRef.current = L.polyline(connector, {
-            color: '#9ecaff',
+            color: '#E6EAF0',
             weight: 2,
             opacity: 0.6,
             dashArray: '4 6',

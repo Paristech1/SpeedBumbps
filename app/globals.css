@@ -1,104 +1,107 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
+@import "./nocturne.css";
 
 /* ============================================
-   VELOCITY DARK — "The Kinetic Luminescence"
-   Design System for SpeedBumps Philly Navigator
+   SpeedBumps — Nocturne Velocity
+   The sb-* tokens below are kept as names and repointed at the
+   Nocturne palette (see nocturne.css), so surfaces, text and accents
+   all resolve to void / asphalt / slate / fog / chrome / ember.
    ============================================ */
 
 :root {
   /* === Tonal Foundations (Dark Canvas) === */
-  --sb-background: #111319;
-  --sb-surface: #111319;
-  --sb-surface-dim: #111319;
-  --sb-surface-container-lowest: #0c0e14;
-  --sb-surface-container-low: #191b22;
-  --sb-surface-container: #1e1f26;
-  --sb-surface-container-high: #282a30;
-  --sb-surface-container-highest: #33343b;
-  --sb-surface-bright: #373940;
-  --sb-surface-variant: #33343b;
+  --sb-background: #07090A;
+  --sb-surface: #07090A;
+  --sb-surface-dim: #07090A;
+  --sb-surface-container-lowest: #07090A;
+  --sb-surface-container-low: #0C1416;
+  --sb-surface-container: #0C1416;
+  --sb-surface-container-high: #0C1416;
+  --sb-surface-container-highest: #0C1416;
+  --sb-surface-bright: #0C1416;
+  --sb-surface-variant: #0C1416;
 
   /* === Brand Colors === */
-  --sb-primary: #9ecaff;
-  --sb-primary-container: #2196f3;
-  --sb-primary-fixed: #d1e4ff;
-  --sb-primary-fixed-dim: #9ecaff;
-  --sb-on-primary: #003258;
-  --sb-on-primary-container: #002c4f;
-  --sb-on-primary-fixed: #001d36;
+  --sb-primary: #E6EAF0;
+  --sb-primary-container: #E6EAF0;
+  --sb-primary-fixed: #E6EAF0;
+  --sb-primary-fixed-dim: #E6EAF0;
+  --sb-on-primary: #07090A;
+  --sb-on-primary-container: #07090A;
+  --sb-on-primary-fixed: #07090A;
 
-  --sb-secondary: #44d8f1;
-  --sb-secondary-container: #00bcd4;
-  --sb-secondary-fixed: #a1efff;
-  --sb-secondary-fixed-dim: #44d8f1;
-  --sb-on-secondary: #00363e;
-  --sb-on-secondary-container: #004650;
+  --sb-secondary: #E6EAF0;
+  --sb-secondary-container: #E6EAF0;
+  --sb-secondary-fixed: #E6EAF0;
+  --sb-secondary-fixed-dim: #E6EAF0;
+  --sb-on-secondary: #07090A;
+  --sb-on-secondary-container: #07090A;
 
-  --sb-tertiary: #3ce36a;
-  --sb-tertiary-container: #00a844;
-  --sb-tertiary-fixed: #69ff87;
-  --sb-tertiary-fixed-dim: #3ce36a;
-  --sb-on-tertiary: #003912;
-  --sb-on-tertiary-container: #00320f;
+  --sb-tertiary: #E6EAF0;
+  --sb-tertiary-container: #E6EAF0;
+  --sb-tertiary-fixed: #E6EAF0;
+  --sb-tertiary-fixed-dim: #E6EAF0;
+  --sb-on-tertiary: #07090A;
+  --sb-on-tertiary-container: #07090A;
 
   /* === Semantic Colors === */
-  --sb-error: #ffb4ab;
-  --sb-error-container: #93000a;
-  --sb-on-error: #690005;
-  --sb-on-error-container: #ffdad6;
+  --sb-error: #E8662E;
+  --sb-error-container: #0C1416;
+  --sb-on-error: #07090A;
+  --sb-on-error-container: #E8662E;
 
   /* === Text Colors === */
-  --sb-on-surface: #e2e2eb;
-  --sb-on-surface-variant: #bfc7d4;
-  --sb-on-background: #e2e2eb;
-  --sb-outline: #89919d;
-  --sb-outline-variant: #404752;
-  --sb-inverse-surface: #e2e2eb;
-  --sb-inverse-on-surface: #2e3037;
-  --sb-inverse-primary: #0061a4;
-  --sb-surface-tint: #9ecaff;
+  --sb-on-surface: #E6EAF0;
+  --sb-on-surface-variant: #B6BECB;
+  --sb-on-background: #E6EAF0;
+  --sb-outline: #5B6E7F;
+  --sb-outline-variant: #5B6E7F;
+  --sb-inverse-surface: #E6EAF0;
+  --sb-inverse-on-surface: #07090A;
+  --sb-inverse-primary: #5B6E7F;
+  --sb-surface-tint: #E6EAF0;
 
   /* === Accent Shortcuts === */
-  --sb-warning-orange: #FF6B00;
-  --sb-gradient-start: #2196F3;
-  --sb-gradient-end: #00BCD4;
+  --sb-warning-orange: #E8662E;
+  --sb-gradient-start: #E6EAF0;
+  --sb-gradient-end: #B6BECB;
 
   /* === Map === */
-  --map-background: #0c0e14;
-  --map-border: #1e1f26;
+  --map-background: #07090A;
+  --map-border: #0C1416;
 
   /* === Glass Effects === */
-  --glass-bg: rgba(51, 52, 59, 0.6);
-  --glass-blur: 20px;
-  --ghost-border: rgba(64, 71, 82, 0.15);
+  --glass-bg: var(--nv-glass);
+  --glass-blur: 18px;
+  --ghost-border: var(--nv-hairline);
 
-  /* === Legacy shadcn tokens (mapped to Velocity Dark) === */
+  /* === Legacy shadcn tokens (mapped to Nocturne) === */
   --radius: 1rem;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.93 0.01 270);
-  --card: oklch(0.18 0.005 270);
-  --card-foreground: oklch(0.93 0.01 270);
-  --popover: oklch(0.18 0.005 270);
-  --popover-foreground: oklch(0.93 0.01 270);
-  --primary: oklch(0.78 0.1 250);
-  --primary-foreground: oklch(0.22 0.04 250);
-  --secondary: oklch(0.82 0.12 200);
-  --secondary-foreground: oklch(0.2 0.04 200);
-  --muted: oklch(0.22 0.005 270);
-  --muted-foreground: oklch(0.65 0.02 270);
-  --accent: oklch(0.22 0.005 270);
-  --accent-foreground: oklch(0.93 0.01 270);
-  --destructive: oklch(0.7 0.19 22);
-  --border: oklch(0.3 0.01 270 / 40%);
-  --input: oklch(0.3 0.01 270 / 50%);
-  --ring: oklch(0.78 0.1 250);
+  --background: #07090A;
+  --foreground: #E6EAF0;
+  --card: #0C1416;
+  --card-foreground: #E6EAF0;
+  --popover: #0C1416;
+  --popover-foreground: #E6EAF0;
+  --primary: #E6EAF0;
+  --primary-foreground: #07090A;
+  --secondary: #0C1416;
+  --secondary-foreground: #E6EAF0;
+  --muted: #0C1416;
+  --muted-foreground: #5B6E7F;
+  --accent: #0C1416;
+  --accent-foreground: #E6EAF0;
+  --destructive: #E8662E;
+  --border: var(--nv-hairline);
+  --input: var(--nv-hairline);
+  --ring: rgba(230, 234, 240, 0.45);
   --chart-1: oklch(0.78 0.1 250);
   --chart-2: oklch(0.82 0.12 200);
   --chart-3: oklch(0.73 0.18 155);
   --chart-4: oklch(0.7 0.19 22);
   --chart-5: oklch(0.65 0.2 35);
-  --sidebar: oklch(0.17 0.005 270);
+  --sidebar: #0C1416;
   --sidebar-foreground: oklch(0.93 0.01 270);
   --sidebar-primary: oklch(0.78 0.1 250);
   --sidebar-primary-foreground: oklch(0.22 0.04 250);
@@ -112,7 +115,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  /* SpeedBumps Velocity Dark tokens */
+  /* SpeedBumps Nocturne tokens */
   --color-sb-background: var(--sb-background);
   --color-sb-surface: var(--sb-surface);
   --color-sb-surface-dim: var(--sb-surface-dim);
@@ -143,9 +146,10 @@
   --color-map-background: var(--map-background);
   --color-map-border: var(--map-border);
 
-  /* Font families — Next.js injects --font-headline / --font-body on <body> */
-  --font-sans: var(--font-body), "Manrope", sans-serif;
-  --font-mono: var(--font-geist-mono);
+  /* Font families — Next.js injects --font-mast / --font-ui / --font-code on <body> */
+  --font-sans: var(--font-ui), "Inter Tight", sans-serif;
+  --font-mono: var(--font-code), ui-monospace, monospace;
+  --font-display: var(--font-mast), "Barlow Condensed", sans-serif;
 
   /* Unified component radii */
   --radius-sheet: 24px;
@@ -222,27 +226,29 @@
    ============================================ */
 
 .route-glow {
-  filter: drop-shadow(0 0 8px rgba(68, 216, 241, 0.6));
+  filter: drop-shadow(0 0 10px rgba(232, 102, 46, 0.45));
 }
 
 .map-glow {
-  box-shadow: 0 0 40px 10px rgba(33, 150, 243, 0.1);
+  box-shadow: 0 0 40px 10px rgba(230, 234, 240, 0.06);
 }
 
 .neon-dot {
-  box-shadow: 0 0 20px var(--sb-secondary);
+  box-shadow: 0 0 20px rgba(230, 234, 240, 0.35);
 }
 
 /* ============================================
    GRADIENT & BRAND  
    ============================================ */
 
+/* No filled CTAs in Nocturne — primary actions are type. These remain only
+   for surfaces that still ask for a wash. */
 .gradient-primary {
-  background: linear-gradient(135deg, var(--sb-primary) 0%, var(--sb-primary-container) 100%);
+  background: linear-gradient(135deg, rgba(230, 234, 240, 0.10) 0%, rgba(230, 234, 240, 0.03) 100%);
 }
 
 .gradient-cta {
-  background: linear-gradient(to right, #2196F3, #00BCD4);
+  background: linear-gradient(90deg, rgba(230, 234, 240, 0.10), rgba(230, 234, 240, 0.02));
 }
 
 /* ============================================
@@ -250,15 +256,15 @@
    ============================================ */
 
 .font-headline {
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-mast), "Barlow Condensed", sans-serif;
 }
 
 .font-body {
-  font-family: "Manrope", sans-serif;
+  font-family: var(--font-ui), "Inter Tight", sans-serif;
 }
 
 .font-label {
-  font-family: "Manrope", sans-serif;
+  font-family: var(--font-code), ui-monospace, monospace;
 }
 
 /* ============================================
@@ -278,8 +284,8 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 8px var(--sb-primary-container), 0 0 24px rgba(33, 150, 243, 0.2); }
-  50% { box-shadow: 0 0 16px var(--sb-primary-container), 0 0 40px rgba(33, 150, 243, 0.4); }
+  0%, 100% { box-shadow: 0 0 8px rgba(232, 102, 46, 0.35), 0 0 24px rgba(232, 102, 46, 0.12); }
+  50% { box-shadow: 0 0 16px rgba(232, 102, 46, 0.5), 0 0 40px rgba(232, 102, 46, 0.22); }
 }
 
 @keyframes route-dash {
@@ -356,7 +362,7 @@
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: rgb(64 71 82) transparent;
+    scrollbar-color: rgb(91 110 127) transparent;
   }
 
   .scrollbar-thin::-webkit-scrollbar {
@@ -369,12 +375,12 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: rgb(64 71 82);
+    background-color: rgb(91 110 127);
     border-radius: 3px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(89 91 99);
+    background-color: rgb(182 190 203);
   }
 }
 
@@ -387,14 +393,14 @@
 }
 
 .leaflet-control-attribution {
-  background: rgba(17, 19, 25, 0.7) !important;
-  color: var(--sb-on-surface-variant) !important;
-  font-family: "Manrope", sans-serif !important;
+  background: rgba(7, 9, 10, 0.72) !important;
+  color: var(--nv-slate) !important;
+  font-family: var(--font-ui), "Inter Tight", sans-serif !important;
   font-size: 10px !important;
 }
 
 .leaflet-control-attribution a {
-  color: var(--sb-primary) !important;
+  color: var(--nv-fog) !important;
 }
 
 /* Google Material Symbols (icon font used in stitch files) */

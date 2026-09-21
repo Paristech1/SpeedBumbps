@@ -1,0 +1,174 @@
+/* ============================================
+   NOCTURNE VELOCITY
+   Blue-hour steel, crushed black, one ember spark.
+
+   Rules this file encodes:
+   · Ember is the only accent, and it marks the one thing that matters.
+   · Surfaces separate by hairline, not by a ladder of greys.
+   · Sharp type, soft world — blur and grain stay off the glyphs.
+   · Mast sizes are in cqw so type scales with the frame it sits in.
+   ============================================ */
+
+:root {
+  --nv-void: #07090A;
+  --nv-asphalt: #0C1416;
+  --nv-slate: #5B6E7F;
+  --nv-fog: #B6BECB;
+  --nv-chrome: #E6EAF0;
+  --nv-ember: #E8662E;
+  --nv-glass: #0C14169E;
+  --nv-hairline: #E6EAF01F;
+
+  /* Washes — chrome at low alpha, for hover and pressed states. */
+  --nv-wash: rgba(230, 234, 240, 0.05);
+  --nv-wash-strong: rgba(230, 234, 240, 0.09);
+  --nv-ember-wash: rgba(232, 102, 46, 0.035);
+}
+
+/* --- Mast: Barlow Condensed 700, uppercase, set tight ------------------- */
+
+.mast {
+  font-family: var(--font-mast), "Barlow Condensed", sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 0.86;
+  letter-spacing: 0.005em;
+}
+
+/* The one word on the screen: RIGHT, WHERE, SEND. */
+.mast-1 { font-size: clamp(3.25rem, 17cqw, 5rem); }
+/* Sheet titles and route minutes. */
+.mast-2 { font-size: clamp(2rem, 9cqw, 2.75rem); }
+/* List primaries — addresses, steps, saved rows. */
+.mast-3 { font-size: clamp(1.25rem, 5.2cqw, 1.5rem); line-height: 0.95; }
+/* Type-only actions sitting inline with UI text. */
+.mast-4 { font-size: 1.0625rem; line-height: 1; letter-spacing: 0.02em; }
+
+/* Digits that carry a measurement — ember when they are the point. */
+.mast-num { font-variant-numeric: tabular-nums; }
+
+/* --- Kicker: Geist Mono, wide, quiet ----------------------------------- */
+
+.kicker {
+  font-family: var(--font-code), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--nv-slate);
+}
+
+/* A mono bar reading as a button: TAKE SMOOTHEST, END. */
+.mono-bar {
+  font-family: var(--font-code), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+/* --- UI text: Inter Tight ---------------------------------------------- */
+
+.ui-text {
+  font-family: var(--font-ui), "Inter Tight", sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+}
+
+.ui-sm {
+  font-family: var(--font-ui), "Inter Tight", sans-serif;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+/* One per screen: lowercase, wide, fog, trailing period. */
+.caption {
+  font-family: var(--font-ui), "Inter Tight", sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  text-transform: lowercase;
+  letter-spacing: 0.14em;
+  color: var(--nv-fog);
+}
+
+/* --- Surfaces ---------------------------------------------------------- */
+
+.nv-sheet {
+  background: var(--nv-asphalt);
+  border-top: 1px solid var(--nv-hairline);
+}
+
+/* Frosted pill over imagery or the map. */
+.nv-glass {
+  background: var(--nv-glass);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--nv-hairline);
+}
+
+.nv-hairline { border: 1px solid var(--nv-hairline); }
+.nv-hairline-t { border-top: 1px solid var(--nv-hairline); }
+.nv-hairline-b { border-bottom: 1px solid var(--nv-hairline); }
+
+.nv-chip {
+  border: 1px solid var(--nv-hairline);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--nv-fog);
+}
+
+.nv-chip-on {
+  border-color: rgba(230, 234, 240, 0.55);
+  background: var(--nv-wash-strong);
+  color: var(--nv-chrome);
+}
+
+/* Selected value — the second place ember is allowed to appear. */
+.nv-ember-edge {
+  border-color: var(--nv-ember);
+  background: var(--nv-ember-wash);
+}
+
+/* A streak of light across the sheet, in place of a divider. */
+.nv-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(230, 234, 240, 0.5), transparent);
+}
+
+/* Containers so mast sizes track the frame rather than the whole window. */
+.nv-frame { container-type: inline-size; }
+
+/* Sheets sit on the void with a soft lift, never a hard shadow line. */
+.nv-lift { box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.65); }
+
+/* --- The map ------------------------------------------------------------
+   Tiles arrive as somebody else's dark style. A light touch of contrast, then
+   a steel veil over the tile pane, carries them to blue-hour: near-void
+   blocks, slate streets, cool labels. The veil sits above the tiles (pane
+   z-index 200) and below routes and markers (400+), so everything the app
+   draws keeps its own colour. */
+
+.leaflet-container {
+  background: var(--nv-void) !important;
+}
+
+.leaflet-tile-pane {
+  filter: brightness(0.95) contrast(1.12) saturate(0.85);
+}
+
+.leaflet-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 250;
+  pointer-events: none;
+  background: rgba(16, 32, 40, 0.42);
+}
+
+/* The switcher's thumbnails are imagery; no veil to sit under, so they take
+   the whole move as a filter. */
+.nv-map-thumb {
+  filter: grayscale(0.7) brightness(0.42) contrast(1.15) saturate(0.55);
+}

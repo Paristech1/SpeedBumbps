@@ -9,6 +9,16 @@ import type { TileProvider } from '@/types/map';
  */
 export const TILE_PROVIDERS: TileProvider[] = [
   {
+    // Nocturne's base: a dark carto style, pushed the rest of the way to
+    // blue-hour steel by the .leaflet-tile-pane filter in nocturne.css.
+    id: 'nocturne',
+    name: 'Nocturne',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    maxZoom: 20,
+    category: 'standard',
+  },
+  {
     id: 'osm',
     name: 'OpenStreetMap',
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -29,7 +39,7 @@ export const TILE_PROVIDERS: TileProvider[] = [
 /**
  * Default tile provider ID
  */
-export const DEFAULT_TILE_PROVIDER_ID = 'osm';
+export const DEFAULT_TILE_PROVIDER_ID = 'nocturne';
 
 /**
  * Get tile provider by ID

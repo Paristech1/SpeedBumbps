@@ -146,7 +146,7 @@ export function useMeasurement() {
       // Add marker
       const marker = L.circleMarker(e.latlng, {
         radius: 6,
-        fillColor: '#3b82f6',
+        fillColor: '#E6EAF0',
         color: '#fff',
         weight: 2,
         opacity: 1,
@@ -170,7 +170,7 @@ export function useMeasurement() {
             polylineRef.current.setLatLngs(latlngs);
           } else {
             polylineRef.current = L.polyline(latlngs, {
-              color: '#3b82f6',
+              color: '#E6EAF0',
               weight: 3,
               opacity: 0.7,
               dashArray: '10, 10',
@@ -189,10 +189,10 @@ export function useMeasurement() {
             polygonRef.current.setLatLngs(latlngs);
           } else {
             polygonRef.current = L.polygon(latlngs, {
-              color: '#3b82f6',
+              color: '#E6EAF0',
               weight: 2,
               opacity: 0.7,
-              fillColor: '#3b82f6',
+              fillColor: '#E6EAF0',
               fillOpacity: 0.2,
             }).addTo(map);
           }

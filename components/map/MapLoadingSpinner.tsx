@@ -6,7 +6,7 @@ import { MapContext } from "@/contexts/MapContext";
 
 /**
  * MapLoadingSpinner component - Loading overlay during map initialization
- * Velocity Dark glass styling with smooth exit fade.
+ * Nocturne glass styling with smooth exit fade.
  */
 export function MapLoadingSpinner() {
   const context = useContext(MapContext);
@@ -31,7 +31,7 @@ export function MapLoadingSpinner() {
             {/* Animated spinner */}
             <div className="relative w-16 h-16">
               <div className="absolute inset-0 border-4 border-sb-surface-container-highest rounded-full" />
-              <div className="absolute inset-0 border-4 border-transparent border-t-[#2196F3] border-l-[#00BCD4] rounded-full animate-spin" />
+              <div className="absolute inset-0 border-4 border-transparent border-t-[#E6EAF0] border-l-[#E6EAF0] rounded-full animate-spin" />
             </div>
 
             {/* Loading text */}

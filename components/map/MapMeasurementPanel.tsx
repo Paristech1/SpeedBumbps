@@ -163,32 +163,32 @@ export function MapMeasurementPanel({
               <>
                 {/* Results */}
                 <div className="flex items-center gap-2">
-                  <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg px-2 py-1.5 min-w-[50px]">
-                    <p className="text-[9px] text-gray-500 dark:text-gray-400">
+                  <div className="bg-[#0C1416] bg-[#0C1416]/50 rounded-lg px-2 py-1.5 min-w-[50px]">
+                    <p className="text-[9px] text-[#B6BECB] text-[#5B6E7F]">
                       Points
                     </p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    <p className="text-sm font-bold text-[#E6EAF0] text-[#E6EAF0]">
                       {pointCount}
                     </p>
                   </div>
 
                   {mode === "distance" && (
-                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg px-2 py-1.5 min-w-[70px]">
-                      <p className="text-[9px] text-blue-600 dark:text-blue-400">
+                    <div className="bg-[#0C1416] dark:bg-[#0C1416]/20 rounded-lg px-2 py-1.5 min-w-[70px]">
+                      <p className="text-[9px] text-[#E6EAF0] dark:text-[#E6EAF0]">
                         Distance
                       </p>
-                      <p className="text-sm font-bold text-blue-900 dark:text-blue-100">
+                      <p className="text-sm font-bold text-[#E6EAF0] dark:text-[#E6EAF0]">
                         {pointCount > 1 ? formatDistance(distance) : "—"}
                       </p>
                     </div>
                   )}
 
                   {mode === "area" && (
-                    <div className="bg-green-50 dark:bg-green-900/20 rounded-lg px-2 py-1.5 min-w-[70px]">
-                      <p className="text-[9px] text-green-600 dark:text-green-400">
+                    <div className="bg-[#0C1416] dark:bg-[#0C1416]/20 rounded-lg px-2 py-1.5 min-w-[70px]">
+                      <p className="text-[9px] text-[#E6EAF0] dark:text-[#E6EAF0]">
                         Area
                       </p>
-                      <p className="text-sm font-bold text-green-900 dark:text-green-100">
+                      <p className="text-sm font-bold text-[#E6EAF0] dark:text-[#E6EAF0]">
                         {pointCount > 2 ? formatArea(area) : "—"}
                       </p>
                     </div>
@@ -201,7 +201,7 @@ export function MapMeasurementPanel({
                 <div className="flex items-center gap-1">
                   <button
                     onClick={handleClear}
-                    className="p-1.5 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg transition-colors"
+                    className="p-1.5 bg-[#0C1416] dark:bg-[#0C1416]/30 hover:bg-[#0C1416] dark:hover:bg-[#0C1416]/50 text-[#E8662E] dark:text-[#E8662E] rounded-lg transition-colors"
                     title="Clear"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -210,7 +210,7 @@ export function MapMeasurementPanel({
                   <button
                     onClick={undoLastPoint}
                     disabled={pointCount === 0}
-                    className="p-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1.5 bg-[#0C1416] bg-[#0C1416] hover:bg-[#0C1416] dark:hover:bg-[#0C1416] text-[#B6BECB] text-[#B6BECB] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Undo"
                   >
                     <Undo className="h-3.5 w-3.5" />
@@ -222,7 +222,7 @@ export function MapMeasurementPanel({
                       (mode === "distance" && pointCount < 2) ||
                       (mode === "area" && pointCount < 3)
                     }
-                    className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1.5 bg-[#0C1416] hover:bg-[#0C1416] text-[#E6EAF0] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Done"
                   >
                     <Check className="h-3.5 w-3.5" />

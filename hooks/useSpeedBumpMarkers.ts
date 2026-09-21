@@ -1,9 +1,12 @@
 'use client';
 
 /**
- * Speed bump marker rendering on the map.
- * Only renders bumps visible in the current viewport (the map is created
- * with preferCanvas so these circle markers share one canvas layer).
+ * Speed bump marker rendering on the map — Nocturne Velocity.
+ *
+ * Bumps are round dots: idle ones in slate, dots on your route in chrome, and
+ * the next bump ahead as the one ember on the map, haloed so it reads from a
+ * glance. Only renders bumps visible in the current viewport (the map is
+ * created with preferCanvas, so these share one canvas layer).
  *
  * While a route is shown, bumps that lie on the selected route are drawn
  * larger with a halo and everything else is dimmed, so the driver can see
@@ -18,23 +21,35 @@ import type { SpeedBump } from '@/types/speedbumps';
 const MIN_ZOOM_TO_SHOW = 10; // don't render at very low zoom (world view)
 const MARKER_RADIUS = 5;
 const ON_ROUTE_RADIUS = 7;
-const ON_ROUTE_HALO_RADIUS = 13;
-const MARKER_COLOR = '#FF6B00'; // orange
-const DIMMED_OPACITY = 0.35;
+const NEXT_RADIUS = 8;
+const HALO_RADIUS = 13;
+/** Nocturne marker states: idle steel, chrome on your route, ember for the next one. */
+const IDLE_COLOR = '#5B6E7F';
+const ON_ROUTE_COLOR = '#E6EAF0';
+const NEXT_COLOR = '#E8662E';
+const VOID_COLOR = '#07090A';
+const DIMMED_OPACITY = 0.45;
 
 interface UseSpeedBumpMarkersOptions {
   /** Bumps on the selected route. When set, these are emphasised and the rest dimmed. */
   onRouteBumps?: SpeedBump[] | null;
+  /** The one bump the driver is about to reach — the only ember on the map. */
+  nextBumpId?: string | null;
 }
 
-export function useSpeedBumpMarkers(map: LeafletMap | null, { onRouteBumps = null }: UseSpeedBumpMarkersOptions = {}) {
+export function useSpeedBumpMarkers(
+  map: LeafletMap | null,
+  { onRouteBumps = null, nextBumpId = null }: UseSpeedBumpMarkersOptions = {},
+) {
   const markersRef = useRef<CircleMarker[]>([]);
   const allBumpsRef = useRef<SpeedBump[] | null>(null);
   const onRouteIdsRef = useRef<Set<string> | null>(null);
+  const nextBumpIdRef = useRef<string | null>(null);
 
   // Stable identity for the highlighted set so viewport redraws see the latest
   const onRouteKey = onRouteBumps ? onRouteBumps.map((b) => b.id).join(',') : '';
   onRouteIdsRef.current = onRouteBumps ? new Set(onRouteBumps.map((b) => b.id)) : null;
+  nextBumpIdRef.current = nextBumpId;
 
   const clearMarkers = useCallback(() => {
     for (const m of markersRef.current) {
@@ -65,6 +80,7 @@ export function useSpeedBumpMarkers(map: LeafletMap | null, { onRouteBumps = nul
     const visibleBumps = getBumpsInBounds(allBumpsRef.current, sw, ne);
     const onRouteIds = onRouteIdsRef.current;
     const hasRoute = onRouteIds !== null;
+    const nextId = nextBumpIdRef.current;
 
     clearMarkers();
 
@@ -73,49 +89,59 @@ export function useSpeedBumpMarkers(map: LeafletMap | null, { onRouteBumps = nul
     const newMarkers: CircleMarker[] = [];
     const emphasised: SpeedBump[] = [];
 
+    const dot = (
+      bump: SpeedBump,
+      radius: number,
+      color: string,
+      { dim = false, stroke = color, weight = 1 } = {},
+    ) =>
+      L.circleMarker([bump.location.lat, bump.location.lng], {
+        radius,
+        fillColor: color,
+        color: stroke,
+        weight,
+        fillOpacity: dim ? DIMMED_OPACITY : 0.9,
+        opacity: dim ? DIMMED_OPACITY : 1,
+      });
+
     for (const bump of visibleBumps) {
       if (hasRoute && onRouteIds.has(bump.id)) {
         emphasised.push(bump);
         continue;
       }
-      const isUserReport = bump.source === 'user';
-      const marker = L.circleMarker([bump.location.lat, bump.location.lng], {
-        radius: MARKER_RADIUS,
-        fillColor: isUserReport ? '#9ecaff' : MARKER_COLOR,
-        color: isUserReport ? '#2196F3' : '#CC4400',
-        weight: 1,
-        fillOpacity: hasRoute ? DIMMED_OPACITY : 0.8,
-        opacity: hasRoute ? DIMMED_OPACITY : 1,
-      }).bindPopup(popupHtml(bump, false));
+      const marker = dot(bump, MARKER_RADIUS, IDLE_COLOR, { dim: hasRoute }).bindPopup(popupHtml(bump, false));
       marker.addTo(leafletMap);
       newMarkers.push(marker);
     }
 
-    // On-route bumps go on top: halo first, then the marker
+    // Bumps on the route sit on top in chrome; the next one is the single
+    // ember, with a halo so it carries from a glance.
     for (const bump of emphasised) {
-      const halo = L.circleMarker([bump.location.lat, bump.location.lng], {
-        radius: ON_ROUTE_HALO_RADIUS,
-        fillColor: MARKER_COLOR,
-        color: MARKER_COLOR,
-        weight: 1,
-        fillOpacity: 0.18,
-        opacity: 0.5,
-        interactive: false,
-      });
-      halo.addTo(leafletMap);
-      newMarkers.push(halo);
+      const isNext = bump.id === nextId;
+      const color = isNext ? NEXT_COLOR : ON_ROUTE_COLOR;
 
-      const marker = L.circleMarker([bump.location.lat, bump.location.lng], {
-        radius: ON_ROUTE_RADIUS,
-        fillColor: MARKER_COLOR,
-        color: '#ffffff',
-        weight: 2,
-        fillOpacity: 1,
-        opacity: 1,
+      if (isNext) {
+        const halo = L.circleMarker([bump.location.lat, bump.location.lng], {
+          radius: HALO_RADIUS,
+          fillColor: NEXT_COLOR,
+          color: NEXT_COLOR,
+          weight: 1,
+          fillOpacity: 0.2,
+          opacity: 0.55,
+          interactive: false,
+        });
+        halo.addTo(leafletMap);
+        newMarkers.push(halo);
+      }
+
+      const marker = dot(bump, isNext ? NEXT_RADIUS : ON_ROUTE_RADIUS, color, {
+        stroke: VOID_COLOR,
+        weight: 1.5,
       }).bindPopup(popupHtml(bump, true));
       marker.addTo(leafletMap);
       newMarkers.push(marker);
     }
+
     markersRef.current = newMarkers;
   }, [clearMarkers]);
 
@@ -138,12 +164,12 @@ export function useSpeedBumpMarkers(map: LeafletMap | null, { onRouteBumps = nul
       window.removeEventListener(USER_REPORTS_CHANGED_EVENT, handleReportsChanged);
       clearMarkers();
     };
-  }, [map, renderBumpsInView, clearMarkers, onRouteKey]);
+  }, [map, renderBumpsInView, clearMarkers, onRouteKey, nextBumpId]);
 }
 
 function popupHtml(bump: SpeedBump, onRoute: boolean): string {
   const source = bump.source === 'user' ? `User report · severity ${bump.severity}` : `Speed bump · ID ${bump.id}`;
   return onRoute
-    ? `<strong style="color:#FF6B00">On your route</strong><br/>${source}`
+    ? `<strong style="color:#E8662E">On your route</strong><br/>${source}`
     : source;
 }

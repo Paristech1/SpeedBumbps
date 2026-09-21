@@ -6,11 +6,11 @@ import { useMapControls } from "@/hooks/useMapControls";
 import { useGeolocation } from "@/hooks/useGeolocation";
 
 /**
- * MapControls — Velocity Dark glass-panel controls at bottom right.
+ * MapControls — Nocturne glass controls at bottom right.
  * Includes: Location, Zoom In/Out, Reset View, Fullscreen
  *
  * Design: Glass-panel containers with ghost-borders per the
- * Kinetic Luminescence design spec.
+ * Nocturne Velocity design spec.
  */
 interface MapControlsProps {
   /** Distance in px from the viewport bottom (clears bottom nav / open sheets). */
@@ -63,7 +63,7 @@ export const MapControls = memo(function MapControls({
         <button
           onClick={zoomIn}
           disabled={!map}
-          className="p-4 hover:bg-[#373940] text-[#e2e2eb] transition-colors border-b border-[#404752]/15 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-4 hover:bg-white/5 text-[#B6BECB] hover:text-[#E6EAF0] transition-colors nv-hairline-b disabled:opacity-50 disabled:cursor-not-allowed"
           title="Zoom In"
           aria-label="Zoom in"
         >
@@ -72,7 +72,7 @@ export const MapControls = memo(function MapControls({
         <button
           onClick={zoomOut}
           disabled={!map}
-          className="p-4 hover:bg-[#373940] text-[#e2e2eb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-4 hover:bg-white/5 text-[#B6BECB] hover:text-[#E6EAF0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Zoom Out"
           aria-label="Zoom out"
         >
@@ -84,7 +84,7 @@ export const MapControls = memo(function MapControls({
       <button
         onClick={locateUser}
         disabled={!isAvailable || isLocating}
-        className={`glass-panel w-14 h-14 rounded-full flex items-center justify-center text-[#9ecaff] shadow-2xl ghost-border hover:bg-[#9ecaff]/10 active:scale-90 transition-all ${
+        className={`glass-panel w-14 h-14 rounded-full flex items-center justify-center text-[#B6BECB] ghost-border hover:bg-white/5 active:scale-90 transition-all ${
           isLocating ? "animate-pulse-glow" : ""
         } disabled:opacity-50 disabled:cursor-not-allowed`}
         title="My Location"
@@ -103,7 +103,7 @@ export const MapControls = memo(function MapControls({
       <button
         onClick={resetView}
         disabled={!map}
-        className="glass-panel w-14 h-14 rounded-full flex items-center justify-center text-[#e2e2eb] shadow-2xl ghost-border hover:bg-[#373940] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        className="glass-panel w-14 h-14 rounded-full flex items-center justify-center text-[#B6BECB] ghost-border hover:bg-white/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         title="Reset View"
         aria-label="Reset view to default"
       >
@@ -129,7 +129,7 @@ export const MapControls = memo(function MapControls({
           if (canFullscreen) toggleFullscreen();
         }}
         className={`glass-panel w-14 h-14 rounded-full flex items-center justify-center shadow-2xl ghost-border transition-all active:scale-90 ${
-          isImmersive ? "text-[#9ecaff] bg-[#9ecaff]/10" : "text-[#e2e2eb] hover:bg-[#373940]"
+          isImmersive ? "text-[#E6EAF0] bg-[#E6EAF0]/10" : "text-[#E6EAF0] hover:bg-[#0C1416]"
         }`}
         title={isImmersive ? "Exit immersive view" : "Immersive view"}
         aria-label={isImmersive ? "Exit immersive view" : "Immersive view"}
