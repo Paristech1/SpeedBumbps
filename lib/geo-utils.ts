@@ -193,9 +193,11 @@ export function formatDuration(seconds: number): string {
 }
 
 /**
- * Route line colour. Nocturne gives the chosen route the ember and leaves
- * every other line in steel, so the map never carries two accents.
+ * Route line colour. In preview the chosen route carries the ember; once
+ * you're driving it turns chrome and the ember moves to the next bump, so
+ * the map never shows two accents at once.
  */
-export function routeColor(isSelected: boolean): string {
-  return isSelected ? '#E8662E' : '#5B6E7F';
+export function routeColor(isSelected: boolean, isNavigating = false): string {
+  if (!isSelected) return '#5B6E7F';
+  return isNavigating ? '#E6EAF0' : '#E8662E';
 }

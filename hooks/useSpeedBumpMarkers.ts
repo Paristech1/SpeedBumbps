@@ -1,7 +1,12 @@
 'use client';
 
 /**
- * Speed bump marker rendering on the map.
+ * Speed bump marker rendering on the map — Nocturne Velocity.
+ *
+ * A bump reads as a short bar lying across the street, not a dot: idle bars
+ * in slate, bars on your route in chrome, and the next bump ahead as the one
+ * ember pill on the map. Bars are sized in screen pixels and rebuilt on every
+ * viewport change, so they keep the same weight at any zoom.
  * Only renders bumps visible in the current viewport (the map is created
  * with preferCanvas so these circle markers share one canvas layer).
  *
@@ -11,19 +16,19 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react';
-import type { Map as LeafletMap, CircleMarker } from 'leaflet';
+import type { Map as LeafletMap, Layer } from 'leaflet';
 import { loadAllBumps, getBumpsInBounds, USER_REPORTS_CHANGED_EVENT } from '@/lib/speed-bump-service';
 import type { SpeedBump } from '@/types/speedbumps';
 
 const MIN_ZOOM_TO_SHOW = 10; // don't render at very low zoom (world view)
-const MARKER_RADIUS = 5;
-const ON_ROUTE_RADIUS = 7;
-const ON_ROUTE_HALO_RADIUS = 13;
+/** Bar size on screen, in pixels: length across the street, then thickness. */
+const BAR_PX = { length: 13, thickness: 4 };
+const ON_ROUTE_BAR_PX = { length: 17, thickness: 5 };
+const NEXT_BAR_PX = { length: 26, thickness: 9 };
 /** Nocturne marker states: idle steel, chrome on your route, ember for the next one. */
 const IDLE_COLOR = '#5B6E7F';
 const ON_ROUTE_COLOR = '#E6EAF0';
-const NEXT_COLOR = '#E8662E';
-const DIMMED_OPACITY = 0.4;
+const DIMMED_OPACITY = 0.45;
 
 interface UseSpeedBumpMarkersOptions {
   /** Bumps on the selected route. When set, these are emphasised and the rest dimmed. */
@@ -36,7 +41,7 @@ export function useSpeedBumpMarkers(
   map: LeafletMap | null,
   { onRouteBumps = null, nextBumpId = null }: UseSpeedBumpMarkersOptions = {},
 ) {
-  const markersRef = useRef<CircleMarker[]>([]);
+  const markersRef = useRef<Layer[]>([]);
   const allBumpsRef = useRef<SpeedBump[] | null>(null);
   const onRouteIdsRef = useRef<Set<string> | null>(null);
   const nextBumpIdRef = useRef<string | null>(null);
@@ -75,60 +80,74 @@ export function useSpeedBumpMarkers(
     const visibleBumps = getBumpsInBounds(allBumpsRef.current, sw, ne);
     const onRouteIds = onRouteIdsRef.current;
     const hasRoute = onRouteIds !== null;
+    const nextId = nextBumpIdRef.current;
 
     clearMarkers();
 
     // Use dynamic import to avoid SSR issues
     const L = (await import('leaflet')).default;
-    const newMarkers: CircleMarker[] = [];
+    const newMarkers: Layer[] = [];
     const emphasised: SpeedBump[] = [];
+
+    // Degrees per screen pixel at this zoom, so a bar keeps its weight.
+    const centre = leafletMap.getCenter();
+    const centrePoint = leafletMap.latLngToContainerPoint(centre);
+    const onePixelOver = leafletMap.containerPointToLatLng([centrePoint.x + 1, centrePoint.y + 1]);
+    const lngPerPx = Math.abs(onePixelOver.lng - centre.lng);
+    const latPerPx = Math.abs(onePixelOver.lat - centre.lat);
+
+    /** A bump drawn as a bar lying across the street. */
+    const bar = (bump: SpeedBump, px: { length: number; thickness: number }, color: string, dim: boolean) => {
+      const halfLng = (px.length / 2) * lngPerPx;
+      const halfLat = (px.thickness / 2) * latPerPx;
+      return L.rectangle(
+        [
+          [bump.location.lat - halfLat, bump.location.lng - halfLng],
+          [bump.location.lat + halfLat, bump.location.lng + halfLng],
+        ],
+        {
+          color,
+          fillColor: color,
+          weight: 0,
+          fillOpacity: dim ? DIMMED_OPACITY : 0.9,
+          opacity: dim ? DIMMED_OPACITY : 1,
+        },
+      );
+    };
 
     for (const bump of visibleBumps) {
       if (hasRoute && onRouteIds.has(bump.id)) {
         emphasised.push(bump);
         continue;
       }
-      const marker = L.circleMarker([bump.location.lat, bump.location.lng], {
-        radius: MARKER_RADIUS,
-        fillColor: IDLE_COLOR,
-        color: IDLE_COLOR,
-        weight: 1,
-        fillOpacity: hasRoute ? DIMMED_OPACITY : 0.85,
-        opacity: hasRoute ? DIMMED_OPACITY : 1,
-      }).bindPopup(popupHtml(bump, false));
+      const marker = bar(bump, BAR_PX, IDLE_COLOR, hasRoute).bindPopup(popupHtml(bump, false));
       marker.addTo(leafletMap);
       newMarkers.push(marker);
     }
 
-    // On-route bumps go on top: halo first, then the marker. Only the next one
-    // burns ember — every other bump on the route is chrome.
+    // Bumps on the route sit on top in chrome; the next one is the single
+    // ember pill, drawn as its own element so it can carry a glow.
     for (const bump of emphasised) {
-      const isNext = bump.id === nextBumpIdRef.current;
-      const color = isNext ? NEXT_COLOR : ON_ROUTE_COLOR;
-
-      const halo = L.circleMarker([bump.location.lat, bump.location.lng], {
-        radius: isNext ? ON_ROUTE_HALO_RADIUS : ON_ROUTE_HALO_RADIUS - 3,
-        fillColor: color,
-        color,
-        weight: 1,
-        fillOpacity: isNext ? 0.22 : 0.12,
-        opacity: isNext ? 0.6 : 0.35,
-        interactive: false,
-      });
-      halo.addTo(leafletMap);
-      newMarkers.push(halo);
-
-      const marker = L.circleMarker([bump.location.lat, bump.location.lng], {
-        radius: isNext ? ON_ROUTE_RADIUS + 1 : ON_ROUTE_RADIUS,
-        fillColor: color,
-        color: isNext ? NEXT_COLOR : '#07090A',
-        weight: isNext ? 2 : 1.5,
-        fillOpacity: 1,
-        opacity: 1,
-      }).bindPopup(popupHtml(bump, true));
+      if (bump.id === nextId) continue;
+      const marker = bar(bump, ON_ROUTE_BAR_PX, ON_ROUTE_COLOR, false).bindPopup(popupHtml(bump, true));
       marker.addTo(leafletMap);
       newMarkers.push(marker);
     }
+
+    const next = nextId ? emphasised.find((b) => b.id === nextId) : undefined;
+    if (next) {
+      const icon = L.divIcon({
+        className: '',
+        html: `<div class="nv-bump-next" style="width:${NEXT_BAR_PX.length}px;height:${NEXT_BAR_PX.thickness}px"></div>`,
+        iconSize: [NEXT_BAR_PX.length, NEXT_BAR_PX.thickness],
+        iconAnchor: [NEXT_BAR_PX.length / 2, NEXT_BAR_PX.thickness / 2],
+      });
+      const marker = L.marker([next.location.lat, next.location.lng], { icon, interactive: true })
+        .bindPopup(popupHtml(next, true));
+      marker.addTo(leafletMap);
+      newMarkers.push(marker);
+    }
+
     markersRef.current = newMarkers;
   }, [clearMarkers]);
 

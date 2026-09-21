@@ -47,6 +47,8 @@ interface RoutePlanningPanelProps {
   locationError?: string | null;
   /** Search bias when there's no GPS fix (the visible map center). */
   getMapCenter?: () => LatLng | null;
+  /** "Drop a pin" — hand the map over so the block can be tapped instead. */
+  onDropPin?: () => void;
 }
 
 export const VEHICLE_OPTIONS: { id: VehicleProfile; label: string }[] = [
@@ -93,6 +95,7 @@ export function RoutePlanningPanel({
   locationPermission = null,
   locationError = null,
   getMapCenter,
+  onDropPin,
 }: RoutePlanningPanelProps) {
   const [useMyLocation, setUseMyLocation] = useState(true);
   const [originQuery, setOriginQuery] = useState('');
@@ -345,10 +348,18 @@ export function RoutePlanningPanel({
   }, [useMyLocation, userLocation, selectedOrigin, selectedDest]);
 
   const NO_MATCHES_HINT = 'No matches yet — try adding a city or ZIP';
+
   const originNoMatches =
     !originLoading && originQuery.trim() !== '' && originResults.length === 0 && originResultsFor === originQuery.trim();
   const destNoMatches =
     !destLoading && destQuery.trim() !== '' && destResults.length === 0 && destResultsFor === destQuery.trim();
+
+  /**
+   * While a destination search is running the sheet IS the search screen:
+   * results fill it, and the planner's own controls step aside until a
+   * destination is chosen.
+   */
+  const isSearchingDest = !selectedDest && (destResults.length > 0 || destLoading || destNoMatches);
 
   const canSwap = !!selectedDest || (!useMyLocation && !!selectedOrigin);
   const canPlanRoute =
@@ -541,16 +552,6 @@ export function RoutePlanningPanel({
                     <X className="w-4 h-4" />
                   </button>
                 )}
-                {(destResults.length > 0 || destLoading || destNoMatches) && !selectedDest && (
-                  <AddressDropdown
-                    results={destResults}
-                    isLoading={destLoading}
-                    emptyMessage={destNoMatches ? NO_MATCHES_HINT : undefined}
-                    activeIndex={destActive}
-                    userLocation={userLocation}
-                    onSelect={(r) => { setSelectedDest(r); setDestQuery(''); setDestResults([]); }}
-                  />
-                )}
                 {showRecents && (
                   <RecentsDropdown
                     recents={recentDestinations}
@@ -595,6 +596,19 @@ export function RoutePlanningPanel({
               </motion.div>
             )}
           </AnimatePresence>
+
+          {isSearchingDest ? (
+            <ResultSections
+              results={destResults}
+              isLoading={destLoading}
+              emptyMessage={destNoMatches ? NO_MATCHES_HINT : undefined}
+              activeIndex={destActive}
+              userLocation={userLocation}
+              onSelect={(r) => { setSelectedDest(r); setDestQuery(''); setDestResults([]); }}
+              onDropPin={onDropPin}
+            />
+          ) : (
+          <>
 
           {/* Vehicle Profile */}
           <div>
@@ -648,11 +662,151 @@ export function RoutePlanningPanel({
               Plot route
             </button>
           </div>
+          </>
+          )}
         </div>
           </motion.div>
         </div>
       )}
     </AnimatePresence>
+  );
+}
+
+/**
+ * The search screen's body: exact addresses first, then places, each row a
+ * hairline apart. The one ember is the dot beside the top hit.
+ */
+function ResultSections({
+  results,
+  isLoading,
+  activeIndex,
+  userLocation,
+  emptyMessage,
+  onSelect,
+  onDropPin,
+}: {
+  results: GeocodingResult[];
+  isLoading: boolean;
+  activeIndex: number;
+  userLocation?: LatLng | null;
+  emptyMessage?: string;
+  onSelect: (r: GeocodingResult) => void;
+  onDropPin?: () => void;
+}) {
+  const addresses: { result: GeocodingResult; index: number }[] = [];
+  const places: { result: GeocodingResult; index: number }[] = [];
+  results.forEach((result, index) => {
+    const kind = result.kind ?? 'area';
+    (kind === 'address' || kind === 'street' ? addresses : places).push({ result, index });
+  });
+
+  return (
+    <div className="-mt-3">
+      {isLoading && results.length === 0 && (
+        <div className="space-y-4 py-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-6 w-3/4 bg-white/5" />
+              <Skeleton className="h-3 w-1/2 bg-white/5" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!isLoading && results.length === 0 && emptyMessage && (
+        <p className="ui-sm text-[#5B6E7F] py-2">{emptyMessage}</p>
+      )}
+
+      {addresses.length > 0 && (
+        <ResultGroup
+          label="Addresses"
+          rows={addresses}
+          activeIndex={activeIndex}
+          userLocation={userLocation}
+          onSelect={onSelect}
+        />
+      )}
+
+      {places.length > 0 && (
+        <ResultGroup
+          label="Places"
+          rows={places}
+          activeIndex={activeIndex}
+          userLocation={userLocation}
+          onSelect={onSelect}
+        />
+      )}
+
+      {onDropPin && (
+        <div className="mt-8">
+          <div className="nv-rule mb-5" />
+          <button
+            onClick={onDropPin}
+            className="mast mast-2 text-[#E6EAF0] text-left transition-opacity active:opacity-60"
+          >
+            Drop a pin
+          </button>
+          <p className="caption mt-2">if the block is not listed.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ResultGroup({
+  label,
+  rows,
+  activeIndex,
+  userLocation,
+  onSelect,
+}: {
+  label: string;
+  rows: { result: GeocodingResult; index: number }[];
+  activeIndex: number;
+  userLocation?: LatLng | null;
+  onSelect: (r: GeocodingResult) => void;
+}) {
+  return (
+    <div className="mt-6 first:mt-2">
+      <div className="kicker mb-1">{label}</div>
+      {rows.map(({ result, index }) => {
+        const distance = userLocation
+          ? formatDistance(haversineDistance(userLocation, result.location))
+          : null;
+        const isExact = result.kind === 'address' && !result.approximate;
+        return (
+          <button
+            key={`${result.shortName}-${result.location.lat}-${result.location.lng}`}
+            role="option"
+            aria-selected={index === activeIndex}
+            // onMouseDown + preventDefault keeps the input focused, so the
+            // sheet doesn't dismiss the list before the tap lands.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onSelect(result)}
+            className={`w-full flex items-center gap-3 py-3.5 text-left nv-hairline-b transition-colors ${
+              index === activeIndex ? 'bg-white/[0.04]' : ''
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${index === 0 ? 'bg-[#E8662E]' : 'bg-transparent'}`}
+              aria-hidden
+            />
+            <span className="min-w-0 flex-1">
+              <span className="mast mast-3 text-[#E6EAF0] truncate block">{result.shortName}</span>
+              <span className="ui-sm text-[#5B6E7F] truncate block mt-1">
+                {[result.category, distance, result.displayName].filter(Boolean).join(' · ')}
+                {result.approximate && ' · approx.'}
+              </span>
+            </span>
+            {isExact && (
+              <span className="kicker nv-hairline rounded-full px-2.5 py-1.5 shrink-0 text-[#B6BECB]">
+                Exact
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

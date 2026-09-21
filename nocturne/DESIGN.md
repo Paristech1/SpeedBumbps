@@ -55,18 +55,28 @@ would collapse the box.
 | 01 | Welcome | — | *(not built; `/` opens the map)* |
 | 02 | Map home | next-bump marker | `14 bumps within 1 mi.` |
 | 03 | Search | first address dot | `exact first. places after.` |
+|  | — the sheet becomes the search screen while typing: ADDRESSES then PLACES, `DROP A PIN` at the foot ||
 | 04 | Route preview | chosen route + chosen minutes | `3 bumps on this one.` |
 | 05 | Navigating | next bump + its distance digits | `speed table in 250 ft.` |
 | 06 | Report a bump | selected harshness digit | `one tap. we verify later.` |
 
 ## Map
 
+Tiles are CARTO's dark style, carried to blue-hour by a light contrast pass on
+the tile pane plus a steel veil above it (`.leaflet-container::after`, between
+the tile pane and the overlays). Everything the app draws sits above the veil
+and keeps its own colour.
+
+A bump reads as a short bar lying across the street, sized in screen pixels so
+it holds its weight at any zoom — never a dot.
+
 | Element | Colour |
 |---|---|
-| Idle bump | slate-blue |
-| Bump on your route | chrome |
-| Next bump ahead | ember (exactly one) |
-| Chosen route | ember |
+| Idle bump | slate-blue bar |
+| Bump on your route | chrome bar |
+| Next bump ahead | ember pill (exactly one) |
+| Chosen route, in preview | ember |
+| Chosen route, while driving | chrome — the ember moves to the next bump |
 | Alternate route | slate-blue, dashed |
 | User location | chrome dot, void stroke |
 | Destination | hollow chrome ring |

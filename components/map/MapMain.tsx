@@ -183,6 +183,8 @@ function MapMainInner() {
   const [originIsCurrentLocation, setOriginIsCurrentLocation] = useState(false);
   // Destination preset by "Route here" on the map
   const [routeHereDestination, setRouteHereDestination] = useState<GeocodingResult | null>(null);
+  // "Drop a pin" from the search screen: the map takes the next tap.
+  const [isPickingDestination, setIsPickingDestination] = useState(false);
 
   const routing = useRouting();
   const { recents, addRecent, removeRecent } = useRecentSearches();
@@ -359,6 +361,11 @@ function MapMainInner() {
   }, []);
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
+    if (isPickingDestination) {
+      setIsPickingDestination(false);
+      handleRouteHere(lat, lng);
+      return;
+    }
     if (isSelectingReportLocation) {
       setReportPickedCoords({ lat, lng });
       setIsSelectingReportLocation(false);
@@ -369,7 +376,7 @@ function MapMainInner() {
       setIsSelectingPOILocation(false);
       setCursorCoords(null);
     }
-  }, [isSelectingPOILocation, isSelectingReportLocation]);
+  }, [isSelectingPOILocation, isSelectingReportLocation, isPickingDestination, handleRouteHere]);
 
   const handleMapMouseMove = useCallback((lat: number, lng: number) => {
     if (isSelectingPOILocation) setCursorCoords({ lat, lng });
@@ -449,7 +456,7 @@ function MapMainInner() {
         className="w-full h-full"
         onClick={handleMapClick}
         onMouseMove={handleMapMouseMove}
-        cursorStyle={isSelectingPOILocation || isSelectingReportLocation ? "crosshair" : "grab"}
+        cursorStyle={isSelectingPOILocation || isSelectingReportLocation || isPickingDestination ? "crosshair" : "grab"}
       >
         <LeafletTileLayer
           url={tileLayerProps.url}
@@ -681,6 +688,31 @@ function MapMainInner() {
         )}
       </AnimatePresence>
 
+      {/* Drop-a-pin prompt — type on the map, nothing boxed */}
+      <AnimatePresence>
+        {isPickingDestination && (
+          <motion.div
+            key="pick-destination"
+            variants={fadeScaleVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="nv-frame fixed left-5 right-5 top-[calc(env(safe-area-inset-top)+1.5rem)] z-[1100] flex items-start justify-between gap-4"
+          >
+            <div className="min-w-0">
+              <p className="mast mast-2 text-[#E6EAF0]">Tap the block</p>
+              <p className="caption mt-2">we&rsquo;ll name it for you.</p>
+            </div>
+            <button
+              onClick={() => { setIsPickingDestination(false); setIsRoutePlanningOpen(true); }}
+              className="mono-bar text-[#5B6E7F] hover:text-[#E6EAF0] shrink-0 pt-1 transition-colors"
+            >
+              Cancel
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Tile Switcher */}
       <MapTileSwitcher
         selectedProviderId={currentProviderId}
@@ -748,6 +780,7 @@ function MapMainInner() {
         locationPermission={hasPermission}
         locationError={locationError}
         getMapCenter={getMapCenter}
+        onDropPin={() => { setIsRoutePlanningOpen(false); setIsPickingDestination(true); }}
       />
 
       {/* Route Result Card — hidden during active navigation */}

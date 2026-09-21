@@ -123,7 +123,7 @@ export function useRoutePolyline({
       // Render unselected (dimmed) route first
       if (unselectedRoute && unselectedRoute.polylinePoints.length >= 2) {
         const latlngs = unselectedRoute.polylinePoints.map((p) => [p.lat, p.lng] as [number, number]);
-        const color = routeColor(false);
+        const color = routeColor(false, isNavigating);
         altPolylineRef.current = L.polyline(latlngs, {
           color,
           weight: STROKE_WIDTH,
@@ -134,7 +134,7 @@ export function useRoutePolyline({
 
       // Render selected route on top
       const latlngs = selectedRoute.polylinePoints.map((p) => [p.lat, p.lng] as [number, number]);
-      const color = routeColor(true);
+      const color = routeColor(true, isNavigating);
       primaryPolylineRef.current = L.polyline(latlngs, {
         color,
         weight: STROKE_WIDTH,
@@ -174,7 +174,7 @@ export function useRoutePolyline({
     return () => {
       mounted = false;
     };
-  }, [map, primaryRoute, alternativeRoute, selectedRouteIndex]);
+  }, [map, primaryRoute, alternativeRoute, selectedRouteIndex, isNavigating]);
 
   // Re-frame when the preview sheet snaps to a different height (new routes are framed as they're drawn)
   const selectedRouteRef = useRef<AppRoute | undefined>(undefined);

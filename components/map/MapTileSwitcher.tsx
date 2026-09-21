@@ -23,6 +23,12 @@ export function MapTileSwitcher({
   // Map tile providers to display options with PNG previews
   const layerOptions = [
     {
+      id: "nocturne",
+      label: "Nocturne",
+      image: "/map-dark.png",
+      provider: TILE_PROVIDERS.find((p) => p.id === "nocturne"),
+    },
+    {
       id: "osm",
       label: "Basic",
       image: "/map-basic.png",
@@ -74,7 +80,7 @@ export function MapTileSwitcher({
                   alt={`${layer.label} map preview`}
                   fill
                   sizes="(max-width: 640px) 40px, 48px"
-                  className="object-cover opacity-70"
+                  className="object-cover nv-map-thumb"
                 />
               </div>
               <span className="kicker text-[9px] tracking-[0.12em]">
@@ -97,7 +103,7 @@ export function MapTileSwitcher({
               alt={`${selectedLayer.label} map preview`}
               fill
               sizes="(max-width: 640px) 64px, 80px"
-              className="object-cover opacity-70"
+              className="object-cover nv-map-thumb"
             />
           </div>
           <span className="block glass-panel px-2 py-1.5 kicker text-[9px] tracking-[0.12em]">

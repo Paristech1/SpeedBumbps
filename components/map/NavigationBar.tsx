@@ -259,64 +259,58 @@ export function NavigationBar({
         )}
       </motion.header>
 
-      {/* Trip card — remaining time, distance and bumps, with type-only actions */}
+      {/* The road below is the composition — the trip reads as type on the map,
+          with the report action at mast scale the way screen 05 sets it. */}
       <motion.div
         variants={hudBottomVariants}
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-3 right-3 z-[1050]"
+        className="nv-frame fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-5 right-5 z-[1050]"
       >
-        <div className="nv-frame nv-glass rounded-[22px] px-5 pt-4 pb-3 max-w-2xl mx-auto">
-          <div className="flex items-end justify-between gap-5">
-            <div className="min-w-0">
-              <p className="kicker">{hasArrived ? 'Arrived' : 'Remaining'}</p>
-              <p className="mast mast-2 mast-num text-[#E6EAF0] mt-1.5 truncate">
-                {hasArrived ? "You're here" : `${formatDuration(remainingDuration)} · ${formatDistance(remainingDistance)}`}
-              </p>
-            </div>
-            {!hasArrived && (
-              <div className="text-right shrink-0">
-                <p className="kicker">Bumps left</p>
-                <p className="mast mast-2 mast-num text-[#E6EAF0] mt-1.5">{bumpsLeft}</p>
-              </div>
-            )}
-          </div>
-
-          <div className="ui-sm text-[#5B6E7F] mt-2">
-            {hasArrived ? (
-              'smooth all the way.'
-            ) : (
-              <>
-                eta {etaClock.toLowerCase()}
-                {speedMph != null && <span className="hidden min-[380px]:inline"> · {speedMph} mph</span>}
-                <span className="hidden min-[340px]:inline"> · {gps.label.toLowerCase()}</span>
-              </>
-            )}
-          </div>
-
-          <div className="nv-rule my-3" />
-
-          <div className="flex items-center justify-between gap-4">
+        <div className="flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="kicker text-[#B6BECB]">
+              {hasArrived ? 'Arrived' : `${formatDuration(remainingDuration)} · ${formatDistance(remainingDistance)}`}
+            </p>
             {onReportBump && !hasArrived ? (
               <button
                 onClick={onReportBump}
-                className="mast mast-4 text-[#E6EAF0] py-2 transition-opacity active:opacity-60"
+                className="mast mast-1 text-[#E6EAF0] text-left mt-2 transition-opacity active:opacity-60"
               >
-                Report a bump
+                Report
+                <br />a bump
               </button>
             ) : (
-              <span className="mono-bar text-[#5B6E7F] py-2">{gps.label}</span>
+              <p className="mast mast-1 text-[#E6EAF0] mt-2">
+                {hasArrived ? 'Arrived' : 'Driving'}
+              </p>
+            )}
+          </div>
+
+          <div className="shrink-0 text-right pb-2">
+            {!hasArrived && (
+              <>
+                <p className="kicker">Bumps left</p>
+                <p className="mast mast-2 mast-num text-[#E6EAF0] mt-1.5">{bumpsLeft}</p>
+              </>
             )}
             <button
               onClick={onEndNavigation}
-              className="mono-bar text-[#E8662E] py-2 pl-6 transition-opacity active:opacity-60"
+              className="mono-bar text-[#E8662E] mt-4 py-2 transition-opacity active:opacity-60"
             >
               {hasArrived ? 'Done' : 'End'}
             </button>
           </div>
         </div>
+
+        <p className="caption mt-3">
+          {hasArrived
+            ? 'smooth all the way.'
+            : `eta ${etaClock.toLowerCase()}${speedMph != null ? ` · ${speedMph} mph` : ''} · ${gps.label.toLowerCase()}.`}
+        </p>
       </motion.div>
+
     </>
   );
 }

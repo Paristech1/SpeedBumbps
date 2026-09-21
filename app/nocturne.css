@@ -142,3 +142,40 @@
 
 /* Sheets sit on the void with a soft lift, never a hard shadow line. */
 .nv-lift { box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.65); }
+
+/* --- The map ------------------------------------------------------------
+   Tiles arrive as somebody else's dark style. A light touch of contrast, then
+   a steel veil over the tile pane, carries them to blue-hour: near-void
+   blocks, slate streets, cool labels. The veil sits above the tiles (pane
+   z-index 200) and below routes and markers (400+), so everything the app
+   draws keeps its own colour. */
+
+.leaflet-container {
+  background: var(--nv-void) !important;
+}
+
+.leaflet-tile-pane {
+  filter: brightness(0.95) contrast(1.12) saturate(0.85);
+}
+
+.leaflet-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 250;
+  pointer-events: none;
+  background: rgba(16, 32, 40, 0.42);
+}
+
+/* The switcher's thumbnails are imagery; no veil to sit under, so they take
+   the whole move as a filter. */
+.nv-map-thumb {
+  filter: grayscale(0.7) brightness(0.42) contrast(1.15) saturate(0.55);
+}
+
+/* The next bump: an ember pill lying across the street. */
+.nv-bump-next {
+  background: var(--nv-ember);
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(7, 9, 10, 0.9), 0 0 16px rgba(232, 102, 46, 0.55);
+}
