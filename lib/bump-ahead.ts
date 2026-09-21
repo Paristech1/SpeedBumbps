@@ -6,7 +6,7 @@
  * block you just left can be closer in metres than the one you are about to hit.
  */
 
-import { findClosestPointIndex, haversineDistance, routeProgress } from './geo-utils';
+import { haversineDistance, routeProgress } from './geo-utils';
 import type { LatLng, SpeedBump } from '@/types/speedbumps';
 
 /** Bumps further than this along the route aren't worth a warning yet. */
@@ -14,7 +14,7 @@ export const BUMP_AHEAD_RANGE_M = 400;
 
 export interface BumpAhead {
   bump: SpeedBump;
-  /** Straight-line metres from the driver to the bump. */
+  /** Metres from the driver to the bump measured along the route. */
   distanceMeters: number;
 }
 
@@ -31,12 +31,16 @@ export function nextBumpAhead(
     return nearest(bumps, location, rangeMeters);
   }
 
-  const progress = routeProgress(routePoints, location);
+  // Compare how much route each still has left rather than which vertex each
+  // is nearest: on a long straight segment the driver and a bump they have
+  // already crossed share a vertex, and the bump would read as ahead.
+  const driverRemaining = routeProgress(routePoints, location).remainingMeters;
+
   let best: BumpAhead | null = null;
   for (const bump of bumps) {
-    const index = findClosestPointIndex(bump.location, routePoints);
-    if (index < progress.segmentIndex) continue; // already behind us
-    const distanceMeters = haversineDistance(location, bump.location);
+    const bumpRemaining = routeProgress(routePoints, bump.location).remainingMeters;
+    const distanceMeters = driverRemaining - bumpRemaining;
+    if (distanceMeters <= 0) continue; // already behind us
     if (distanceMeters > rangeMeters) continue;
     if (!best || distanceMeters < best.distanceMeters) best = { bump, distanceMeters };
   }
@@ -62,8 +66,8 @@ export function bumpsRemaining(
   if (!bumps || bumps.length === 0) return 0;
   if (!location || !routePoints || routePoints.length < 2) return bumps.length;
 
-  const progress = routeProgress(routePoints, location);
-  return bumps.filter((b) => findClosestPointIndex(b.location, routePoints) >= progress.segmentIndex).length;
+  const driverRemaining = routeProgress(routePoints, location).remainingMeters;
+  return bumps.filter((b) => routeProgress(routePoints, b.location).remainingMeters < driverRemaining).length;
 }
 
 /** Label for a bump's kind, as the HUD and report sheet say it. */
