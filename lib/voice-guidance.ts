@@ -1,34 +1,30 @@
 /**
  * Voice guidance — the front door for everything that speaks.
  *
- * Two engines sit behind this. The **system voice** (Web Speech API) is the
- * floor: no download, no GPU, no network, always there. The **neural voice**
- * (Kokoro, in-browser) is the ceiling: the same voice on every phone, offline,
- * and it doesn't sound like a screen reader — but it costs an ~86 MB model
- * download, so it is off until the driver asks for it.
+ * One engine: the browser's own speech synthesis, driven through EasySpeech
+ * (see lib/voice/web-speech.ts). It needs no download, no GPU and no network,
+ * which is what a driver in a dead zone actually has.
  *
- * The rule between them is that a prompt is never delayed. speak() plays a
- * neural clip only when one is already rendered; otherwise the system voice
- * says the line immediately and the neural engine renders it in the
- * background, so the same line is neural the next time it comes up. Guidance
- * repeats itself constantly, so the voice improves over a drive on its own.
- *
- * Call sites don't choose an engine — they call speak() and get the best one
- * that can answer right now.
+ * There was briefly a second engine — Kokoro, a neural model run in the
+ * browser. It sounded better in principle and never played on a real phone,
+ * and there was no way to find that out from inside the app. It is gone. What
+ * replaced it is the thing that was missing underneath: a voice that reports
+ * whether it actually spoke.
  */
 
 import { toImperial } from './geo-utils';
 import * as systemVoice from './voice/web-speech';
-import * as neuralVoice from './voice/kokoro';
 
-export type { KokoroStatus, KokoroVoice } from './voice/kokoro';
-export { SAMPLE_LINE } from './voice/phrases';
+export type { SpeechOutcome } from './voice/web-speech';
 
 const VOICE_MUTED_STORAGE_KEY = 'speedbumps-voice-muted';
 
+/** The line the Test button speaks — long enough to hear the voice, short enough to sit through. */
+export const SAMPLE_LINE = 'In a quarter mile, turn right onto South Street. Speed bump ahead.';
+
 let muted: boolean | null = null; // lazily hydrated from localStorage
 
-// --- the system voice, re-exported unchanged --------------------------------
+// --- the engine -------------------------------------------------------------
 
 export function isSpeechSupported(): boolean {
   return systemVoice.isSupported();
@@ -38,37 +34,17 @@ export const getAvailableVoices = systemVoice.getAvailableVoices;
 export const getSelectedVoiceName = systemVoice.getSelectedVoiceName;
 export const setVoiceByName = systemVoice.setVoiceByName;
 
-// --- the neural voice -------------------------------------------------------
-
-export const isNeuralVoiceSupported = neuralVoice.isSupported;
-export const isNeuralVoiceEnabled = neuralVoice.isEnabled;
-export const setNeuralVoiceEnabled = neuralVoice.setEnabled;
-export const getNeuralVoiceStatus = neuralVoice.getStatus;
-export const getNeuralVoiceProgress = neuralVoice.getProgress;
-export const getNeuralVoices = neuralVoice.getVoices;
-export const getNeuralVoiceId = neuralVoice.getVoiceId;
-export const setNeuralVoiceId = neuralVoice.setVoiceId;
-export const subscribeNeuralVoice = neuralVoice.subscribe;
-export const hasWebGPU = neuralVoice.hasWebGPU;
+/** Start hydrating the voice list. Safe and cheap to call more than once. */
+export const initVoice = systemVoice.init;
 
 /**
- * Start loading the neural voice, if the driver has turned it on. Call this
- * when a route is plotted: the download must not begin at the first turn.
+ * What happened to the last line, and why the voice might be silent. The
+ * Profile panel reads this so a dead voice is something you can see rather
+ * than something you have to guess at.
  */
-export const prewarmVoice = neuralVoice.prewarm;
-
-/**
- * Render a route's own instructions ahead of the drive, so their street names
- * are already audio by the time they're spoken.
- */
-export const prerenderVoice = neuralVoice.prerender;
-
-/** Speak a line through the neural voice, waiting for it. Previews only — never on the road. */
-export async function speakSample(text: string): Promise<boolean> {
-  if (!(await neuralVoice.load())) return false;
-  await neuralVoice.render(text);
-  return neuralVoice.playCached(text);
-}
+export const getSpeechOutcome = systemVoice.getOutcome;
+export const getVoiceDiagnostics = systemVoice.diagnostics;
+export const subscribeVoice = systemVoice.subscribe;
 
 // --- mute -------------------------------------------------------------------
 
@@ -96,30 +72,31 @@ export function setVoiceMuted(value: boolean): void {
 // --- speaking ---------------------------------------------------------------
 
 /**
- * Unlock audio on iOS. Both engines need a first play inside a user gesture,
- * so this must be called from the Start button handler.
+ * Unlock speech inside a user gesture. iOS ignores speak() until one call has
+ * happened inside one, so this must run from a tap handler — the Start button.
  */
 export function primeVoice(): void {
   systemVoice.prime();
-  neuralVoice.prime();
+}
+
+/** Say a line, now. */
+export function speak(text: string): void {
+  if (!text || isVoiceMuted()) return;
+  systemVoice.speak(text);
 }
 
 /**
- * Say a line, now. Plays the neural clip when one is rendered, and otherwise
- * falls straight through to the system voice — this never waits on synthesis,
- * because a turn instruction that arrives late is a missed turn.
+ * Say a line regardless of the mute setting — the Test button in the Profile
+ * panel, which exists precisely to find out whether the voice works. Muting
+ * guidance and then getting silence from a button labelled Test is how a
+ * working voice gets reported as broken.
  */
-export function speak(text: string): void {
-  if (!text || isVoiceMuted()) return;
-  cancelSpeech();
-  if (neuralVoice.playCached(text)) return;
+export function speakSample(text: string = SAMPLE_LINE): void {
   systemVoice.speak(text);
-  neuralVoice.warm(text); // so the next time this line comes up, it's neural
 }
 
 export function cancelSpeech(): void {
   systemVoice.cancel();
-  neuralVoice.stop();
 }
 
 // --- phrasing ---------------------------------------------------------------

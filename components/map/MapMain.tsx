@@ -28,7 +28,7 @@ import { useLocationTracking, type UserLocation } from "@/hooks/useLocationTrack
 import { useRouteDeviation } from "@/hooks/useRouteDeviation";
 import { useNavigationCamera } from "@/hooks/useNavigationCamera";
 import { useWakeLock } from "@/hooks/useWakeLock";
-import { primeVoice, speak, isSpeechSupported, prewarmVoice, prerenderVoice } from "@/lib/voice-guidance";
+import { primeVoice, speak, isSpeechSupported, initVoice } from "@/lib/voice-guidance";
 import { nextBumpAhead } from "@/lib/bump-ahead";
 import { log } from "@/lib/app-logger";
 import { useSavedRoutes } from "@/hooks/useSavedRoutes";
@@ -297,21 +297,13 @@ function MapMainInner() {
     }
   }, [routing.status, routing.result]);
 
-  // Plotting a route is the moment to get the neural voice ready: it needs a
-  // model download the first time, and starting that at the first turn is a
-  // missed turn. Rendering this route's own steps now means their street names
-  // are already audio when they're spoken. Both no-op unless the driver turned
-  // the neural voice on.
-  const plottedRoute = routing.status === "success" ? routing.result : null;
+  // Get the voice list hydrating early. Chrome hands it over asynchronously
+  // and iOS sometimes not until something has been spoken, so asking at the
+  // first turn means the first turn is the one that comes out in the wrong
+  // voice, or not at all.
   useEffect(() => {
-    if (!plottedRoute) return;
-    prewarmVoice();
-    const steps = [
-      ...(plottedRoute.primaryRoute?.steps ?? []),
-      ...(plottedRoute.alternativeRoute?.steps ?? []),
-    ].map((step) => step.instruction);
-    if (steps.length > 0) prerenderVoice(steps);
-  }, [plottedRoute]);
+    void initVoice();
+  }, []);
 
   const handleTabChange = useCallback((tab: TabId) => {
     setActiveTab(tab);

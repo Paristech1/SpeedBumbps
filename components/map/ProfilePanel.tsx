@@ -17,18 +17,10 @@ import {
   getAvailableVoices,
   getSelectedVoiceName,
   setVoiceByName,
-  speak,
-  SAMPLE_LINE,
-  isNeuralVoiceSupported,
-  isNeuralVoiceEnabled,
-  setNeuralVoiceEnabled,
-  getNeuralVoiceStatus,
-  getNeuralVoiceProgress,
-  getNeuralVoices,
-  getNeuralVoiceId,
-  setNeuralVoiceId,
-  subscribeNeuralVoice,
+  initVoice,
   speakSample,
+  getSpeechOutcome,
+  subscribeVoice,
 } from '@/lib/voice-guidance';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -55,8 +47,8 @@ interface ProfilePanelProps {
 
 const snapPoints = [0.6, 0.92];
 
-/** Stable empty array — useSyncExternalStore re-renders forever on a fresh one. */
-const EMPTY_NEURAL_VOICES: ReturnType<typeof getNeuralVoices> = [];
+/** Stable reference — useSyncExternalStore re-renders forever on a fresh object. */
+const IDLE_OUTCOME = { state: 'idle' } as const;
 
 export function ProfilePanel({
   isOpen,
@@ -82,22 +74,16 @@ export function ProfilePanel({
       setVoices(getAvailableVoices());
       setVoiceName(getSelectedVoiceName());
     };
+    // init() resolves once the browser has handed over its voices; refresh
+    // again on voiceschanged, which some browsers fire later still.
+    void initVoice().then(refresh);
     refresh();
     window.speechSynthesis.addEventListener('voiceschanged', refresh);
     return () => window.speechSynthesis.removeEventListener('voiceschanged', refresh);
   }, []);
 
-  // Neural voice — live state from the engine (it loads a model in the background)
-  const neuralStatus = useSyncExternalStore(subscribeNeuralVoice, getNeuralVoiceStatus, () => 'off' as const);
-  const neuralProgress = useSyncExternalStore(subscribeNeuralVoice, getNeuralVoiceProgress, () => 0);
-  const neuralVoiceList = useSyncExternalStore(subscribeNeuralVoice, getNeuralVoices, () => EMPTY_NEURAL_VOICES);
-  const neuralVoiceId = useSyncExternalStore(subscribeNeuralVoice, getNeuralVoiceId, () => '');
-  const [neuralOn, setNeuralOn] = useState(false);
-  useEffect(() => {
-    // localStorage can't be read during render or on the server
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setNeuralOn(isNeuralVoiceEnabled());
-  }, []);
+  // What the voice last did, so a silent one is visible rather than a mystery
+  const speechOutcome = useSyncExternalStore(subscribeVoice, getSpeechOutcome, () => IDLE_OUTCOME);
 
   // Log mode — live capture state from the diagnostics logger
   const capturing = useSyncExternalStore(subscribeLogger, isCapturing, () => false);
@@ -274,87 +260,6 @@ export function ProfilePanel({
                   <Volume2 className="w-3.5 h-3.5" /> Navigation voice
                 </div>
 
-                {/* The engine. Neural is a one-time download, so it's the
-                    driver's call, and the system voice keeps working either way. */}
-                {isNeuralVoiceSupported() && (
-                  <div className="mb-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => { setNeuralVoiceEnabled(false); setNeuralOn(false); }}
-                        className={`flex-1 nv-chip mono-bar px-4 py-3 rounded-2xl transition-all ${
-                          neuralOn ? 'hover:text-[#E6EAF0]' : 'nv-chosen-edge text-[#E6EAF0]'
-                        }`}
-                        aria-pressed={!neuralOn}
-                      >
-                        System
-                      </button>
-                      <button
-                        onClick={() => { setNeuralVoiceEnabled(true); setNeuralOn(true); }}
-                        className={`flex-1 nv-chip mono-bar px-4 py-3 rounded-2xl transition-all ${
-                          neuralOn ? 'nv-chosen-edge text-[#E6EAF0]' : 'hover:text-[#E6EAF0]'
-                        }`}
-                        aria-pressed={neuralOn}
-                      >
-                        Natural
-                      </button>
-                    </div>
-
-                    {neuralOn && (
-                      <div className="mt-3">
-                        {neuralStatus === 'loading' && (
-                          <>
-                            <div className="h-1 rounded-full bg-[#E6EAF0]/10 overflow-hidden">
-                              <div
-                                className="h-full bg-[#2BD9CE] transition-[width] duration-300"
-                                style={{ width: `${Math.round(neuralProgress * 100)}%` }}
-                              />
-                            </div>
-                            <p className="ui-sm text-[#5B6E7F] mt-2">
-                              Downloading the voice — {Math.round(neuralProgress * 100)}%. It only
-                              happens once, and guidance uses the system voice until it lands.
-                            </p>
-                          </>
-                        )}
-                        {neuralStatus === 'failed' && (
-                          <p className="ui-sm text-[#FF3D8E]">
-                            That voice couldn&apos;t load here. Guidance is using the system voice.
-                          </p>
-                        )}
-                        {neuralStatus === 'ready' && neuralVoiceList.length > 0 && (
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={neuralVoiceId}
-                              onChange={(e) => setNeuralVoiceId(e.target.value)}
-                              className="flex-1 min-w-0 bg-transparent nv-hairline rounded-2xl px-4 py-3 ui-sm text-[#E6EAF0] focus:outline-none focus:border-[#E6EAF0]/50"
-                              aria-label="Natural voice"
-                            >
-                              {neuralVoiceList.map((v) => (
-                                <option key={v.id} value={v.id}>
-                                  {v.label}{v.gender ? ` — ${v.gender}` : ''}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              onClick={() => { void speakSample(SAMPLE_LINE); }}
-                              className="nv-chip mono-bar flex items-center gap-1.5 px-4 py-3 rounded-2xl active:scale-95 transition-all whitespace-nowrap hover:text-[#E6EAF0]"
-                              aria-label="Test natural voice"
-                            >
-                              <Play className="w-4 h-4" /> Test
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <p className="ui-sm text-[#5B6E7F] mt-3">
-                      {neuralOn
-                        ? 'The same voice on every phone, and it keeps working with no signal. Nothing about your route leaves the device.'
-                        : 'Natural is a one-time 86 MB download that runs on your phone. It sounds like a person instead of a screen reader.'}
-                    </p>
-                  </div>
-                )}
-
-                {isNeuralVoiceSupported() && <div className="nv-rule mb-4" />}
 
                 <div className="flex items-center gap-2">
                   {voices.length === 0 ? (
@@ -376,7 +281,10 @@ export function ProfilePanel({
                         ))}
                       </select>
                       <button
-                        onClick={() => speak('Heads up, speed bump ahead. Take it easy.')}
+                        // Speaks through the mute setting on purpose: a button
+                        // labelled Test that is silent because guidance is
+                        // muted is how a working voice gets reported as broken.
+                        onClick={() => speakSample()}
                         className="nv-chip mono-bar flex items-center gap-1.5 px-4 py-3 rounded-2xl active:scale-95 transition-all whitespace-nowrap hover:text-[#E6EAF0]"
                         aria-label="Test voice"
                       >
@@ -385,8 +293,24 @@ export function ProfilePanel({
                     </>
                   )}
                 </div>
-                <p className="ui-sm text-[#5B6E7F] mt-3">
-                  The fallback voice, used before the natural one has loaded and wherever it can&apos;t run. Some devices add more voices in their system settings.
+
+                {/* What the voice last did. Silence used to be indistinguishable
+                    from a voice that had never been asked to speak. */}
+                <p
+                  className={`ui-sm mt-3 ${
+                    speechOutcome.state === 'failed' ? 'text-[#FF3D8E]' : 'text-[#5B6E7F]'
+                  }`}
+                  role={speechOutcome.state === 'failed' ? 'alert' : undefined}
+                >
+                  {speechOutcome.state === 'failed'
+                    ? `Nothing played — ${speechOutcome.reason}.`
+                    : speechOutcome.state === 'speaking'
+                      ? 'Speaking…'
+                      : speechOutcome.state === 'spoke'
+                        ? 'Voice is working. Some devices add more voices in their system settings.'
+                        : voices.length === 0
+                          ? 'This browser reports no speech voices. Guidance will be silent here.'
+                          : 'Tap Test to hear it. On iPhone the silent switch mutes the voice.'}
                 </p>
               </div>
             )}
