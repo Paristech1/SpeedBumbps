@@ -454,7 +454,7 @@ function MapMainInner() {
     <div className="relative h-screen w-full overflow-hidden bg-[#07090A]">
       {/* Map */}
       <LeafletMap
-        className="w-full h-full"
+        className={`w-full h-full${currentProviderId === "nocturne" ? " nv-map" : ""}`}
         onClick={handleMapClick}
         onMouseMove={handleMapMouseMove}
         cursorStyle={isSelectingPOILocation || isSelectingReportLocation || isPickingDestination ? "crosshair" : "grab"}

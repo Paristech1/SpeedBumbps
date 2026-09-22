@@ -22,8 +22,14 @@ import { formatDistance, formatDuration } from '@/lib/geo-utils';
 import { listContainerVariants, listItemVariants } from '@/lib/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 
-/** Visible sheet height at each snap: peek / default / expanded. */
-export const ROUTE_SHEET_SNAP_POINTS: (number | string)[] = ['190px', '372px', 0.85];
+/**
+ * Visible sheet height at each snap: tucked / default / expanded.
+ *
+ * The lowest snap leaves only the handle and a one-line summary, so the sheet
+ * can be pulled down to all but clear the map. The route stays put — tap that
+ * line to bring the sheet back up.
+ */
+export const ROUTE_SHEET_SNAP_POINTS: (number | string)[] = ['76px', '372px', 0.85];
 
 interface RouteResultCardProps {
   result: RouteCalculationResult;
@@ -58,6 +64,8 @@ export function RouteResultCard({
     : 0;
   const altFewerBumps = hasAlternative ? primaryRoute.speedBumpCount - alternativeRoute!.speedBumpCount : 0;
 
+  const isTucked = snap === ROUTE_SHEET_SNAP_POINTS[0];
+
   const bumpLine = selectedRoute.isSpeedBumpFree
     ? 'no bumps on this one.'
     : `${selectedRoute.speedBumpCount} bump${selectedRoute.speedBumpCount !== 1 ? 's' : ''} on this one.`;
@@ -83,121 +91,142 @@ export function RouteResultCard({
           {/* Handle */}
           <div className="mx-auto mt-3 mb-4 h-1 w-10 shrink-0 rounded-full bg-[#5B6E7F]/60" />
 
-          {/* Route summary — large ETA style from stitch */}
-          <div className="nv-frame px-6 mb-4 shrink-0">
-            <div className="flex items-end gap-6">
-              <div className="min-w-0">
-                <p className="kicker">Time</p>
-                <p className="mast mast-2 mast-num text-[#E6EAF0] whitespace-nowrap mt-1.5">
-                  {formatDuration(selectedRoute.durationSeconds)}
-                </p>
+          {/* Tucked away: one line, and a tap to bring the sheet back */}
+          {isTucked ? (
+            <button
+              onClick={() => onSnapChange(ROUTE_SHEET_SNAP_POINTS[1])}
+              className="nv-frame w-full flex items-baseline gap-3 px-6 pb-4 text-left shrink-0"
+              aria-label="Show route details"
+            >
+              <span className="mast mast-3 mast-num text-[#E6EAF0] whitespace-nowrap">
+                {formatDuration(selectedRoute.durationSeconds)}
+              </span>
+              <span className="mast mast-3 mast-num text-[#B6BECB] whitespace-nowrap">
+                {formatDistance(selectedRoute.distanceMeters)}
+              </span>
+              <span className="ui-sm text-[#5B6E7F] truncate">{bumpLine}</span>
+            </button>
+          ) : (
+            <div className="nv-frame px-6 mb-4 shrink-0">
+              <div className="flex items-end gap-6">
+                <div className="min-w-0">
+                  <p className="kicker">Time</p>
+                  <p className="mast mast-2 mast-num text-[#E6EAF0] whitespace-nowrap mt-1.5">
+                    {formatDuration(selectedRoute.durationSeconds)}
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <p className="kicker">Distance</p>
+                  <p className="mast mast-2 mast-num text-[#E6EAF0] whitespace-nowrap mt-1.5">
+                    {formatDistance(selectedRoute.distanceMeters)}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="kicker">Distance</p>
-                <p className="mast mast-2 mast-num text-[#E6EAF0] whitespace-nowrap mt-1.5">
-                  {formatDistance(selectedRoute.distanceMeters)}
-                </p>
-              </div>
-            </div>
-            <p className="caption mt-2.5">{bumpLine}</p>
-          </div>
-
-          {/* Route toggle (when alternative exists) */}
-          {hasAlternative && (
-            <div className="nv-frame flex gap-3 px-6 mb-4 shrink-0" data-vaul-no-drag>
-              <RouteChoice
-                label="Fastest"
-                minutes={formatDuration(primaryRoute.durationSeconds)}
-                detail={`${primaryRoute.speedBumpCount} bump${primaryRoute.speedBumpCount !== 1 ? 's' : ''}`}
-                isSelected={selectedRouteIndex === 0}
-                onClick={() => selectedRouteIndex !== 0 && onToggleRoute()}
-              />
-              <RouteChoice
-                label="Smoothest"
-                minutes={formatDuration(alternativeRoute!.durationSeconds)}
-                detail={`${altExtraMinutes > 0 ? `+${altExtraMinutes} min` : 'same time'} · −${altFewerBumps} bump${altFewerBumps !== 1 ? 's' : ''}`}
-                isSelected={selectedRouteIndex === 1}
-                onClick={() => selectedRouteIndex !== 1 && onToggleRoute()}
-              />
+              <p className="caption mt-2.5">{bumpLine}</p>
             </div>
           )}
 
-          {/* Action buttons */}
-          <div className="px-6 mb-4 shrink-0" data-vaul-no-drag>
-            <div className="nv-rule mb-3" />
-            <div className="flex items-center justify-between gap-3">
-              <button
-                onClick={onStartNavigation}
-                className="mono-bar text-[#E6EAF0] py-2 transition-opacity active:opacity-60"
-              >
-                {selectedRouteIndex === 1 ? 'Take smoothest' : 'Take fastest'}
-              </button>
-              <div className="flex items-center gap-1 shrink-0">
+          {!isTucked && (
+            <>
+            {/* Route toggle (when alternative exists) */}
+            {hasAlternative && (
+              <div className="nv-frame flex gap-3 px-6 mb-4 shrink-0" data-vaul-no-drag>
+                <RouteChoice
+                  label="Fastest"
+                  minutes={formatDuration(primaryRoute.durationSeconds)}
+                  detail={`${primaryRoute.speedBumpCount} bump${primaryRoute.speedBumpCount !== 1 ? 's' : ''}`}
+                  isSelected={selectedRouteIndex === 0}
+                  onClick={() => selectedRouteIndex !== 0 && onToggleRoute()}
+                />
+                <RouteChoice
+                  label="Smoothest"
+                  minutes={formatDuration(alternativeRoute!.durationSeconds)}
+                  detail={`${altExtraMinutes > 0 ? `+${altExtraMinutes} min` : 'same time'} · −${altFewerBumps} bump${altFewerBumps !== 1 ? 's' : ''}`}
+                  isSelected={selectedRouteIndex === 1}
+                  onClick={() => selectedRouteIndex !== 1 && onToggleRoute()}
+                />
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="px-6 mb-4 shrink-0" data-vaul-no-drag>
+              <div className="nv-rule mb-3" />
+              <div className="flex items-center justify-between gap-3">
                 <button
-                  onClick={onSaveRoute}
-                  className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors active:scale-95 ${
-                    isRouteSaved ? 'text-[#E6EAF0]' : 'text-[#5B6E7F] hover:text-[#E6EAF0]'
-                  }`}
-                  title={isRouteSaved ? 'Route saved' : 'Save route'}
-                  aria-label={isRouteSaved ? 'Route saved' : 'Save route'}
+                  onClick={onStartNavigation}
+                  className="mono-bar text-[#E6EAF0] py-2 transition-opacity active:opacity-60"
                 >
-                  <Bookmark className={`w-5 h-5 ${isRouteSaved ? 'fill-current' : ''}`} />
+                  {selectedRouteIndex === 1 ? 'Take smoothest' : 'Take fastest'}
                 </button>
-                <button
-                  onClick={() => onSnapChange(ROUTE_SHEET_SNAP_POINTS[2])}
-                  className="w-10 h-10 flex items-center justify-center rounded-full text-[#5B6E7F] hover:text-[#E6EAF0] transition-colors active:scale-95"
-                  title="Turn-by-turn steps"
-                  aria-label="Show turn-by-turn steps"
-                >
-                  <List className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={onClearRoute}
-                  className="w-10 h-10 flex items-center justify-center rounded-full text-[#5B6E7F] hover:text-[#E6EAF0] transition-colors active:scale-95"
-                  title="Cancel route"
-                  aria-label="Cancel route"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={onSaveRoute}
+                    className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors active:scale-95 ${
+                      isRouteSaved ? 'text-[#E6EAF0]' : 'text-[#5B6E7F] hover:text-[#E6EAF0]'
+                    }`}
+                    title={isRouteSaved ? 'Route saved' : 'Save route'}
+                    aria-label={isRouteSaved ? 'Route saved' : 'Save route'}
+                  >
+                    <Bookmark className={`w-5 h-5 ${isRouteSaved ? 'fill-current' : ''}`} />
+                  </button>
+                  <button
+                    onClick={() => onSnapChange(ROUTE_SHEET_SNAP_POINTS[2])}
+                    className="w-10 h-10 flex items-center justify-center rounded-full text-[#5B6E7F] hover:text-[#E6EAF0] transition-colors active:scale-95"
+                    title="Turn-by-turn steps"
+                    aria-label="Show turn-by-turn steps"
+                  >
+                    <List className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={onClearRoute}
+                    className="w-10 h-10 flex items-center justify-center rounded-full text-[#5B6E7F] hover:text-[#E6EAF0] transition-colors active:scale-95"
+                    title="Cancel route"
+                    aria-label="Cancel route"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Turn-by-turn steps — visible at the expanded snap */}
-          <div className="nv-frame flex items-baseline gap-3 px-6 pt-1 pb-3 shrink-0">
-            <h2 className="kicker">Turn by turn</h2>
-            <span className="kicker">{selectedRoute.steps.length} steps</span>
-          </div>
-          <motion.div
-            variants={listContainerVariants}
-            initial="hidden"
-            animate="visible"
-            className="flex-1 overflow-y-auto hide-scrollbar px-6 pb-10"
-          >
-            {selectedRoute.steps.length === 0 ? (
-              <EmptyState
-                icon={<List className="w-8 h-8" />}
-                title="No turn-by-turn steps"
-                hint="This route has distance and duration but no detailed directions were returned."
-              />
-            ) : selectedRoute.steps.map((step, i) => (
-              <motion.div
-                key={i}
-                variants={listItemVariants}
-                className="nv-frame flex items-center gap-4 px-2 py-3.5 nv-hairline-b last:border-b-0"
-              >
-                <DirectionIcon instruction={step.instruction} isCurrent={i === 0} />
-                <div className="flex-1 min-w-0">
-                  <h3 className={`mast mast-3 ${i === 0 ? 'text-[#E6EAF0]' : 'text-[#B6BECB]'}`}>
-                    {step.instruction}
-                  </h3>
-                  <p className="ui-sm text-[#5B6E7F] mt-1 tabular-nums">
-                    {formatDistance(step.distanceMeters)} · {formatDuration(step.durationSeconds)}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
+            {/* Turn-by-turn steps — visible at the expanded snap */}
+            <div className="nv-frame flex items-baseline gap-3 px-6 pt-1 pb-3 shrink-0">
+              <h2 className="kicker">Turn by turn</h2>
+              <span className="kicker">{selectedRoute.steps.length} steps</span>
+            </div>
+            <motion.div
+              variants={listContainerVariants}
+              initial="hidden"
+              animate="visible"
+              className="flex-1 overflow-y-auto hide-scrollbar px-6 pb-10"
+            >
+              {selectedRoute.steps.length === 0 ? (
+                <EmptyState
+                  icon={<List className="w-8 h-8" />}
+                  title="No turn-by-turn steps"
+                  hint="This route has distance and duration but no detailed directions were returned."
+                />
+              ) : selectedRoute.steps.map((step, i) => (
+                <motion.div
+                  key={i}
+                  variants={listItemVariants}
+                  className="nv-frame flex items-center gap-4 px-2 py-3.5 nv-hairline-b last:border-b-0"
+                >
+                  <DirectionIcon instruction={step.instruction} isCurrent={i === 0} />
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`mast mast-3 ${i === 0 ? 'text-[#E6EAF0]' : 'text-[#B6BECB]'}`}>
+                      {step.instruction}
+                    </h3>
+                    <p className="ui-sm text-[#5B6E7F] mt-1 tabular-nums">
+                      {formatDistance(step.distanceMeters)} · {formatDuration(step.durationSeconds)}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+            </>
+          )}
+
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
