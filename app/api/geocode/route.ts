@@ -30,6 +30,7 @@ import {
   MAX_SEARCH_RESULTS,
   biasCacheKey,
   cleanQuery,
+  dropOtherStreets,
   filterProviderResults,
   hasHouseOnTypedStreet,
   leadingHouseNumber,
@@ -41,7 +42,7 @@ import {
   type ProviderFilter,
 } from '@/lib/search-results';
 import { parseQuery } from '@/lib/address-index/parse';
-import { isCityStreetPair, searchCityIndex } from '@/lib/address-index/store';
+import { cityIndexStatus, isCityStreetPair, searchCityIndex } from '@/lib/address-index/store';
 
 // Greater Philly metro (Photon bbox order: minLon,minLat,maxLon,maxLat) — hard filter
 const METRO_BBOX = '-75.55,39.70,-74.70,40.35';
@@ -145,6 +146,11 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const reverse = params.get('reverse');
   if (reverse) return handleReverse(reverse, request.signal);
+  // Is the City address index reachable from this deploy? Without it, house
+  // searches fall back to Photon/Nominatim alone and go vague.
+  if (params.has('status')) {
+    return NextResponse.json({ addressIndex: await cityIndexStatus() }, { headers: { 'Cache-Control': 'no-store' } });
+  }
 
   const query = cleanQuery(params.get('q') ?? '').slice(0, 200);
   if (!query) {
@@ -197,8 +203,8 @@ async function handleSearch(query: string, near: LatLng | null, signal: AbortSig
     : null;
   const results = mergeSearchResults(
     query,
-    filterProviderResults(photon?.ok ? photon.value : [], filter),
-    filterProviderResults(nominatim?.ok ? nominatim.value : [], filter),
+    dropOtherStreets(query, filterProviderResults(photon?.ok ? photon.value : [], filter)),
+    dropOtherStreets(query, filterProviderResults(nominatim?.ok ? nominatim.value : [], filter)),
     MAX_SEARCH_RESULTS,
     near,
     indexHits,

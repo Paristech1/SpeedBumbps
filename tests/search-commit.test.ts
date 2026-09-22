@@ -151,3 +151,39 @@ describe('resolveSearchOutcome', () => {
     expect(resolveSearchOutcome([])).toEqual({ kind: 'empty' });
   });
 });
+
+describe('resolveSearchOutcome — a house was typed', () => {
+  // From a screen recording: "22 East Johnson street", Enter, and the
+  // destination became "21st Ward War Memorial" without a word.
+  const typed = '22 East Johnson street';
+  const memorial: GeocodingResult = {
+    shortName: '21st Ward War Memorial',
+    displayName: 'Philadelphia, PA',
+    location: { lat: 40.03, lng: -75.21 },
+    kind: 'place',
+  };
+  const house: GeocodingResult = {
+    shortName: '22 E Johnson St',
+    displayName: 'Philadelphia, PA 19144',
+    location: { lat: 40.04615, lng: -75.18196 },
+    kind: 'address',
+    houseNumber: '22',
+    street: 'E Johnson St',
+  };
+
+  it('shows a lone result that is not the typed house instead of taking it', () => {
+    expect(resolveSearchOutcome([memorial], typed)).toEqual({
+      kind: 'present',
+      results: [memorial],
+      activeIndex: 0,
+    });
+  });
+
+  it('takes the lone result when it is the typed house', () => {
+    expect(resolveSearchOutcome([house], typed)).toEqual({ kind: 'choose', result: house });
+  });
+
+  it('still takes a lone result for a search without a house number', () => {
+    expect(resolveSearchOutcome([memorial], '21st ward war memorial')).toEqual({ kind: 'choose', result: memorial });
+  });
+});

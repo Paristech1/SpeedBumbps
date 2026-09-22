@@ -350,7 +350,7 @@ export function RoutePlanningPanel({
       try {
         const fresh = await searchAddress(commit.query, { near: searchBias() });
         setResultsFor(commit.query);
-        const outcome = resolveSearchOutcome(fresh);
+        const outcome = resolveSearchOutcome(fresh, commit.query);
         if (outcome.kind === 'empty') {
           setResults([]);
           setSearchError(`No matches for "${commit.query}" — check the spelling or add a city or ZIP`);
@@ -849,7 +849,7 @@ function ResultGroup({
         const distance = userLocation
           ? formatDistance(haversineDistance(userLocation, result.location))
           : null;
-        const isExact = result.kind === 'address' && !result.approximate;
+        const isExact = result.kind === 'address' && !!result.houseNumber && !result.approximate;
         return (
           <button
             key={`${result.shortName}-${result.location.lat}-${result.location.lng}`}
@@ -926,7 +926,7 @@ function AddressDropdown({
         const distance = userLocation ? formatDistance(haversineDistance(userLocation, r.location)) : null;
         // One ember on the list: the dot beside the top hit.
         const isTop = i === 0;
-        const isExact = r.kind === 'address' && !r.approximate;
+        const isExact = r.kind === 'address' && !!r.houseNumber && !r.approximate;
         return (
           <button
             key={`${r.shortName}-${r.location.lat}-${r.location.lng}`}

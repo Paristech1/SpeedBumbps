@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  dropOtherStreets,
   leadingHouseNumber,
   categoryLabel,
   photonToResult,
@@ -292,4 +293,27 @@ describe('biasCacheKey', () => {
   });
 
   function at(lat: number, lng: number) { return { lat, lng }; }
+});
+
+describe('dropOtherStreets', () => {
+  // What the live site listed under ADDRESSES for "22 East Johnson street"
+  // while the City index was out of reach.
+  const at = { lat: 40.0, lng: -75.15 };
+  const chalmers: GeocodingResult = { shortName: 'Chalmers Avenue', displayName: 'North Philadelphia', location: at, kind: 'address' };
+  const venango: GeocodingResult = { shortName: '23rd & Venango Loop', displayName: 'North Philadelphia', location: at, kind: 'street' };
+  const johnson: GeocodingResult = { shortName: 'East Johnson Street', displayName: 'Germantown', location: at, kind: 'street' };
+  const house: GeocodingResult = { shortName: '22 E Johnson St', displayName: '19144', location: at, kind: 'address', houseNumber: '22', street: 'E Johnson St' };
+  const place: GeocodingResult = { shortName: '7-Eleven', displayName: 'Philadelphia', location: at, kind: 'place' };
+
+  it('drops streets other than the one typed', () => {
+    expect(dropOtherStreets('22 East Johnson street', [chalmers, venango, johnson, house])).toEqual([johnson, house]);
+  });
+
+  it('keeps places — "7 eleven" starts with a number too', () => {
+    expect(dropOtherStreets('7 eleven', [place])).toEqual([place]);
+  });
+
+  it('leaves queries without a house number alone', () => {
+    expect(dropOtherStreets('chalmers', [chalmers, venango])).toEqual([chalmers, venango]);
+  });
 });

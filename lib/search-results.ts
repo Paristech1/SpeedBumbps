@@ -112,6 +112,35 @@ export function hasHouseOnTypedStreet(query: string, results: GeocodingResult[])
   });
 }
 
+/**
+ * True when a result is the house the user typed: same house number, on the
+ * typed (or still-being-typed) street. Always false for queries without a
+ * house number — there is no house to be.
+ */
+export function isTypedHouse(query: string, result: GeocodingResult): boolean {
+  const number = leadingHouseNumber(query);
+  if (!number) return false;
+  return hasHouseOnTypedStreet(query, [result]);
+}
+
+/**
+ * For a house-number query, drop provider streets and addresses on some other
+ * street. Without it, a query the City index can't answer ("22 east johnson
+ * street" with the index missing) came back as whatever streets Photon found
+ * near the driver — Chalmers Avenue, 23rd & Venango — listed as addresses.
+ * Places are kept: "7 eleven" starts with a number too.
+ */
+export function dropOtherStreets(query: string, results: GeocodingResult[]): GeocodingResult[] {
+  if (!leadingHouseNumber(query)) return results;
+  const typed = queryStreetTokens(query);
+  if (typed.length === 0) return results;
+  return results.filter((r) => {
+    if (r.kind === 'place' || r.kind === 'area') return true;
+    const street = r.street ?? (r.kind === 'street' || !r.houseNumber ? r.shortName : undefined);
+    return streetMatchLevel(typed, street) > 0;
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Photon (komoot) — typo-tolerant, prefix-friendly, includes shops/amenities
 // ---------------------------------------------------------------------------

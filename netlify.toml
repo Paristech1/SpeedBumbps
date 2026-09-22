@@ -1,0 +1,6 @@
+# The geocode function reads the City address index from disk at runtime.
+# next.config.ts traces it into the bundle for Vercel; this does the same for
+# Netlify's functions, which otherwise ship without data/ and fall back to
+# Photon/Nominatim alone (vague house searches, wrong single matches).
+[functions]
+  included_files = ["data/address-index/**"]

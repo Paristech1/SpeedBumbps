@@ -15,6 +15,7 @@
  */
 
 import type { GeocodingResult } from '@/types/speedbumps';
+import { isTypedHouse, leadingHouseNumber } from './search-results';
 
 export interface SearchCommitState {
   /** Exactly what's in the box, untrimmed — the caller's raw query. */
@@ -69,12 +70,19 @@ export type SearchOutcome =
 /**
  * What to do with what the search came back with.
  *
- * One result is unambiguous, so it's taken. Several are put on screen rather
- * than picked from on the driver's behalf — that silent pick is the behaviour
- * this whole module exists to undo.
+ * One result is taken — unless the driver typed a house and that one result
+ * isn't it. "22 East Johnson street" once came back as a lone "21st Ward War
+ * Memorial" and was taken as the destination without a word; now a lone
+ * stranger is shown, highlighted, and a second Enter is the driver's choice.
+ * Several results are always put on screen rather than picked from on the
+ * driver's behalf — that silent pick is the behaviour this module exists to undo.
  */
-export function resolveSearchOutcome(results: GeocodingResult[]): SearchOutcome {
+export function resolveSearchOutcome(results: GeocodingResult[], query = ''): SearchOutcome {
   if (results.length === 0) return { kind: 'empty' };
-  if (results.length === 1) return { kind: 'choose', result: results[0] };
+  if (results.length === 1) {
+    const [only] = results;
+    const typedAHouse = leadingHouseNumber(query) !== null;
+    if (!typedAHouse || isTypedHouse(query, only)) return { kind: 'choose', result: only };
+  }
   return { kind: 'present', results, activeIndex: 0 };
 }
