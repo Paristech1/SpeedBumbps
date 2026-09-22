@@ -47,6 +47,27 @@ npm test           # vitest (unit tests in tests/)
 
 No environment variables are required. The routing and geocoding proxies call public OpenStreetMap-community servers; be considerate of their usage policies (the geocode proxy caches for 24 h and the client debounces searches).
 
+### Place search with Google (optional, recommended)
+
+Without a key, search runs on the City address index (every Philadelphia
+parcel) plus Photon and Nominatim. Those two are free OpenStreetMap services
+that aren't built for this. Nominatim's policy forbids search-as-you-type,
+and Photon's public server throttles production use. Both know businesses
+poorly. Set a Google key and suggestions come from **Places Autocomplete
+(New)** instead. The City index still leads for Philly house numbers.
+
+1. In Google Cloud, enable **Places API (New)** and create an API key.
+   Restrict it to that API.
+2. In Netlify: *Site configuration → Environment variables*, add
+   `GOOGLE_MAPS_API_KEY`, then redeploy.
+3. Check `/api/geocode?status`. It should say `"googlePlaces": true`.
+
+Cost: keystrokes are grouped into a session per search and are free. A
+session is billed once, when a result is picked, at the Place Details
+Essentials rate (location and address only). Google's free monthly allowance
+covers light use. If Google errors or times out, search falls back to
+Photon/Nominatim on its own.
+
 ## Project structure
 
 ```

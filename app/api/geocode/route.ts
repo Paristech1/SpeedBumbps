@@ -43,6 +43,13 @@ import {
 } from '@/lib/search-results';
 import { parseQuery } from '@/lib/address-index/parse';
 import { cityIndexStatus, isCityStreetPair, searchCityIndex } from '@/lib/address-index/store';
+import {
+  GoogleError,
+  fetchGooglePlace,
+  fetchGoogleSuggestions,
+  googlePlacesKey,
+  isSessionToken,
+} from '@/lib/google-places';
 
 // Greater Philly metro (Photon bbox order: minLon,minLat,maxLon,maxLat) — hard filter
 const METRO_BBOX = '-75.55,39.70,-74.70,40.35';
@@ -149,14 +156,79 @@ export async function GET(request: NextRequest) {
   // Is the City address index reachable from this deploy? Without it, house
   // searches fall back to Photon/Nominatim alone and go vague.
   if (params.has('status')) {
-    return NextResponse.json({ addressIndex: await cityIndexStatus() }, { headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json(
+      { addressIndex: await cityIndexStatus(), googlePlaces: googlePlacesKey() !== null },
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
   }
+
+  const session = params.get('session');
+  const sessionToken = isSessionToken(session) ? session : undefined;
+  const place = params.get('place');
+  if (place) return handlePlace(place, sessionToken, params.get('label') ?? undefined);
 
   const query = cleanQuery(params.get('q') ?? '').slice(0, 200);
   if (!query) {
     return NextResponse.json([]);
   }
-  return handleSearch(query, parseLatLng(params.get('near')), request.signal);
+  const near = parseLatLng(params.get('near'));
+  const key = googlePlacesKey();
+  if (key) {
+    const google = await handleGoogleSearch(key, query, near, sessionToken);
+    if (google) return google;
+    // Google down or refusing: the OSM path below still answers.
+  }
+  return handleSearch(query, near, request.signal);
+}
+
+const GOOGLE_TIMEOUT_MS = 3500;
+
+/**
+ * City index + Google Places Autocomplete. The index still leads for Philly
+ * houses (it knows every parcel); Google fills in businesses, landmarks and
+ * everything past the city line. Not cached: suggestions belong to a billing
+ * session, and Google's terms don't allow storing its results.
+ * Returns null when Google fails, so the caller can fall back.
+ */
+async function handleGoogleSearch(
+  key: string,
+  query: string,
+  near: LatLng | null,
+  sessionToken: string | undefined,
+): Promise<NextResponse | null> {
+  const bias = near ?? PHILLY_CENTER;
+  const parsed = parseQuery(query);
+  const [google, indexHits] = await Promise.all([
+    settle(fetchGoogleSuggestions(key, query, bias, near, sessionToken, GOOGLE_TIMEOUT_MS)),
+    searchCityIndex(parsed, bias),
+  ]);
+  if (!google.ok) {
+    const status = google.error instanceof GoogleError ? google.error.status : 'timeout';
+    console.warn(`[geocode] Google Places failed (${status}); falling back to Photon/Nominatim`);
+    return null;
+  }
+  const exactHouse = parsed.kind === 'address' && indexHits.some((hit) => hit.tier === 1);
+  // With the exact parcel in hand, Google's copies of it are noise; its places stay.
+  const suggestions = exactHouse ? google.value.filter((r) => r.kind === 'place') : google.value;
+  const results = mergeSearchResults(query, dropOtherStreets(query, suggestions), [], MAX_SEARCH_RESULTS, near, indexHits);
+  return NextResponse.json(results, { headers: { 'Cache-Control': 'no-store' } });
+}
+
+/** Resolve a chosen Google suggestion to a real location; closes its billing session. */
+async function handlePlace(placeId: string, sessionToken: string | undefined, label: string | undefined) {
+  const key = googlePlacesKey();
+  if (!key || !/^[\w-]{10,300}$/.test(placeId)) {
+    return NextResponse.json({ error: 'Unknown place' }, { status: 400 });
+  }
+  try {
+    const result = await fetchGooglePlace(key, placeId, sessionToken, label?.slice(0, 200), GOOGLE_TIMEOUT_MS);
+    if (!result) return NextResponse.json({ error: 'That place has no location' }, { status: 404 });
+    return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store' } });
+  } catch (err) {
+    const status = err instanceof GoogleError ? err.status : 504;
+    console.warn(`[geocode] Google place lookup failed (${status})`);
+    return NextResponse.json({ error: "Couldn't find where that place is — try again" }, { status: 502 });
+  }
 }
 
 async function handleSearch(query: string, near: LatLng | null, signal: AbortSignal) {

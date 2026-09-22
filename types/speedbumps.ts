@@ -66,6 +66,16 @@ export interface GeocodingResult {
   street?: string;
   /** Pin is near, not at, the typed address (nearest known house, or an intersection). */
   approximate?: boolean;
+  /** Google place id, for suggestions from Places Autocomplete. */
+  placeId?: string;
+  /**
+   * A suggestion whose location isn't known yet (Places Autocomplete returns
+   * none). `location` is only a placeholder: resolve it (resolvePlace) before
+   * routing to it, saving it, or measuring from it.
+   */
+  pending?: boolean;
+  /** Straight-line distance from the driver, when the provider measured it. */
+  distanceMeters?: number;
 }
 
 /**

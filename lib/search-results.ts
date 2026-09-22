@@ -329,7 +329,13 @@ function comparableName(result: GeocodingResult): string {
 }
 
 function isDuplicate(a: GeocodingResult, b: GeocodingResult): boolean {
-  return comparableName(a) === comparableName(b) && haversineDistance(a.location, b.location) < DUPLICATE_RADIUS_M;
+  // Two suggestions are the same only if Google says so: two Wawas are two Wawas
+  if (a.pending && b.pending) return a.placeId === b.placeId;
+  if (comparableName(a) !== comparableName(b)) return false;
+  // A pending suggestion has no location yet, so against a located copy (the
+  // index's house) the name has to do
+  if (a.pending || b.pending) return true;
+  return haversineDistance(a.location, b.location) < DUPLICATE_RADIUS_M;
 }
 
 /**

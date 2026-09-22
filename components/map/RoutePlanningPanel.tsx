@@ -11,7 +11,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X, Loader2, ArrowUpDown, History, Trash2 } from 'lucide-react';
 import { sheetVariants, scrimVariants, fadeScaleVariants } from '@/lib/motion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { searchAddress } from '@/lib/nominatim-service';
+import { newSearchSession, resolvePlace, searchAddress } from '@/lib/nominatim-service';
 import { haversineDistance, formatDistance } from '@/lib/geo-utils';
 import type { GeocodingResult, LatLng, RouteAvoidanceProfile, VehicleProfile, RoutePreferenceMode } from '@/types/speedbumps';
 import { resolveSearchCommit, resolveSearchOutcome } from '@/lib/search-commit';
@@ -147,6 +147,11 @@ export function RoutePlanningPanel({
   // Tracks whether the current destQuery is the pre-filled hint (no autocomplete until user edits)
   const destIsPrefillRef = useRef(false);
 
+  // Places billing sessions, one per field: minted on the first search, retired
+  // when a pick resolves. Keystrokes in one session are free; the pick bills once.
+  const sessionRef = useRef<{ origin: string | null; dest: string | null }>({ origin: null, dest: null });
+  const sessionFor = (field: 'origin' | 'dest') => (sessionRef.current[field] ??= newSearchSession());
+
   // Reset on open — snapshot initial values at open time only (not on every re-render)
   const initialDestLabelRef = useRef(initialDestLabel);
   const initialProfileRef = useRef(initialProfile);
@@ -219,7 +224,7 @@ export function RoutePlanningPanel({
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const results = await searchAddress(originQuery, { near: searchBias(), signal: controller.signal });
+        const results = await searchAddress(originQuery, { near: searchBias(), signal: controller.signal, session: sessionFor('origin') });
         if (controller.signal.aborted) return;
         setOriginResults(results);
         setOriginResultsFor(originQuery.trim());
@@ -255,7 +260,7 @@ export function RoutePlanningPanel({
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const results = await searchAddress(destQuery, { near: searchBias(), signal: controller.signal });
+        const results = await searchAddress(destQuery, { near: searchBias(), signal: controller.signal, session: sessionFor('dest') });
         if (controller.signal.aborted) return;
         setDestResults(results);
         setDestResultsFor(destQuery.trim());
@@ -299,6 +304,32 @@ export function RoutePlanningPanel({
   }, [useMyLocation, userLocation, selectedOrigin, selectedDest, mode, vehicle, onPlanRoute, onClose]);
 
   /**
+   * Take a result into a field. A Google suggestion arrives without a
+   * location; it's looked up here, before anything can route to it.
+   */
+  const [resolving, setResolving] = useState(false);
+  const pick = useCallback(async (field: 'origin' | 'dest', result: GeocodingResult) => {
+    const isDest = field === 'dest';
+    let resolved = result;
+    if (result.pending) {
+      setResolving(true);
+      try {
+        resolved = await resolvePlace(result, sessionRef.current[field] ?? undefined);
+      } catch (err) {
+        setSearchError(err instanceof Error ? err.message : "Couldn't find where that place is");
+        return;
+      } finally {
+        setResolving(false);
+      }
+    }
+    sessionRef.current[field] = null;
+    (isDest ? setSelectedDest : setSelectedOrigin)(resolved);
+    (isDest ? setDestQuery : setOriginQuery)('');
+    (isDest ? setDestResults : setOriginResults)([]);
+    (isDest ? setDestActive : setOriginActive)(-1);
+  }, []);
+
+  /**
    * Enter in a search field means: search for what I typed.
    *
    * It used to mean "take suggestion zero". activeIndex is -1 until the driver
@@ -325,15 +356,8 @@ export function RoutePlanningPanel({
       const setResultsFor = isDest ? setDestResultsFor : setOriginResultsFor;
       const setActive = isDest ? setDestActive : setOriginActive;
       const setLoading = isDest ? setDestLoading : setOriginLoading;
-      const setQuery = isDest ? setDestQuery : setOriginQuery;
-      const setSelected = isDest ? setSelectedDest : setSelectedOrigin;
 
-      const choose = (result: GeocodingResult) => {
-        setSelected(result);
-        setQuery('');
-        setResults([]);
-        setActive(-1);
-      };
+      const choose = (result: GeocodingResult) => void pick(field, result);
 
       const commit = resolveSearchCommit({ query, results, resultsFor, activeIndex: active });
       if (commit.kind === 'none') return;
@@ -348,7 +372,7 @@ export function RoutePlanningPanel({
 
       setLoading(true);
       try {
-        const fresh = await searchAddress(commit.query, { near: searchBias() });
+        const fresh = await searchAddress(commit.query, { near: searchBias(), session: sessionFor(field) });
         setResultsFor(commit.query);
         const outcome = resolveSearchOutcome(fresh, commit.query);
         if (outcome.kind === 'empty') {
@@ -378,6 +402,7 @@ export function RoutePlanningPanel({
       originResultsFor,
       destActive,
       originActive,
+      pick,
     ],
   );
 
@@ -524,13 +549,19 @@ export function RoutePlanningPanel({
                         void commitFromKeyboard('origin');
                       }
                     }}
+                    enterKeyHint="search"
+                    inputMode="search"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     placeholder={originStatus === 'unavailable' ? 'Type a start address' : 'Address or place'}
                     className="w-full h-14 bg-transparent pl-11 pr-10 ui-text text-[#E6EAF0] placeholder:text-[#5B6E7F] focus:outline-none"
                   />
-                  {originLoading && (
+                  {(originLoading || resolving) && (
                     <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5B6E7F] animate-spin" />
                   )}
-                  {selectedOrigin && !originLoading && (
+                  {selectedOrigin && !originLoading && !resolving && (
                     <button
                       onClick={() => { setSelectedOrigin(null); setOriginQuery(''); }}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-[#5B6E7F] hover:text-[#E6EAF0]"
@@ -546,7 +577,7 @@ export function RoutePlanningPanel({
                       emptyMessage={originNoMatches ? NO_MATCHES_HINT : undefined}
                       activeIndex={originActive}
                       userLocation={userLocation}
-                      onSelect={(r) => { setSelectedOrigin(r); setOriginQuery(''); setOriginResults([]); }}
+                      onSelect={(r) => void pick('origin', r)}
                     />
                   )}
                   {originStatus === 'unavailable' ? (
@@ -603,13 +634,18 @@ export function RoutePlanningPanel({
                     }
                   }}
                   enterKeyHint="search"
+                  inputMode="search"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   placeholder="Address, store, or place"
                   className="w-full h-14 bg-transparent pl-11 pr-10 ui-text text-[#E6EAF0] placeholder:text-[#5B6E7F] focus:outline-none"
                 />
-                {destLoading && (
+                {(destLoading || resolving) && (
                   <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5B6E7F] animate-spin" />
                 )}
-                {selectedDest && !destLoading && (
+                {selectedDest && !destLoading && !resolving && (
                   <button
                     onClick={() => { setSelectedDest(null); setDestQuery(''); setTimeout(() => destInputRef.current?.focus(), 50); }}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#5B6E7F] hover:text-[#E6EAF0]"
@@ -621,7 +657,7 @@ export function RoutePlanningPanel({
                 {showRecents && (
                   <RecentsDropdown
                     recents={recentDestinations}
-                    onSelect={(r) => { setSelectedDest(r); setDestQuery(''); setDestResults([]); }}
+                    onSelect={(r) => void pick('dest', r)}
                     onRemove={onRemoveRecent}
                   />
                 )}
@@ -670,7 +706,7 @@ export function RoutePlanningPanel({
               emptyMessage={destNoMatches ? NO_MATCHES_HINT : undefined}
               activeIndex={destActive}
               userLocation={userLocation}
-              onSelect={(r) => { setSelectedDest(r); setDestQuery(''); setDestResults([]); }}
+              onSelect={(r) => void pick('dest', r)}
               onDropPin={onDropPin}
             />
           ) : (
@@ -739,6 +775,18 @@ export function RoutePlanningPanel({
       )}
     </AnimatePresence>
   );
+}
+
+/** Google's terms ask for attribution wherever its suggestions show without a Google map. */
+function PoweredByGoogle() {
+  return <p className="kicker text-right mt-3 normal-case tracking-[0.08em]">Powered by Google</p>;
+}
+
+/** Distance label for a row: the provider's measure, else ours — never from a placeholder location. */
+function rowDistance(result: GeocodingResult, userLocation?: LatLng | null): string | null {
+  if (typeof result.distanceMeters === 'number') return formatDistance(result.distanceMeters);
+  if (result.pending || !userLocation) return null;
+  return formatDistance(haversineDistance(userLocation, result.location));
 }
 
 /**
@@ -810,6 +858,8 @@ function ResultSections({
         />
       )}
 
+      {results.some((r) => r.placeId) && <PoweredByGoogle />}
+
       {onDropPin && (
         <div className="mt-8">
           <div className="nv-rule mb-5" />
@@ -846,13 +896,11 @@ function ResultGroup({
     <div className="mt-6 first:mt-2">
       <div className="kicker mb-1">{label}</div>
       {rows.map(({ result, index }) => {
-        const distance = userLocation
-          ? formatDistance(haversineDistance(userLocation, result.location))
-          : null;
+        const distance = rowDistance(result, userLocation);
         const isExact = result.kind === 'address' && !!result.houseNumber && !result.approximate;
         return (
           <button
-            key={`${result.shortName}-${result.location.lat}-${result.location.lng}`}
+            key={result.placeId ?? `${result.shortName}-${result.location.lat}-${result.location.lng}`}
             role="option"
             aria-selected={index === activeIndex}
             // onMouseDown + preventDefault keeps the input focused, so the
@@ -923,13 +971,13 @@ function AddressDropdown({
       className="nv-frame nv-sheet nv-hairline absolute left-0 right-0 top-full mt-2 rounded-2xl z-50 max-h-[22rem] overflow-y-auto hide-scrollbar"
     >
       {results.map((r, i) => {
-        const distance = userLocation ? formatDistance(haversineDistance(userLocation, r.location)) : null;
+        const distance = rowDistance(r, userLocation);
         // One ember on the list: the dot beside the top hit.
         const isTop = i === 0;
         const isExact = r.kind === 'address' && !!r.houseNumber && !r.approximate;
         return (
           <button
-            key={`${r.shortName}-${r.location.lat}-${r.location.lng}`}
+            key={r.placeId ?? `${r.shortName}-${r.location.lat}-${r.location.lng}`}
             role="option"
             aria-selected={i === activeIndex}
             // onMouseDown + preventDefault keeps input focused and prevents blur
@@ -959,6 +1007,7 @@ function AddressDropdown({
           </button>
         );
       })}
+      {results.some((r) => r.placeId) && <div className="px-4 pb-3"><PoweredByGoogle /></div>}
       {isLoading && results.length === 0 && (
         <div className="px-4 py-3 space-y-3">
           {[0, 1, 2].map((i) => (
