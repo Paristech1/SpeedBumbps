@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useEffect } from "react";
+import { memo, useState, useEffect, useRef } from "react";
 import { Plus, Minus, Maximize2, Minimize2 } from "lucide-react";
 import { useMapControls } from "@/hooks/useMapControls";
 import { useGeolocation } from "@/hooks/useGeolocation";
@@ -17,30 +17,38 @@ interface MapControlsProps {
   bottomOffset?: number;
   /** Fade out (e.g. when a sheet covers most of the screen). */
   hidden?: boolean;
-  /** Immersive mode hides the overlay chrome (search bar etc.). */
+  /** Immersive mode strips every overlay off the map. */
   isImmersive?: boolean;
-  onToggleImmersive?: () => void;
+  onImmersiveChange?: (next: boolean) => void;
 }
 
 export const MapControls = memo(function MapControls({
   bottomOffset = 128,
   hidden = false,
   isImmersive = false,
-  onToggleImmersive,
+  onImmersiveChange,
 }: MapControlsProps) {
-  const { map, zoomIn, zoomOut, toggleFullscreen, isFullscreenAvailable, resetView } =
+  const { map, zoomIn, zoomOut, enterFullscreen, exitFullscreen, isFullscreenAvailable, resetView } =
     useMapControls();
   const { locateUser, isLocating, isAvailable } = useGeolocation();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [canFullscreen, setCanFullscreen] = useState(false);
+  const onImmersiveChangeRef = useRef(onImmersiveChange);
+  useEffect(() => {
+    onImmersiveChangeRef.current = onImmersiveChange;
+  }, [onImmersiveChange]);
 
-  // Listen for fullscreen changes; hide the button where the API doesn't exist (e.g. iPhone Safari)
+  // Track real fullscreen so leaving it by Escape or the system gesture also
+  // leaves immersive — otherwise the chrome stays hidden with no way back.
   useEffect(() => {
     // capability detection must run post-mount (SSR can't know the browser)
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCanFullscreen(isFullscreenAvailable());
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const doc = document as Document & { webkitFullscreenElement?: Element | null };
+      const on = !!(document.fullscreenElement || doc.webkitFullscreenElement);
+      setIsFullscreen(on);
+      if (!on) onImmersiveChangeRef.current?.(false);
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -53,8 +61,11 @@ export const MapControls = memo(function MapControls({
 
   return (
     <div
-      className={`absolute right-6 flex flex-col items-center gap-3 z-[1000] transition-[bottom,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-        hidden ? "opacity-0 pointer-events-none" : ""
+      // Same reason as the tile switcher: the gaps between these buttons are
+      // open map, and a column that takes the pointer along its whole height
+      // eats drags that start there.
+      className={`absolute right-6 flex flex-col items-center gap-3 z-[1000] pointer-events-none transition-[bottom,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        hidden ? "opacity-0" : "[&>*]:pointer-events-auto"
       }`}
       style={{ bottom: bottomOffset }}
     >
@@ -121,18 +132,25 @@ export const MapControls = memo(function MapControls({
         </svg>
       </button>
 
-      {/* Immersive view — hides the overlay chrome; also enters real
-          fullscreen where the browser supports it (not iPhone Safari) */}
+      {/* Full screen — one tap takes every overlay off the map, and enters real
+          browser fullscreen too where that exists (it doesn't on iPhone Safari,
+          where stripping the chrome is the whole of it). Explicit enter/exit
+          rather than two independent toggles, so the button and the browser
+          can't end up disagreeing about which state we're in. */}
       <button
         onClick={() => {
-          onToggleImmersive?.();
-          if (canFullscreen) toggleFullscreen();
+          const next = !isImmersive;
+          onImmersiveChange?.(next);
+          if (canFullscreen) {
+            if (next) enterFullscreen();
+            else exitFullscreen();
+          }
         }}
         className={`glass-panel w-14 h-14 rounded-full flex items-center justify-center shadow-2xl ghost-border transition-all active:scale-90 ${
           isImmersive ? "text-[#E6EAF0] bg-[#E6EAF0]/10" : "text-[#E6EAF0] hover:bg-[#0C1416]"
         }`}
-        title={isImmersive ? "Exit immersive view" : "Immersive view"}
-        aria-label={isImmersive ? "Exit immersive view" : "Immersive view"}
+        title={isImmersive ? "Exit full screen" : "Full screen"}
+        aria-label={isImmersive ? "Exit full screen" : "Full screen"}
       >
         {isImmersive || isFullscreen ? (
           <Minimize2 className="h-5 w-5" />

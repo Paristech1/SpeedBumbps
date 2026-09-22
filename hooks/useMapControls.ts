@@ -21,26 +21,43 @@ export function useMapControls() {
         }
     }, [map]);
 
-    const toggleFullscreen = useCallback(() => {
+    // Explicit enter/exit rather than one toggle: the caller already knows which
+    // way it is going, and a toggle that reads the document can disagree with it.
+    const enterFullscreen = useCallback(() => {
+        const doc = document as Document & { webkitFullscreenElement?: Element | null };
+        if (document.fullscreenElement || doc.webkitFullscreenElement) return;
+        const root = document.documentElement as HTMLElement & {
+            webkitRequestFullscreen?: () => void;
+        };
+        // A rejected request (user gesture lost, iframe without allowfullscreen)
+        // must not take the page down with it — immersive still works without it.
+        try {
+            const result = root.requestFullscreen?.() ?? (root.webkitRequestFullscreen?.(), undefined);
+            if (result && typeof result.catch === 'function') result.catch(() => {});
+        } catch {
+            // no fullscreen; the chrome is hidden either way
+        }
+    }, []);
+
+    const exitFullscreen = useCallback(() => {
         const doc = document as Document & {
             webkitFullscreenElement?: Element | null;
             webkitExitFullscreen?: () => void;
         };
-        const root = document.documentElement as HTMLElement & {
-            webkitRequestFullscreen?: () => void;
-        };
-        if (!document.fullscreenElement && !doc.webkitFullscreenElement) {
-            if (root.requestFullscreen) {
-                root.requestFullscreen();
-            } else {
-                root.webkitRequestFullscreen?.();
-            }
-        } else if (document.exitFullscreen) {
-            document.exitFullscreen();
-        } else {
-            doc.webkitExitFullscreen?.();
+        if (!document.fullscreenElement && !doc.webkitFullscreenElement) return;
+        try {
+            const result = document.exitFullscreen?.() ?? (doc.webkitExitFullscreen?.(), undefined);
+            if (result && typeof result.catch === 'function') result.catch(() => {});
+        } catch {
+            // already out
         }
     }, []);
+
+    const toggleFullscreen = useCallback(() => {
+        const doc = document as Document & { webkitFullscreenElement?: Element | null };
+        if (document.fullscreenElement || doc.webkitFullscreenElement) exitFullscreen();
+        else enterFullscreen();
+    }, [enterFullscreen, exitFullscreen]);
 
     const isFullscreenAvailable = useCallback(() => {
         const root = document.documentElement as HTMLElement & {
@@ -59,6 +76,8 @@ export function useMapControls() {
     return {
         zoomIn,
         zoomOut,
+        enterFullscreen,
+        exitFullscreen,
         toggleFullscreen,
         isFullscreenAvailable,
         resetView,

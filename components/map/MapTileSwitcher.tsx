@@ -47,8 +47,12 @@ export function MapTileSwitcher({
     layerOptions[0];
 
   return (
+    // The container's box reaches well up the map to make room for the slide-out
+    // panel. Left clickable, it swallows drags that started on open map, so the
+    // map stops responding in a corner for no visible reason: the box is
+    // transparent to the pointer and only the controls inside it take input.
     <div
-      className="absolute left-6 flex flex-col sm:flex-row items-start sm:items-center gap-2 z-[1000] transition-all duration-300"
+      className="absolute left-6 flex flex-col sm:flex-row items-start sm:items-center gap-2 z-[1000] transition-all duration-300 pointer-events-none"
       style={{ bottom: `max(${bottomOffset}px, calc(env(safe-area-inset-bottom) + 5.5rem))` }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -57,7 +61,7 @@ export function MapTileSwitcher({
       <div
         className={`order-first sm:order-last flex items-center gap-2 transition-all duration-300 ease-out ${
           isHovered
-            ? "opacity-100 translate-y-0 sm:translate-y-0 sm:translate-x-0"
+            ? "opacity-100 translate-y-0 sm:translate-y-0 sm:translate-x-0 pointer-events-auto"
             : "opacity-0 translate-y-4 sm:translate-y-0 sm:-translate-x-4 pointer-events-none"
         }`}
       >
@@ -102,7 +106,7 @@ export function MapTileSwitcher({
       </div>
 
       {/* Main Tile Button */}
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center gap-1 pointer-events-auto">
         <button
           className="overflow-hidden rounded-2xl glass-panel shadow-lg hover:shadow-xl transition-all ring-2 ring-[#E6EAF0]/35"
           aria-label="Tile layer options"

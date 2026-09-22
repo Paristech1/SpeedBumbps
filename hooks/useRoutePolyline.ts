@@ -87,6 +87,43 @@ export function useRoutePolyline({
   autoFitRef.current = autoFit;
   /** Sheet height the route was last framed for. */
   const fittedInsetRef = useRef<number | null>(null);
+  /** Set once the driver pans or zooms: their frame is theirs, we stop re-framing. */
+  const driverMovedRef = useRef(false);
+
+  // Watch for the driver moving the map, and only the driver. `movestart` is no
+  // good here — the app's own setView and follow-cam raise it too, and a guard
+  // flag around our fitBounds can't cover callers in other hooks. `dragstart`
+  // only ever comes from a hand on the map; a pinch or double-tap zoom raises
+  // `zoomstart` right after a pointer lands on the map, which our own framing
+  // never does.
+  const USER_ZOOM_WINDOW_MS = 700;
+  useEffect(() => {
+    if (!map) return;
+    const container = map.getContainer();
+    let lastPointerAt = 0;
+
+    const onPointer = () => {
+      lastPointerAt = Date.now();
+    };
+    const markMoved = () => {
+      driverMovedRef.current = true;
+    };
+    const onZoomStart = () => {
+      if (Date.now() - lastPointerAt < USER_ZOOM_WINDOW_MS) driverMovedRef.current = true;
+    };
+
+    container.addEventListener('pointerdown', onPointer, { passive: true });
+    container.addEventListener('wheel', onPointer, { passive: true });
+    map.on('dragstart', markMoved);
+    map.on('zoomstart', onZoomStart);
+
+    return () => {
+      container.removeEventListener('pointerdown', onPointer);
+      container.removeEventListener('wheel', onPointer);
+      map.off('dragstart', markMoved);
+      map.off('zoomstart', onZoomStart);
+    };
+  }, [map]);
 
   useEffect(() => {
     if (!map) return;
@@ -165,6 +202,7 @@ export function useRoutePolyline({
       // Fit map to route bounds — skipped during navigation (follow-cam owns the camera)
       if (autoFitRef.current) {
         const inset = bottomInsetRef.current;
+        driverMovedRef.current = false;
         if (await fitRoute(map, selectedRoute, inset)) fittedInsetRef.current = inset;
       }
     };
@@ -176,12 +214,17 @@ export function useRoutePolyline({
     };
   }, [map, primaryRoute, alternativeRoute, selectedRouteIndex]);
 
-  // Re-frame when the preview sheet snaps to a different height (new routes are framed as they're drawn)
+  // Re-frame when the preview sheet snaps to a different height (new routes are framed as they're drawn).
+  //
+  // Only until the driver moves the map themselves. After that the frame is
+  // theirs: dragging the sheet is how you uncover the map, and having the
+  // camera snap back each time means re-doing the pan you just did.
   const selectedRouteRef = useRef<AppRoute | undefined>(undefined);
   selectedRouteRef.current = selectedRouteIndex === 1 && alternativeRoute ? alternativeRoute : primaryRoute;
   useEffect(() => {
     const route = selectedRouteRef.current;
     if (!map || !route || !autoFit) return;
+    if (driverMovedRef.current) return;
     const fitted = fittedInsetRef.current;
     if (fitted !== null && Math.abs(bottomInset - fitted) <= REFIT_INSET_DELTA_PX) return;
     let cancelled = false;

@@ -108,6 +108,15 @@ export function LeafletMap({
           attributionControl: DEFAULT_MAP_CONFIG.attributionControl,
           // ~1.5k speed-bump circle markers: one canvas beats thousands of SVG nodes
           preferCanvas: true,
+          // A firm camera. The default glide keeps sliding after the finger
+          // lifts and pinch lands between zoom levels, so the frame the driver
+          // just set drifts out from under them and has to be set again.
+          inertiaDeceleration: 6000,
+          inertiaMaxSpeed: 1200,
+          zoomSnap: 1,
+          zoomDelta: 1,
+          wheelPxPerZoomLevel: 120,
+          bounceAtZoomLimits: false,
         });
 
         // Mark as initialized before storing reference

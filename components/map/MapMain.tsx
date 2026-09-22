@@ -443,17 +443,30 @@ function MapMainInner() {
   }, [routing, location]);
 
   // Keep map controls above whichever sheet is open
-  const routeSheetVisible = hasRoute && !routing.isNavigating;
+  // Full screen takes the route sheet down with the rest of the chrome; the
+  // full-screen button is the way back, and it brings the sheet with it.
+  const routeSheetVisible = hasRoute && !routing.isNavigating && !isImmersive;
   const snapToPx = (s: number | string | null): number => {
     if (typeof s === "string") return parseInt(s, 10) || 0;
     if (typeof s === "number") return Math.round(s * viewportH);
     return 0;
   };
-  const controlsBottom = routeSheetVisible ? snapToPx(routeSnap) + 16 : 128;
+  const controlsBottom = isImmersive ? 32 : routeSheetVisible ? snapToPx(routeSnap) + 16 : 128;
   const controlsHidden =
-    (routeSheetVisible && typeof routeSnap === "number" && routeSnap >= 0.8) ||
+    (!isImmersive && routeSheetVisible && typeof routeSnap === "number" && routeSnap >= 0.8) ||
     activeTab !== "explore" ||
     routing.isNavigating;
+
+  /**
+   * Full screen is all or nothing: every overlay off, the route sheet tucked to
+   * its handle, the controls on the floor. Half-hiding the chrome is what made
+   * the button feel like it hadn't done anything.
+   */
+  const setImmersive = useCallback((next: boolean) => {
+    setIsImmersive(next);
+    if (next) setRouteSnap(ROUTE_SHEET_SNAP_POINTS[0]);
+    else setRouteSnap(ROUTE_SHEET_SNAP_POINTS[1]);
+  }, []);
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-[#07090A]">
@@ -721,7 +734,7 @@ function MapMainInner() {
       </AnimatePresence>
 
       {/* Tile Switcher */}
-      {!routing.isNavigating && (
+      {!routing.isNavigating && !isImmersive && (
         <MapTileSwitcher
           selectedProviderId={currentProviderId}
           onProviderChange={setProviderId}
@@ -734,7 +747,7 @@ function MapMainInner() {
         bottomOffset={controlsBottom}
         hidden={controlsHidden}
         isImmersive={isImmersive}
-        onToggleImmersive={() => setIsImmersive((p) => !p)}
+        onImmersiveChange={setImmersive}
       />
 
       {/* Measurement Panel */}
@@ -792,8 +805,8 @@ function MapMainInner() {
         onDropPin={() => { setIsRoutePlanningOpen(false); setIsPickingDestination(true); }}
       />
 
-      {/* Route Result Card — hidden during active navigation */}
-      {hasRoute && routing.result && !routing.isNavigating && (
+      {/* Route Result Card — hidden during active navigation and in full screen */}
+      {routeSheetVisible && routing.result && (
         <RouteResultCard
           result={routing.result}
           selectedRouteIndex={routing.selectedRouteIndex}
@@ -845,7 +858,7 @@ function MapMainInner() {
       />
 
       {/* === BOTTOM NAVIGATION BAR (Nocturne shared component) === */}
-      {!routing.isNavigating && (
+      {!routing.isNavigating && !isImmersive && (
         <BottomNavBar
           activeTab={activeTab}
           onTabChange={handleTabChange}
