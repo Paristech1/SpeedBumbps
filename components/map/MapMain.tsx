@@ -212,8 +212,13 @@ function MapMainInner() {
   const { pois, addPOI, updatePOI, deletePOI, clearAllPOIs, exportGeoJSON, importGeoJSON, flyToPOI } = usePOIManager();
 
   const tileLayerProps = useMemo(
-    () => ({ url: tileProvider.url, attribution: tileProvider.attribution, maxZoom: tileProvider.maxZoom }),
-    [tileProvider.url, tileProvider.attribution, tileProvider.maxZoom]
+    () => ({
+      url: tileProvider.url,
+      attribution: tileProvider.attribution,
+      maxZoom: tileProvider.maxZoom,
+      maxNativeZoom: tileProvider.maxNativeZoom,
+    }),
+    [tileProvider.url, tileProvider.attribution, tileProvider.maxZoom, tileProvider.maxNativeZoom]
   );
 
   const handlePlanRoute = useCallback(
@@ -463,6 +468,7 @@ function MapMainInner() {
           url={tileLayerProps.url}
           attribution={tileLayerProps.attribution}
           maxZoom={tileLayerProps.maxZoom}
+          maxNativeZoom={tileLayerProps.maxNativeZoom}
         />
         {/* SpeedBumps logic (map-context-dependent) */}
         <SpeedBumpsMap

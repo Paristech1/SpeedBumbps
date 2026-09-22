@@ -9,14 +9,19 @@ import type { TileProvider } from '@/types/map';
  */
 export const TILE_PROVIDERS: TileProvider[] = [
   {
-    // Nocturne's base: a dark carto style, pushed the rest of the way to
-    // blue-hour steel by the .leaflet-tile-pane filter in nocturne.css.
+    // Nocturne's base. Esri's dark canvas needs no API key — CARTO's free
+    // dark_all now does, and serves "API KEY REQUIRED" watermarks without one.
+    // The .nv-map filter in nocturne.css carries it the rest of the way to
+    // blue-hour steel. Esri stops at z16, so maxNativeZoom lets Leaflet
+    // upscale for the zooms navigation uses instead of asking for tiles that
+    // do not exist.
     id: 'nocturne',
     name: 'Nocturne',
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    maxZoom: 20,
-    category: 'standard',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+    maxNativeZoom: 16,
+    category: 'dark',
   },
   {
     id: 'osm',

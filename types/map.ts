@@ -25,6 +25,12 @@ export interface TileProvider {
   url: string;
   attribution: string;
   maxZoom: number;
+  /**
+   * Deepest zoom the service actually has tiles for. Leaflet upscales past it
+   * instead of asking for tiles that come back empty — needed for basemaps
+   * that stop short of the zooms navigation uses.
+   */
+  maxNativeZoom?: number;
   category: 'standard' | 'satellite' | 'dark' | 'custom';
 }
 

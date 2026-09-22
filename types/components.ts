@@ -27,6 +27,7 @@ export interface LeafletTileLayerProps {
   url: string;
   attribution?: string;
   maxZoom?: number;
+  maxNativeZoom?: number;
   subdomains?: string[];
 }
 

@@ -176,7 +176,9 @@
   filter: grayscale(1) brightness(0.92) contrast(1.15) sepia(0.55) hue-rotate(168deg) saturate(1.5);
 }
 
-/* The switcher's thumbnails are imagery; hold them back to match. */
+/* The switcher's thumbnails are imagery. Held back to match the map, but not
+   so far that they stop reading as pictures of a map — they sit on the void
+   inside a ring, and a crushed thumbnail is just a dark square. */
 .nv-map-thumb {
-  filter: grayscale(0.7) brightness(0.42) contrast(1.15) saturate(0.55);
+  filter: grayscale(0.55) brightness(0.72) contrast(1.1) saturate(0.6);
 }

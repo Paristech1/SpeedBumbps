@@ -36,6 +36,7 @@ export function LeafletTileLayer({
   url,
   attribution = "",
   maxZoom = 19,
+  maxNativeZoom,
   subdomains = DEFAULT_SUBDOMAINS,
 }: LeafletTileLayerProps) {
   const map = useLeafletMap();
@@ -84,6 +85,7 @@ export function LeafletTileLayer({
         const tileLayer = L.tileLayer(url, {
           attribution,
           maxZoom,
+          maxNativeZoom,
           subdomains: subdomainsList,
         });
 
@@ -115,7 +117,7 @@ export function LeafletTileLayer({
         }
       }
     };
-  }, [map, url, attribution, maxZoom, subdomainsKey]);
+  }, [map, url, attribution, maxZoom, maxNativeZoom, subdomainsKey]);
 
   // This component doesn't render anything visible
   return null;

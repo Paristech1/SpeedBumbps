@@ -69,12 +69,18 @@ export function MapTileSwitcher({
               disabled={!layer.provider}
               className={`flex flex-col items-center gap-1.5 px-2 sm:px-3 py-2 rounded-xl transition-all ${
                 selectedProviderId === layer.id
-                  ? "bg-[#E6EAF0]/20 ring-2 ring-[#E6EAF0]"
-                  : "hover:bg-[#0C1416]"
+                  ? "bg-white/[0.06] text-[#E6EAF0]"
+                  : "hover:bg-white/[0.04]"
               } ${!layer.provider ? "opacity-50 cursor-not-allowed" : ""}`}
               title={layer.label}
             >
-              <div className="relative h-10 w-10 sm:h-12 sm:w-12 rounded-lg overflow-hidden shadow-sm">
+              <div
+                className={`relative h-10 w-10 sm:h-12 sm:w-12 rounded-lg overflow-hidden ring-2 ${
+                  selectedProviderId === layer.id
+                    ? "ring-[#2BD9CE]"
+                    : "ring-[#E6EAF0]/35"
+                }`}
+              >
                 <Image
                   src={layer.image}
                   alt={`${layer.label} map preview`}
@@ -83,7 +89,11 @@ export function MapTileSwitcher({
                   className="object-cover nv-map-thumb"
                 />
               </div>
-              <span className="kicker text-[9px] tracking-[0.12em]">
+              <span
+                className={`kicker text-[9px] tracking-[0.12em] ${
+                  selectedProviderId === layer.id ? "text-[#E6EAF0]" : ""
+                }`}
+              >
                 {layer.label}
               </span>
             </button>
@@ -94,7 +104,7 @@ export function MapTileSwitcher({
       {/* Main Tile Button */}
       <div className="flex flex-col items-center gap-1">
         <button
-          className="overflow-hidden rounded-2xl glass-panel shadow-lg hover:shadow-xl transition-all ghost-border"
+          className="overflow-hidden rounded-2xl glass-panel shadow-lg hover:shadow-xl transition-all ring-2 ring-[#E6EAF0]/35"
           aria-label="Tile layer options"
         >
           <div className="relative h-16 w-16 sm:h-18 sm:w-20">
