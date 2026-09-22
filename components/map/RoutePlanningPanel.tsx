@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { searchAddress } from '@/lib/nominatim-service';
 import { haversineDistance, formatDistance } from '@/lib/geo-utils';
 import type { GeocodingResult, LatLng, RouteAvoidanceProfile, VehicleProfile, RoutePreferenceMode } from '@/types/speedbumps';
+import { resolveSearchCommit, resolveSearchOutcome } from '@/lib/search-commit';
 import type { RecentDestination } from '@/types/user-data';
 
 export interface PlanRouteRequest {
@@ -126,6 +127,23 @@ export function RoutePlanningPanel({
   const searchBias = () => userLocationRef.current ?? getMapCenterRef.current?.() ?? null;
   const destInputRef = useRef<HTMLInputElement>(null);
   const originInputRef = useRef<HTMLInputElement>(null);
+  /**
+   * The autocomplete search each field has in the air — its debounce timer and
+   * its fetch. Enter runs its own search and needs to call this one off, or it
+   * lands afterwards and overwrites the results Enter just put on screen.
+   */
+  const pendingSearchRef = useRef<Record<'origin' | 'dest', { timer: ReturnType<typeof setTimeout>; controller: AbortController } | null>>({
+    origin: null,
+    dest: null,
+  });
+
+  function cancelPendingSearch(field: 'origin' | 'dest'): void {
+    const pending = pendingSearchRef.current[field];
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    pending.controller.abort();
+    pendingSearchRef.current[field] = null;
+  }
   // Tracks whether the current destQuery is the pre-filled hint (no autocomplete until user edits)
   const destIsPrefillRef = useRef(false);
 
@@ -202,6 +220,7 @@ export function RoutePlanningPanel({
     const timer = setTimeout(async () => {
       try {
         const results = await searchAddress(originQuery, { near: searchBias(), signal: controller.signal });
+        if (controller.signal.aborted) return;
         setOriginResults(results);
         setOriginResultsFor(originQuery.trim());
         setOriginActive(-1);
@@ -214,9 +233,13 @@ export function RoutePlanningPanel({
       }
       setOriginLoading(false);
     }, SEARCH_DEBOUNCE_MS);
+    // The ref object itself is stable; only its fields change.
+    const pending = pendingSearchRef.current;
+    pending.origin = { timer, controller };
     return () => {
       clearTimeout(timer);
       controller.abort();
+      if (pending.origin?.timer === timer) pending.origin = null;
     };
   }, [originQuery, useMyLocation]);
 
@@ -233,6 +256,7 @@ export function RoutePlanningPanel({
     const timer = setTimeout(async () => {
       try {
         const results = await searchAddress(destQuery, { near: searchBias(), signal: controller.signal });
+        if (controller.signal.aborted) return;
         setDestResults(results);
         setDestResultsFor(destQuery.trim());
         setDestActive(-1);
@@ -245,9 +269,13 @@ export function RoutePlanningPanel({
       }
       setDestLoading(false);
     }, SEARCH_DEBOUNCE_MS);
+    // The ref object itself is stable; only its fields change.
+    const pending = pendingSearchRef.current;
+    pending.dest = { timer, controller };
     return () => {
       clearTimeout(timer);
       controller.abort();
+      if (pending.dest?.timer === timer) pending.dest = null;
     };
   }, [destQuery]);
 
@@ -271,62 +299,87 @@ export function RoutePlanningPanel({
   }, [useMyLocation, userLocation, selectedOrigin, selectedDest, mode, vehicle, onPlanRoute, onClose]);
 
   /**
-   * Enter in the destination field: take the top suggestion, or geocode the
-   * raw text right away if suggestions haven't loaded yet.
+   * Enter in a search field means: search for what I typed.
+   *
+   * It used to mean "take suggestion zero". activeIndex is -1 until the driver
+   * presses an arrow key, and `Math.max(active, 0)` turned that -1 into 0, so
+   * Enter committed whichever suggestion happened to be sitting at the top of
+   * a list the driver had never touched — often a match for an earlier,
+   * shorter version of what they were still typing.
+   *
+   * Now a suggestion is only taken when it was genuinely highlighted. Anything
+   * else runs a fresh search for the exact text in the box. One match is taken;
+   * several are put on screen with the first highlighted, so a second Enter
+   * takes it — the driver sees what they're choosing instead of having it
+   * chosen for them.
    */
-  const commitDestFromKeyboard = useCallback(async () => {
-    if (selectedDest) return;
-    const q = destQuery.trim();
-    if (!q) return;
-    if (destResults.length > 0 && destResultsFor === q) {
-      setSelectedDest(destResults[Math.max(destActive, 0)]);
-      setDestQuery('');
-      setDestResults([]);
-      return;
-    }
-    setDestLoading(true);
-    try {
-      const results = await searchAddress(q, { near: searchBias() });
-      if (results.length > 0) {
-        setSelectedDest(results[0]);
-        setDestQuery('');
-        setDestResults([]);
-      } else {
-        setSearchError(`No matches for "${q}" — check the spelling or add a city or ZIP`);
-      }
-    } catch (err) {
-      setSearchError(err instanceof Error ? err.message : 'Search failed');
-    } finally {
-      setDestLoading(false);
-    }
-  }, [selectedDest, destResults, destResultsFor, destActive, destQuery]);
+  const commitFromKeyboard = useCallback(
+    async (field: 'origin' | 'dest') => {
+      const isDest = field === 'dest';
+      const query = isDest ? destQuery : originQuery;
+      const results = isDest ? destResults : originResults;
+      const resultsFor = isDest ? destResultsFor : originResultsFor;
+      const active = isDest ? destActive : originActive;
 
-  const commitOriginFromKeyboard = useCallback(async () => {
-    if (selectedOrigin) return;
-    const q = originQuery.trim();
-    if (!q) return;
-    if (originResults.length > 0 && originResultsFor === q) {
-      setSelectedOrigin(originResults[Math.max(originActive, 0)]);
-      setOriginQuery('');
-      setOriginResults([]);
-      return;
-    }
-    setOriginLoading(true);
-    try {
-      const results = await searchAddress(q, { near: searchBias() });
-      if (results.length > 0) {
-        setSelectedOrigin(results[0]);
-        setOriginQuery('');
-        setOriginResults([]);
-      } else {
-        setSearchError(`No matches for "${q}" — check the spelling or add a city or ZIP`);
+      const setResults = isDest ? setDestResults : setOriginResults;
+      const setResultsFor = isDest ? setDestResultsFor : setOriginResultsFor;
+      const setActive = isDest ? setDestActive : setOriginActive;
+      const setLoading = isDest ? setDestLoading : setOriginLoading;
+      const setQuery = isDest ? setDestQuery : setOriginQuery;
+      const setSelected = isDest ? setSelectedDest : setSelectedOrigin;
+
+      const choose = (result: GeocodingResult) => {
+        setSelected(result);
+        setQuery('');
+        setResults([]);
+        setActive(-1);
+      };
+
+      const commit = resolveSearchCommit({ query, results, resultsFor, activeIndex: active });
+      if (commit.kind === 'none') return;
+      if (commit.kind === 'choose') {
+        choose(commit.result);
+        return;
       }
-    } catch (err) {
-      setSearchError(err instanceof Error ? err.message : 'Search failed');
-    } finally {
-      setOriginLoading(false);
-    }
-  }, [selectedOrigin, originResults, originResultsFor, originActive, originQuery]);
+
+      // Enter owns the search from here — the autocomplete's pending one would
+      // otherwise land after it and wipe what Enter put on screen.
+      cancelPendingSearch(field);
+
+      setLoading(true);
+      try {
+        const fresh = await searchAddress(commit.query, { near: searchBias() });
+        setResultsFor(commit.query);
+        const outcome = resolveSearchOutcome(fresh);
+        if (outcome.kind === 'empty') {
+          setResults([]);
+          setSearchError(`No matches for "${commit.query}" — check the spelling or add a city or ZIP`);
+          return;
+        }
+        setSearchError(null);
+        if (outcome.kind === 'choose') {
+          choose(outcome.result);
+          return;
+        }
+        setResults(outcome.results);
+        setActive(outcome.activeIndex); // a second Enter takes it
+      } catch (err) {
+        setSearchError(err instanceof Error ? err.message : 'Search failed');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [
+      destQuery,
+      originQuery,
+      destResults,
+      originResults,
+      destResultsFor,
+      originResultsFor,
+      destActive,
+      originActive,
+    ],
+  );
 
   /** Swap origin and destination. "My Location" becomes a concrete point when swapped. */
   const handleSwap = useCallback(() => {
@@ -463,7 +516,7 @@ export function RoutePlanningPanel({
                         setOriginActive(next);
                       } else if (e.key === 'Enter') {
                         e.preventDefault();
-                        commitOriginFromKeyboard();
+                        void commitFromKeyboard('origin');
                       }
                     }}
                     placeholder={originStatus === 'unavailable' ? 'Type a start address' : 'Address or place'}
@@ -532,8 +585,16 @@ export function RoutePlanningPanel({
                       setDestActive(next);
                     } else if (e.key === 'Enter') {
                       e.preventDefault();
-                      if (selectedDest && canPlanRoute) handlePlanRoute();
-                      else commitDestFromKeyboard();
+                      if (!selectedDest) {
+                        void commitFromKeyboard('dest');
+                      } else if (canPlanRoute) {
+                        handlePlanRoute();
+                      } else {
+                        // Destination is set but the route can't be planned, so
+                        // the start is what's missing. Enter used to do nothing
+                        // at all here; send them where the answer is.
+                        originInputRef.current?.focus();
+                      }
                     }
                   }}
                   enterKeyHint="search"
