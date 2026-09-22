@@ -1,135 +1,76 @@
 /**
- * Voice guidance speech service — Web Speech API singleton.
+ * Voice guidance — the front door for everything that speaks.
  *
- * Uses the on-device OS speech engine (free, no API key). Quirks handled:
- * - iOS Safari ignores speak() until one speak happens inside a user
- *   gesture; primeVoice() must be called from the Start button handler.
- * - Chrome can garbage-collect utterances mid-speech, so a module-level
- *   reference is held until the utterance ends.
- * - cancel() before each speak() avoids stale-queue wedges.
- * - getVoices() is empty on first call in Chrome; we hydrate on the
- *   asynchronous `voiceschanged` event.
+ * Two engines sit behind this. The **system voice** (Web Speech API) is the
+ * floor: no download, no GPU, no network, always there. The **neural voice**
+ * (Kokoro, in-browser) is the ceiling: the same voice on every phone, offline,
+ * and it doesn't sound like a screen reader — but it costs an ~86 MB model
+ * download, so it is off until the driver asks for it.
  *
- * The voice is chosen from the best available English system voice rather
- * than the raw OS default, which is what made guidance sound "generic".
- * The user can override the pick (persisted) from the Profile panel.
+ * The rule between them is that a prompt is never delayed. speak() plays a
+ * neural clip only when one is already rendered; otherwise the system voice
+ * says the line immediately and the neural engine renders it in the
+ * background, so the same line is neural the next time it comes up. Guidance
+ * repeats itself constantly, so the voice improves over a drive on its own.
+ *
+ * Call sites don't choose an engine — they call speak() and get the best one
+ * that can answer right now.
  */
 
 import { toImperial } from './geo-utils';
+import * as systemVoice from './voice/web-speech';
+import * as neuralVoice from './voice/kokoro';
+
+export type { KokoroStatus, KokoroVoice } from './voice/kokoro';
+export { SAMPLE_LINE } from './voice/phrases';
 
 const VOICE_MUTED_STORAGE_KEY = 'speedbumps-voice-muted';
-const VOICE_NAME_STORAGE_KEY = 'speedbumps-voice-name';
 
 let muted: boolean | null = null; // lazily hydrated from localStorage
-let currentUtterance: SpeechSynthesisUtterance | null = null;
-let primed = false;
 
-let selectedVoice: SpeechSynthesisVoice | null = null;
-let voicesHydrated = false;
-let voicesListenerAttached = false;
-
-// Names (substring match) of higher-quality natural voices across platforms,
-// in rough preference order. Falls through to a generic en-US pick.
-const PREFERRED_VOICE_HINTS = [
-  'Google US English',
-  'Microsoft Aria',
-  'Microsoft Jenny',
-  'Microsoft Guy',
-  'Samantha',
-  'Karen',
-  'Daniel',
-  'Moira',
-  'Google UK English Female',
-  'Google UK English Male',
-];
+// --- the system voice, re-exported unchanged --------------------------------
 
 export function isSpeechSupported(): boolean {
-  return typeof window !== 'undefined' && 'speechSynthesis' in window;
+  return systemVoice.isSupported();
 }
 
-function getStoredVoiceName(): string | null {
-  try {
-    return localStorage.getItem(VOICE_NAME_STORAGE_KEY);
-  } catch {
-    return null;
-  }
+export const getAvailableVoices = systemVoice.getAvailableVoices;
+export const getSelectedVoiceName = systemVoice.getSelectedVoiceName;
+export const setVoiceByName = systemVoice.setVoiceByName;
+
+// --- the neural voice -------------------------------------------------------
+
+export const isNeuralVoiceSupported = neuralVoice.isSupported;
+export const isNeuralVoiceEnabled = neuralVoice.isEnabled;
+export const setNeuralVoiceEnabled = neuralVoice.setEnabled;
+export const getNeuralVoiceStatus = neuralVoice.getStatus;
+export const getNeuralVoiceProgress = neuralVoice.getProgress;
+export const getNeuralVoices = neuralVoice.getVoices;
+export const getNeuralVoiceId = neuralVoice.getVoiceId;
+export const setNeuralVoiceId = neuralVoice.setVoiceId;
+export const subscribeNeuralVoice = neuralVoice.subscribe;
+export const hasWebGPU = neuralVoice.hasWebGPU;
+
+/**
+ * Start loading the neural voice, if the driver has turned it on. Call this
+ * when a route is plotted: the download must not begin at the first turn.
+ */
+export const prewarmVoice = neuralVoice.prewarm;
+
+/**
+ * Render a route's own instructions ahead of the drive, so their street names
+ * are already audio by the time they're spoken.
+ */
+export const prerenderVoice = neuralVoice.prerender;
+
+/** Speak a line through the neural voice, waiting for it. Previews only — never on the road. */
+export async function speakSample(text: string): Promise<boolean> {
+  if (!(await neuralVoice.load())) return false;
+  await neuralVoice.render(text);
+  return neuralVoice.playCached(text);
 }
 
-/** Choose the best available voice: user override → natural English → en-US → default. */
-function pickBestVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
-  if (voices.length === 0) return null;
-
-  const stored = getStoredVoiceName();
-  if (stored) {
-    const override = voices.find((v) => v.name === stored);
-    if (override) return override;
-  }
-
-  const english = voices.filter((v) => v.lang?.toLowerCase().startsWith('en'));
-  const pool = english.length > 0 ? english : voices;
-
-  for (const hint of PREFERRED_VOICE_HINTS) {
-    const match = pool.find((v) => v.name.includes(hint));
-    if (match) return match;
-  }
-
-  const enUS = pool.filter((v) => v.lang?.toLowerCase() === 'en-us');
-  const preferred = enUS.length > 0 ? enUS : pool;
-
-  const natural = preferred.find((v) => /natural|neural|premium|enhanced|google/i.test(v.name));
-  if (natural) return natural;
-
-  return preferred.find((v) => v.default) ?? preferred[0];
-}
-
-/** Hydrate the available-voices list (idempotent); Chrome loads them async. */
-function ensureVoices(): void {
-  if (!isSpeechSupported()) return;
-  const synth = window.speechSynthesis;
-
-  const hydrate = () => {
-    const voices = synth.getVoices();
-    if (voices.length > 0) {
-      selectedVoice = pickBestVoice(voices);
-      voicesHydrated = true;
-    }
-  };
-
-  if (!voicesHydrated) hydrate();
-
-  if (!voicesListenerAttached && 'onvoiceschanged' in synth) {
-    voicesListenerAttached = true;
-    synth.addEventListener('voiceschanged', hydrate);
-  }
-}
-
-/** English voices available for the in-app picker. */
-export function getAvailableVoices(): SpeechSynthesisVoice[] {
-  if (!isSpeechSupported()) return [];
-  ensureVoices();
-  const voices = window.speechSynthesis.getVoices();
-  const english = voices.filter((v) => v.lang?.toLowerCase().startsWith('en'));
-  return english.length > 0 ? english : voices;
-}
-
-export function getSelectedVoiceName(): string | null {
-  ensureVoices();
-  return selectedVoice?.name ?? getStoredVoiceName();
-}
-
-/** Override the guidance voice by name (persisted). Empty string clears the override. */
-export function setVoiceByName(name: string): void {
-  try {
-    if (name) localStorage.setItem(VOICE_NAME_STORAGE_KEY, name);
-    else localStorage.removeItem(VOICE_NAME_STORAGE_KEY);
-  } catch {
-    // storage unavailable — keep in-memory only
-  }
-  if (isSpeechSupported()) {
-    const voices = window.speechSynthesis.getVoices();
-    selectedVoice = name ? voices.find((v) => v.name === name) ?? pickBestVoice(voices) : pickBestVoice(voices);
-  }
-}
+// --- mute -------------------------------------------------------------------
 
 export function isVoiceMuted(): boolean {
   if (muted === null) {
@@ -152,41 +93,36 @@ export function setVoiceMuted(value: boolean): void {
   if (value) cancelSpeech();
 }
 
+// --- speaking ---------------------------------------------------------------
+
 /**
- * Unlock speech on iOS by speaking an empty utterance synchronously
- * inside a user-gesture handler. No-op elsewhere; safe to call again.
+ * Unlock audio on iOS. Both engines need a first play inside a user gesture,
+ * so this must be called from the Start button handler.
  */
 export function primeVoice(): void {
-  if (!isSpeechSupported() || primed) return;
-  primed = true;
-  ensureVoices();
-  window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+  systemVoice.prime();
+  neuralVoice.prime();
 }
 
+/**
+ * Say a line, now. Plays the neural clip when one is rendered, and otherwise
+ * falls straight through to the system voice — this never waits on synthesis,
+ * because a turn instruction that arrives late is a missed turn.
+ */
 export function speak(text: string): void {
-  if (!isSpeechSupported() || isVoiceMuted() || !text) return;
-  ensureVoices();
-  const synth = window.speechSynthesis;
-  synth.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  if (selectedVoice) utterance.voice = selectedVoice;
-  utterance.lang = selectedVoice?.lang ?? 'en-US';
-  utterance.rate = 1.02; // a touch above default reads as confident, not rushed
-  utterance.pitch = 1.0;
-  const release = () => {
-    if (currentUtterance === utterance) currentUtterance = null;
-  };
-  utterance.onend = release;
-  utterance.onerror = release;
-  currentUtterance = utterance;
-  synth.speak(utterance);
+  if (!text || isVoiceMuted()) return;
+  cancelSpeech();
+  if (neuralVoice.playCached(text)) return;
+  systemVoice.speak(text);
+  neuralVoice.warm(text); // so the next time this line comes up, it's neural
 }
 
 export function cancelSpeech(): void {
-  if (!isSpeechSupported()) return;
-  currentUtterance = null;
-  window.speechSynthesis.cancel();
+  systemVoice.cancel();
+  neuralVoice.stop();
 }
+
+// --- phrasing ---------------------------------------------------------------
 
 /** Speech-friendly imperial distance phrasing (same unit split as formatDistance). */
 export function speechDistance(meters: number): string {

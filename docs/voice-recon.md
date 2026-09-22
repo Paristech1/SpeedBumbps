@@ -113,6 +113,11 @@ hidden Unicode, no shell-out calls at all. The only `npx` mentions are
 
 ## Top pick: Kokoro as the voice, Web Speech as the floor
 
+> **Built.** `lib/voice/` holds the two engines behind `lib/voice-guidance.ts`;
+> the driver turns the neural one on from the Profile panel. What follows is
+> the plan it was built from — the shipped code differs in one place, noted
+> below.
+
 One 82M-parameter model, about 86 MB at `q8`, downloaded once and kept in the
 browser cache. After that the voice is identical on every phone, works with no
 network, and sounds like a person rather than a screen reader. Web Speech stays
@@ -200,15 +205,27 @@ call site stay untouched.
 - Offer the download rather than starting it. 86 MB on a metered connection is
   the driver's call, and the app must work fully without it.
 
+### What the shipped code does differently
+
+The plan had `speak()` choosing an engine. It doesn't: it plays a neural clip
+only when one is **already rendered**, and otherwise falls straight through to
+the system voice while rendering that line in the background. Guidance repeats
+itself constantly, so a line is neural the next time it comes up, and no prompt
+ever waits on synthesis. That turned out to be the only shape that is safe in a
+car, and it made the phrase bank a warm-up rather than a lookup.
+
 ### Testing
 
-- Unit: the engine picker falls back when `from_pretrained` throws, when
-  `navigator.gpu` is absent, and when the fetch is offline.
-- Unit: the phrase bank returns a cached clip for a known phrase and `null` for
-  an unknown one.
-- Playwright: stub the model fetch, plot a route, assert `prewarm()` fires on
-  plot and not on load; assert the fallback path speaks when the stub 404s.
-- By ear: the same route on Chrome desktop, Android Chrome and iOS Safari.
+`tests/voice-guidance.test.ts` and `tests/voice-kokoro.test.ts` — 33 cases
+covering the handover (neural when rendered, system otherwise, never awaited,
+silent when muted), the load paths (failure degrades instead of throwing, one
+fetch however many callers, off-and-on mid-download), and the clip cache
+(rendered once, oldest-out past the limit, dropped on a voice change).
+
+Still to do by ear: the same route on Chrome desktop, Android Chrome and iOS
+Safari. This sandbox can't reach huggingface.co, so the model has never
+actually been fetched — the loading and failure states are verified, the
+**ready** state is not.
 
 ---
 
