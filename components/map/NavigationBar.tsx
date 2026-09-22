@@ -2,10 +2,10 @@
 
 /**
  * Active navigation HUD — Nocturne Velocity.
- * A glass card over the map carries the kicker (distance to the maneuver),
- * the maneuver itself set as the mast, and the street underneath. The one
- * ember on the screen is the next bump; the card below reads the remaining
- * time, distance and bumps left, with type-only actions.
+ * A glass card over the map carries the turn: its glyph, the distance to it,
+ * the maneuver set as the mast, and the street underneath. The one flare on
+ * the screen is the next bump. A low trip bar reads arrival, time left and
+ * bumps left, with REPORT A BUMP and END as type.
  *
  * Step tracking is progress-based: the driver's position is projected onto
  * the route polyline and the "current" step is the first maneuver still ahead
@@ -177,9 +177,12 @@ export function NavigationBar({
           ? 'Arriving at destination'
           : 'Waiting for GPS…';
 
+  const toManeuver = distanceToManeuver != null ? toImperial(distanceToManeuver) : null;
+  const leftClock = formatDuration(remainingDuration);
+
   return (
     <>
-      {/* Maneuver card — glass over the map, type doing the work */}
+      {/* Maneuver card — the turn, how far, and which street. Nothing else. */}
       <motion.header
         variants={hudTopVariants}
         initial="hidden"
@@ -187,37 +190,55 @@ export function NavigationBar({
         exit="exit"
         className="fixed top-0 left-0 right-0 z-[1050] px-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]"
       >
-        <div className="nv-frame nv-glass rounded-[22px] px-5 py-4">
-          {/* Kicker and the quiet controls share a row; the mast gets the width */}
-          <div className="flex items-start justify-between gap-4">
-            <p className="kicker truncate pt-1">{kicker}</p>
-            <div className="flex items-center gap-1 shrink-0 -mt-1 -mr-2">
+        <div className="nv-frame nv-glass rounded-[22px] pl-5 pr-3 pt-4 pb-5">
+          <div className="flex items-start gap-4">
+            <div className="shrink-0 w-12 h-12 -ml-1 flex items-center justify-center rounded-2xl nv-hairline">
+              {hasArrived ? (
+                <Flag className="w-6 h-6 text-[#E6EAF0]" strokeWidth={1.75} />
+              ) : (
+                <TurnIcon instruction={currentStep.instruction} />
+              )}
+            </div>
+            <div className="min-w-0 flex-1 pt-0.5">
+              {toManeuver && !hasArrived ? (
+                <>
+                  <p className="kicker">{isLastStep ? 'Destination in' : 'In'}</p>
+                  <p className="mast mast-num text-[1.75rem] leading-none text-[#E6EAF0] mt-1 whitespace-nowrap">
+                    {toManeuver.value}
+                    <span className="kicker text-[#B6BECB] ml-1.5 align-[0.2em]">{toManeuver.unit}</span>
+                  </p>
+                </>
+              ) : (
+                <p className="kicker pt-1 truncate">{kicker}</p>
+              )}
+            </div>
+            <div className="flex items-center shrink-0 -mt-1">
               {isSpeechSupported() && (
                 <button
                   onClick={toggleVoice}
-                  className="p-2 rounded-full transition-colors hover:bg-white/5"
+                  className="w-10 h-10 flex items-center justify-center rounded-full transition-colors hover:bg-[var(--nv-wash)]"
                   title={voiceMuted ? 'Unmute voice guidance' : 'Mute voice guidance'}
                   aria-label={voiceMuted ? 'Unmute voice guidance' : 'Mute voice guidance'}
                 >
                   {voiceMuted ? (
-                    <VolumeX className="w-5 h-5 text-[#5B6E7F]" />
+                    <VolumeX className="w-5 h-5 text-[#5B6E7F]" strokeWidth={1.75} />
                   ) : (
-                    <Volume2 className="w-5 h-5 text-[#B6BECB]" />
+                    <Volume2 className="w-5 h-5 text-[#B6BECB]" strokeWidth={1.75} />
                   )}
                 </button>
               )}
               <button
                 onClick={onEndNavigation}
-                className="p-2 rounded-full transition-colors hover:bg-white/5"
+                className="w-10 h-10 flex items-center justify-center rounded-full transition-colors hover:bg-[var(--nv-wash)]"
                 aria-label="End navigation"
               >
-                <X className="w-5 h-5 text-[#B6BECB]" />
+                <X className="w-5 h-5 text-[#B6BECB]" strokeWidth={1.75} />
               </button>
             </div>
           </div>
 
           {waitingForGps ? (
-            <div className="mt-3 space-y-3">
+            <div className="mt-4 space-y-3">
               <Skeleton className="h-12 w-48 max-w-full bg-white/10" />
               <Skeleton className="h-4 w-32 max-w-full bg-white/5" />
             </div>
@@ -229,88 +250,91 @@ export function NavigationBar({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.16 }}
-                className="mt-2 flex items-end justify-between gap-4"
+                className="mt-4"
               >
-                <div className="min-w-0 flex-1">
-                  <h1 className="mast mast-1 text-[#E6EAF0] truncate">{headline.action}</h1>
-                  {headline.detail && (
-                    <p className="ui-text lowercase text-[#B6BECB] truncate mt-2">{headline.detail}</p>
-                  )}
-                </div>
-                <div className="shrink-0 pb-1 hidden sm:flex items-center gap-3">
-                  {hasArrived ? (
-                    <Flag className="w-6 h-6 text-[#B6BECB]" />
-                  ) : (
-                    <TurnIcon instruction={currentStep.instruction} />
-                  )}
-                </div>
+                <h1 className="mast mast-1 text-[#E6EAF0] truncate">{headline.action}</h1>
+                {headline.detail && (
+                  <p className="ui-text text-[#B6BECB] truncate mt-2">{headline.detail}</p>
+                )}
               </motion.div>
             </AnimatePresence>
           )}
         </div>
 
-        {/* The one warning line — ember on the digits only */}
+        {/* The one caption, and the one flare: the digits to the next bump */}
         {bumpAhead && (
-          <p className="caption mt-3 pl-2">
-            {bumpKindLabel(bumpAhead.bump)} in{' '}
-            <span className="text-[#FF3D8E] mast-num">{toImperial(bumpAhead.distanceMeters).value}</span>
-            {' '}{toImperial(bumpAhead.distanceMeters).unit}.
+          <p className="caption mt-3 pl-3 flex items-center gap-2.5">
+            <span aria-hidden className="w-1.5 h-1.5 rounded-full bg-[#FF3D8E] shadow-[0_0_10px_#FF3D8E]" />
+            <span>
+              {bumpKindLabel(bumpAhead.bump)} in{' '}
+              <span className="text-[#FF3D8E] mast-num">{toImperial(bumpAhead.distanceMeters).value}</span>
+              {' '}{toImperial(bumpAhead.distanceMeters).unit}.
+            </span>
           </p>
         )}
       </motion.header>
 
-      {/* The road below is the composition — the trip reads as type on the map,
-          with the report action at mast scale the way screen 05 sets it. */}
+      {/* Trip bar — arrival, what's left, bumps left; then the two actions as
+          type. Kept low and quiet so the road stays the composition. */}
       <motion.div
         variants={hudBottomVariants}
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="nv-frame fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-5 right-5 z-[1050]"
+        // Lifted one line clear of the floor: the tile attribution lives there.
+        className="nv-frame fixed bottom-[calc(max(0.5rem,env(safe-area-inset-bottom))+1.25rem)] left-3 right-3 z-[1050]"
       >
-        <div className="flex items-end justify-between gap-4">
-          <div className="min-w-0">
-            <p className="kicker text-[#B6BECB]">
-              {hasArrived ? 'Arrived' : `${formatDuration(remainingDuration)} · ${formatDistance(remainingDistance)}`}
-            </p>
+        <div className="nv-glass rounded-[22px] px-5 pt-4 pb-1">
+          {hasArrived ? (
+            <p className="mast mast-2 text-[#E6EAF0]">You&rsquo;re here</p>
+          ) : (
+            <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-end">
+              <div className="min-w-0">
+                <p className="kicker">Arrive</p>
+                <p className="mast mast-2 mast-num text-[#E6EAF0] mt-1.5 whitespace-nowrap">
+                  {etaClock.replace(/\s?[AP]M$/i, '')}
+                  <span className="kicker text-[#5B6E7F] ml-1 align-[0.3em]">{/pm$/i.test(etaClock) ? 'pm' : /am$/i.test(etaClock) ? 'am' : ''}</span>
+                </p>
+              </div>
+              <div className="min-w-0">
+                <p className="kicker">Left</p>
+                <p className="mast mast-2 mast-num text-[#E6EAF0] mt-1.5 whitespace-nowrap">{leftClock}</p>
+              </div>
+              <div className="text-right">
+                <p className="kicker">Bumps</p>
+                <p className="mast mast-2 mast-num text-[#E6EAF0] mt-1.5">{bumpsLeft}</p>
+              </div>
+            </div>
+          )}
+          <p className="kicker mt-2.5 truncate">
+            {hasArrived
+              ? 'Smooth all the way'
+              : `${formatDistance(remainingDistance)} to go · ${gps.label}${speedMph != null ? ` · ${speedMph} mph` : ''}`}
+          </p>
+
+          <div className="nv-hairline-t mt-3 flex items-center justify-between -mx-1">
             {onReportBump && !hasArrived ? (
               <button
                 onClick={onReportBump}
-                className="mast mast-1 text-[#E6EAF0] text-left mt-2 transition-opacity active:opacity-60"
+                className="flex items-center gap-2.5 mono-bar text-[#E6EAF0] px-1 py-3.5 transition-opacity active:opacity-60"
               >
-                Report
-                <br />a bump
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden>
+                  <path d="M2 17h5c1.5 0 2.2-6 5-6s3.5 6 5 6h5" />
+                </svg>
+                Report a bump
               </button>
             ) : (
-              <p className="mast mast-1 text-[#E6EAF0] mt-2">
-                {hasArrived ? "You're here" : 'Driving'}
-              </p>
-            )}
-          </div>
-
-          <div className="shrink-0 text-right pb-2">
-            {!hasArrived && (
-              <>
-                <p className="kicker">Bumps left</p>
-                <p className="mast mast-2 mast-num text-[#E6EAF0] mt-1.5">{bumpsLeft}</p>
-              </>
+              <span />
             )}
             <button
               onClick={onEndNavigation}
-              className="mono-bar text-[#FF3D8E] mt-4 py-2 transition-opacity active:opacity-60"
+              className="mono-bar text-[#B6BECB] hover:text-[#E6EAF0] px-1 py-3.5 transition-colors active:opacity-60"
             >
               {hasArrived ? 'Done' : 'End'}
             </button>
           </div>
         </div>
-
-        <p className="caption mt-3">
-          {hasArrived
-            ? 'smooth all the way.'
-            : `eta ${etaClock.toLowerCase()}${speedMph != null ? ` · ${speedMph} mph` : ''} · ${gps.label.toLowerCase()}.`}
-        </p>
       </motion.div>
-
     </>
   );
 }
@@ -323,7 +347,7 @@ function gpsTier(accuracy: number | null): { label: string } {
 }
 
 function TurnIcon({ instruction }: { instruction: string }) {
-  const cls = 'w-6 h-6 text-[#B6BECB]';
+  const cls = 'w-7 h-7 text-[#E6EAF0]';
   const lower = instruction.toLowerCase();
 
   if (lower.startsWith('arrive')) return <MapPin className={cls} />;

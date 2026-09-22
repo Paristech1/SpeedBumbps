@@ -19,7 +19,12 @@ import { loadAllBumps, getBumpsInBounds, USER_REPORTS_CHANGED_EVENT } from '@/li
 import type { SpeedBump } from '@/types/speedbumps';
 
 const MIN_ZOOM_TO_SHOW = 10; // don't render at very low zoom (world view)
-const MARKER_RADIUS = 5;
+/** Idle dots shrink as the map pulls out, so a dense block reads as a field of points rather than a smear. */
+function idleRadius(zoom: number): number {
+  if (zoom >= 16) return 4.5;
+  if (zoom >= 14) return 3.5;
+  return 2.5;
+}
 const ON_ROUTE_RADIUS = 7;
 const NEXT_RADIUS = 8;
 const HALO_RADIUS = 13;
@@ -109,7 +114,8 @@ export function useSpeedBumpMarkers(
         emphasised.push(bump);
         continue;
       }
-      const marker = dot(bump, MARKER_RADIUS, IDLE_COLOR, { dim: hasRoute }).bindPopup(popupHtml(bump, false));
+      const marker = dot(bump, idleRadius(zoom), IDLE_COLOR, { dim: hasRoute, stroke: VOID_COLOR, weight: 1 })
+        .bindPopup(popupHtml(bump, false));
       marker.addTo(leafletMap);
       newMarkers.push(marker);
     }

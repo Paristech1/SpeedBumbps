@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MapPin, Navigation, X, Loader2, ArrowUpDown, History, Trash2 } from 'lucide-react';
+import { X, Loader2, ArrowUpDown, History, Trash2 } from 'lucide-react';
 import { sheetVariants, scrimVariants, fadeScaleVariants } from '@/lib/motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { searchAddress } from '@/lib/nominatim-service';
@@ -468,17 +468,22 @@ export function RoutePlanningPanel({
             </div>
 
             <div className="px-6 pb-6 space-y-8">
-          {/* Search Fields */}
-          <div className="flex gap-3">
-            <div className="flex-1 min-w-0 space-y-4">
+          {/* Search Fields — one hairline block. Origin is the chrome dot and
+              destination the hollow ring, joined, exactly as the map draws them. */}
+          <div className="relative flex nv-hairline rounded-2xl">
+            <span
+              aria-hidden
+              className="absolute left-[21px] top-[34px] bottom-[34px] w-px bg-[repeating-linear-gradient(180deg,#5B6E7F_0_2px,transparent_2px_5px)]"
+            />
+            <div className="flex-1 min-w-0 divide-y divide-[#E6EAF0]/10">
               {/* FROM Field */}
               {useMyLocation ? (
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    <Navigation className="w-5 h-5 text-[#B6BECB]" />
+                    <span className="block w-2.5 h-2.5 rounded-full bg-[#E6EAF0]" />
                   </div>
                   <input
-                    className="w-full h-14 bg-transparent nv-hairline rounded-2xl pl-12 pr-24 ui-text text-[#E6EAF0] focus:outline-none focus:border-[#E6EAF0]/50"
+                    className="w-full h-14 bg-transparent pl-11 pr-24 ui-text text-[#E6EAF0] focus:outline-none"
                     readOnly
                     type="text"
                     value={originStatus === 'ready' ? MY_LOCATION_LABEL : 'Locating…'}
@@ -498,8 +503,8 @@ export function RoutePlanningPanel({
                 </div>
               ) : (
                 <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    <Navigation className="w-5 h-5 text-[#E6EAF0]" />
+                  <div className="absolute left-4 top-7 -translate-y-1/2">
+                    <span className="block w-2.5 h-2.5 rounded-full bg-[#E6EAF0]" />
                   </div>
                   <input
                     ref={originInputRef}
@@ -520,7 +525,7 @@ export function RoutePlanningPanel({
                       }
                     }}
                     placeholder={originStatus === 'unavailable' ? 'Type a start address' : 'Address or place'}
-                    className="w-full h-14 bg-transparent nv-hairline rounded-2xl pl-12 pr-10 ui-text text-[#E6EAF0] placeholder:text-[#5B6E7F] focus:outline-none focus:border-[#E6EAF0]/50"
+                    className="w-full h-14 bg-transparent pl-11 pr-10 ui-text text-[#E6EAF0] placeholder:text-[#5B6E7F] focus:outline-none"
                   />
                   {originLoading && (
                     <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5B6E7F] animate-spin" />
@@ -546,7 +551,7 @@ export function RoutePlanningPanel({
                   )}
                   {originStatus === 'unavailable' ? (
                     !selectedOrigin && (
-                      <p className="mt-2 px-1 ui-sm text-[#5B6E7F]">
+                      <p className="-mt-2 pb-3 pl-11 ui-sm text-[#5B6E7F]">
                         {locationError ?? 'GPS hasn’t found you yet'}
                       </p>
                     )
@@ -554,7 +559,7 @@ export function RoutePlanningPanel({
                     // A late GPS fix is offered, never forced over a typed origin
                     <button
                       onClick={() => setUseMyLocation(true)}
-                      className="mt-2 kicker hover:text-[#E6EAF0] transition-colors"
+                      className="-mt-1 pb-3 pl-11 kicker hover:text-[#E6EAF0] transition-colors"
                     >
                       Use my location
                     </button>
@@ -563,9 +568,9 @@ export function RoutePlanningPanel({
               )}
 
               {/* TO Field */}
-              <div className="relative mt-2">
+              <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                  <MapPin className="w-5 h-5 text-[#5B6E7F]" />
+                  <span className="block w-2.5 h-2.5 rounded-full border-[1.5px] border-[#E6EAF0]" />
                 </div>
                 <input
                   ref={destInputRef}
@@ -599,7 +604,7 @@ export function RoutePlanningPanel({
                   }}
                   enterKeyHint="search"
                   placeholder="Address, store, or place"
-                  className="w-full h-14 bg-transparent nv-hairline rounded-2xl pl-12 pr-10 ui-text text-[#E6EAF0] placeholder:text-[#5B6E7F] focus:outline-none focus:border-[#E6EAF0]/50"
+                  className="w-full h-14 bg-transparent pl-11 pr-10 ui-text text-[#E6EAF0] placeholder:text-[#5B6E7F] focus:outline-none"
                 />
                 {destLoading && (
                   <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5B6E7F] animate-spin" />
@@ -627,11 +632,11 @@ export function RoutePlanningPanel({
             <button
               onClick={handleSwap}
               disabled={!canSwap}
-              className="self-center w-11 h-11 shrink-0 rounded-full nv-hairline text-[#5B6E7F] flex items-center justify-center hover:text-[#E6EAF0] active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              className="self-center w-11 h-11 mr-1.5 shrink-0 rounded-full text-[#5B6E7F] flex items-center justify-center hover:text-[#E6EAF0] active:scale-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               aria-label="Swap origin and destination"
               title="Swap"
             >
-              <ArrowUpDown className="w-5 h-5" />
+              <ArrowUpDown className="w-[18px] h-[18px]" strokeWidth={1.75} />
             </button>
           </div>
 
@@ -676,12 +681,12 @@ export function RoutePlanningPanel({
             <label className="block kicker mb-3 px-1">
               Vehicle
             </label>
-            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+            <div className="flex flex-wrap gap-2">
               {VEHICLE_OPTIONS.map((v) => (
                 <button
                   key={v.id}
                   onClick={() => setVehicle(v.id)}
-                  className={`nv-chip mono-bar px-5 py-2.5 whitespace-nowrap transition-all active:scale-95 duration-150 ${
+                  className={`nv-chip mono-bar text-[0.75rem] px-4 py-2 whitespace-nowrap transition-all active:scale-95 duration-150 ${
                     vehicle === v.id ? 'nv-chip-on' : 'hover:text-[#E6EAF0]'
                   }`}
                 >
@@ -692,21 +697,24 @@ export function RoutePlanningPanel({
           </div>
 
           {/* Route Preferences */}
-          <div className="space-y-3">
-            <label className="block kicker mb-3 px-1">
+          <div>
+            <label className="block kicker mb-1 px-1">
               Routing
             </label>
             {MODE_OPTIONS.map((m) => (
               <button
                 key={m.id}
                 onClick={() => setMode(m.id)}
-                className={`w-full flex items-center justify-between gap-4 px-4 py-4 rounded-2xl text-left transition-all nv-hairline ${
-                  mode === m.id ? 'nv-chosen-edge' : 'hover:bg-white/[0.03]'
-                }`}
+                aria-pressed={mode === m.id}
+                className="relative w-full flex items-center justify-between gap-4 pl-4 pr-1 py-3.5 text-left transition-colors nv-hairline-b last:border-b-0 hover:bg-[var(--nv-wash)]"
               >
+                <span
+                  aria-hidden
+                  className={`absolute left-0 top-3 bottom-3 w-[2px] rounded-full transition-colors ${mode === m.id ? 'bg-[#2BD9CE]' : 'bg-transparent'}`}
+                />
                 <div className="min-w-0">
                   <h4 className={`mast mast-3 ${mode === m.id ? 'text-[#2BD9CE]' : 'text-[#E6EAF0]'}`}>{m.label}</h4>
-                  <p className="ui-sm text-[#5B6E7F] mt-1.5">{m.description}</p>
+                  <p className="ui-sm text-[#5B6E7F] mt-1">{m.description}</p>
                 </div>
               </button>
             ))}

@@ -1,16 +1,13 @@
 "use client";
 
 import { memo, useState, useEffect, useRef } from "react";
-import { Plus, Minus, Maximize2, Minimize2 } from "lucide-react";
+import { Plus, Minus, Maximize2, Minimize2, LocateFixed, RotateCcw } from "lucide-react";
 import { useMapControls } from "@/hooks/useMapControls";
 import { useGeolocation } from "@/hooks/useGeolocation";
 
 /**
- * MapControls — Nocturne glass controls at bottom right.
- * Includes: Location, Zoom In/Out, Reset View, Fullscreen
- *
- * Design: Glass-panel containers with ghost-borders per the
- * Nocturne Velocity design spec.
+ * MapControls — one slim glass rail at bottom right: locate, layers, full
+ * screen. Zoom and reset view join it on wider screens with a pointer.
  */
 interface MapControlsProps {
   /** Distance in px from the viewport bottom (clears bottom nav / open sheets). */
@@ -20,6 +17,8 @@ interface MapControlsProps {
   /** Immersive mode strips every overlay off the map. */
   isImmersive?: boolean;
   onImmersiveChange?: (next: boolean) => void;
+  /** Extra rail buttons (the layer picker), set between locate and full screen. */
+  children?: React.ReactNode;
 }
 
 export const MapControls = memo(function MapControls({
@@ -27,6 +26,7 @@ export const MapControls = memo(function MapControls({
   hidden = false,
   isImmersive = false,
   onImmersiveChange,
+  children,
 }: MapControlsProps) {
   const { map, zoomIn, zoomOut, enterFullscreen, exitFullscreen, isFullscreenAvailable, resetView } =
     useMapControls();
@@ -59,105 +59,70 @@ export const MapControls = memo(function MapControls({
     };
   }, [isFullscreenAvailable]);
 
+  const railBtn =
+    "w-11 h-11 flex items-center justify-center text-[#B6BECB] hover:text-[#E6EAF0] transition-colors active:bg-[var(--nv-wash-strong)] disabled:opacity-40 disabled:cursor-not-allowed";
+
   return (
     <div
-      // Same reason as the tile switcher: the gaps between these buttons are
-      // open map, and a column that takes the pointer along its whole height
-      // eats drags that start there.
-      className={`absolute right-6 flex flex-col items-center gap-3 z-[1000] pointer-events-none transition-[bottom,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+      // Same reason as before: the gaps around the rail are open map, and a
+      // column that takes the pointer along its whole height eats drags that
+      // start there.
+      className={`absolute right-4 flex flex-col items-end gap-2 z-[1000] pointer-events-none transition-[bottom,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
         hidden ? "opacity-0" : "[&>*]:pointer-events-auto"
       }`}
       style={{ bottom: bottomOffset }}
     >
-      {/* Zoom Controls — Glass container with ghost border */}
-      <div className="glass-panel flex flex-col rounded-2xl shadow-2xl ghost-border overflow-hidden">
-        <button
-          onClick={zoomIn}
-          disabled={!map}
-          className="p-4 hover:bg-white/5 text-[#B6BECB] hover:text-[#E6EAF0] transition-colors nv-hairline-b disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Zoom In"
-          aria-label="Zoom in"
-        >
-          <Plus className="h-5 w-5" />
+      {/* Zoom and reset only where there's a pointer to want them; on a phone
+          the fingers do both. */}
+      <div className="hidden sm:flex flex-col nv-glass rounded-full overflow-hidden">
+        <button onClick={zoomIn} disabled={!map} className={`${railBtn} nv-hairline-b`} title="Zoom In" aria-label="Zoom in">
+          <Plus className="h-[18px] w-[18px]" strokeWidth={1.75} />
         </button>
-        <button
-          onClick={zoomOut}
-          disabled={!map}
-          className="p-4 hover:bg-white/5 text-[#B6BECB] hover:text-[#E6EAF0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Zoom Out"
-          aria-label="Zoom out"
-        >
-          <Minus className="h-5 w-5" />
+        <button onClick={zoomOut} disabled={!map} className={`${railBtn} nv-hairline-b`} title="Zoom Out" aria-label="Zoom out">
+          <Minus className="h-[18px] w-[18px]" strokeWidth={1.75} />
+        </button>
+        <button onClick={resetView} disabled={!map} className={railBtn} title="Reset View" aria-label="Reset view to default">
+          <RotateCcw className="h-[18px] w-[18px]" strokeWidth={1.75} />
         </button>
       </div>
 
-      {/* My Location — Circular glass button with neon accent */}
-      <button
-        onClick={locateUser}
-        disabled={!isAvailable || isLocating}
-        className={`glass-panel w-14 h-14 rounded-full flex items-center justify-center text-[#B6BECB] ghost-border hover:bg-white/5 active:scale-90 transition-all ${
-          isLocating ? "animate-pulse-glow" : ""
-        } disabled:opacity-50 disabled:cursor-not-allowed`}
-        title="My Location"
-        aria-label="Find my location"
-      >
-        <svg
-          className="h-5 w-5"
-          viewBox="0 0 24 24"
-          fill="currentColor"
+      {/* The rail: one glass capsule, hairlines between, nothing filled. */}
+      <div className="flex flex-col nv-glass rounded-full">
+        <button
+          onClick={locateUser}
+          disabled={!isAvailable || isLocating}
+          className={`${railBtn} rounded-t-full nv-hairline-b ${isLocating ? "animate-pulse" : ""}`}
+          title="My Location"
+          aria-label="Find my location"
         >
-          <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" />
-        </svg>
-      </button>
-
-      {/* Reset View */}
-      <button
-        onClick={resetView}
-        disabled={!map}
-        className="glass-panel w-14 h-14 rounded-full flex items-center justify-center text-[#B6BECB] ghost-border hover:bg-white/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        title="Reset View"
-        aria-label="Reset view to default"
-      >
-        <svg
-          className="h-5 w-5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
+          <LocateFixed className="h-[18px] w-[18px]" strokeWidth={1.75} />
+        </button>
+        {children && <div className="nv-hairline-b">{children}</div>}
+        {/* Full screen — one tap takes every overlay off the map, and enters real
+            browser fullscreen too where that exists (it doesn't on iPhone Safari,
+            where stripping the chrome is the whole of it). Explicit enter/exit
+            rather than two independent toggles, so the button and the browser
+            can't end up disagreeing about which state we're in. */}
+        <button
+          onClick={() => {
+            const next = !isImmersive;
+            onImmersiveChange?.(next);
+            if (canFullscreen) {
+              if (next) enterFullscreen();
+              else exitFullscreen();
+            }
+          }}
+          className={`${railBtn} rounded-b-full ${isImmersive ? "text-[#E6EAF0]" : ""}`}
+          title={isImmersive ? "Exit full screen" : "Full screen"}
+          aria-label={isImmersive ? "Exit full screen" : "Full screen"}
         >
-          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-          <path d="M21 3v5h-5" />
-          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-          <path d="M3 21v-5h5" />
-        </svg>
-      </button>
-
-      {/* Full screen — one tap takes every overlay off the map, and enters real
-          browser fullscreen too where that exists (it doesn't on iPhone Safari,
-          where stripping the chrome is the whole of it). Explicit enter/exit
-          rather than two independent toggles, so the button and the browser
-          can't end up disagreeing about which state we're in. */}
-      <button
-        onClick={() => {
-          const next = !isImmersive;
-          onImmersiveChange?.(next);
-          if (canFullscreen) {
-            if (next) enterFullscreen();
-            else exitFullscreen();
-          }
-        }}
-        className={`glass-panel w-14 h-14 rounded-full flex items-center justify-center shadow-2xl ghost-border transition-all active:scale-90 ${
-          isImmersive ? "text-[#E6EAF0] bg-[#E6EAF0]/10" : "text-[#E6EAF0] hover:bg-[#0C1416]"
-        }`}
-        title={isImmersive ? "Exit full screen" : "Full screen"}
-        aria-label={isImmersive ? "Exit full screen" : "Full screen"}
-      >
-        {isImmersive || isFullscreen ? (
-          <Minimize2 className="h-5 w-5" />
-        ) : (
-          <Maximize2 className="h-5 w-5" />
-        )}
-      </button>
+          {isImmersive || isFullscreen ? (
+            <Minimize2 className="h-[18px] w-[18px]" strokeWidth={1.75} />
+          ) : (
+            <Maximize2 className="h-[18px] w-[18px]" strokeWidth={1.75} />
+          )}
+        </button>
+      </div>
     </div>
   );
 });

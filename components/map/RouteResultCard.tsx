@@ -2,8 +2,8 @@
 
 /**
  * Route preview — Nocturne Velocity bottom sheet.
- * Two ways there: the chosen one carries the ember edge and the ember minutes,
- * and the actions are type, not filled buttons.
+ * The ways there are the summary: one row each, the chosen one marked in teal
+ * (its edge and its minutes). The actions are type, not filled buttons.
  *
  * vaul drawer with three snap points:
  *   peek (summary only) · default (+ actions) · expanded (inline step list).
@@ -17,7 +17,7 @@ import {
   ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight,
   MoveUpRight, MoveUpLeft, MapPin, RotateCw, GitFork,
 } from 'lucide-react';
-import type { RouteCalculationResult } from '@/types/speedbumps';
+import type { AppRoute, RouteCalculationResult } from '@/types/speedbumps';
 import { formatDistance, formatDuration } from '@/lib/geo-utils';
 import { listContainerVariants, listItemVariants } from '@/lib/motion';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -69,6 +69,14 @@ export function RouteResultCard({
   const bumpLine = selectedRoute.isSpeedBumpFree
     ? 'no bumps on this one.'
     : `${selectedRoute.speedBumpCount} bump${selectedRoute.speedBumpCount !== 1 ? 's' : ''} on this one.`;
+  // With two ways there the rows already carry the counts; the caption names
+  // the trade instead.
+  const extra = altExtraMinutes > 0 ? `${altExtraMinutes} more min` : 'no extra time';
+  const tradeLine = !hasAlternative
+    ? bumpLine
+    : selectedRouteIndex === 1
+      ? `${altFewerBumps} fewer bump${altFewerBumps !== 1 ? 's' : ''} for ${extra}.`
+      : `smoothest skips ${altFewerBumps} for ${extra}.`;
 
   return (
     <Drawer.Root
@@ -107,56 +115,41 @@ export function RouteResultCard({
               <span className="ui-sm text-[#5B6E7F] truncate">{bumpLine}</span>
             </button>
           ) : (
-            <div className="nv-frame px-6 mb-4 shrink-0">
-              <div className="flex items-end gap-6">
-                <div className="min-w-0">
-                  <p className="kicker">Time</p>
-                  <p className="mast mast-2 mast-num text-[#E6EAF0] whitespace-nowrap mt-1.5">
-                    {formatDuration(selectedRoute.durationSeconds)}
-                  </p>
-                </div>
-                <div className="min-w-0">
-                  <p className="kicker">Distance</p>
-                  <p className="mast mast-2 mast-num text-[#E6EAF0] whitespace-nowrap mt-1.5">
-                    {formatDistance(selectedRoute.distanceMeters)}
-                  </p>
-                </div>
+            /* The ways there are the summary: time, distance and bumps sit on
+               each row, and the chosen row carries the teal. */
+            <div className="px-6 shrink-0" data-vaul-no-drag>
+              <div role="radiogroup" aria-label="Route options">
+                <RouteChoice
+                  label={hasAlternative ? 'Fastest' : 'Route'}
+                  route={primaryRoute}
+                  isSelected={selectedRouteIndex === 0 || !hasAlternative}
+                  onClick={() => hasAlternative && selectedRouteIndex !== 0 && onToggleRoute()}
+                />
+                {hasAlternative && (
+                  <RouteChoice
+                    label="Smoothest"
+                    route={alternativeRoute!}
+                    isSelected={selectedRouteIndex === 1}
+                    onClick={() => selectedRouteIndex !== 1 && onToggleRoute()}
+                  />
+                )}
               </div>
-              <p className="caption mt-2.5">{bumpLine}</p>
+              <p className="caption mt-3 mb-4">{tradeLine}</p>
             </div>
           )}
 
           {!isTucked && (
             <>
-            {/* Route toggle (when alternative exists) */}
-            {hasAlternative && (
-              <div className="nv-frame flex gap-3 px-6 mb-4 shrink-0" data-vaul-no-drag>
-                <RouteChoice
-                  label="Fastest"
-                  minutes={formatDuration(primaryRoute.durationSeconds)}
-                  detail={`${primaryRoute.speedBumpCount} bump${primaryRoute.speedBumpCount !== 1 ? 's' : ''}`}
-                  isSelected={selectedRouteIndex === 0}
-                  onClick={() => selectedRouteIndex !== 0 && onToggleRoute()}
-                />
-                <RouteChoice
-                  label="Smoothest"
-                  minutes={formatDuration(alternativeRoute!.durationSeconds)}
-                  detail={`${altExtraMinutes > 0 ? `+${altExtraMinutes} min` : 'same time'} · −${altFewerBumps} bump${altFewerBumps !== 1 ? 's' : ''}`}
-                  isSelected={selectedRouteIndex === 1}
-                  onClick={() => selectedRouteIndex !== 1 && onToggleRoute()}
-                />
-              </div>
-            )}
-
             {/* Action buttons */}
             <div className="px-6 mb-4 shrink-0" data-vaul-no-drag>
-              <div className="nv-rule mb-3" />
+              <div className="nv-rule mb-2" />
               <div className="flex items-center justify-between gap-3">
                 <button
                   onClick={onStartNavigation}
-                  className="mono-bar text-[#E6EAF0] py-2 transition-opacity active:opacity-60"
+                  className="group flex items-center gap-3 mono-bar text-[#E6EAF0] py-3 transition-opacity active:opacity-60"
                 >
-                  {selectedRouteIndex === 1 ? 'Take smoothest' : 'Take fastest'}
+                  {!hasAlternative ? 'Drive' : selectedRouteIndex === 1 ? 'Take smoothest' : 'Take fastest'}
+                  <span aria-hidden className="block h-px w-8 bg-[#E6EAF0] transition-all group-hover:w-11" />
                 </button>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
@@ -254,32 +247,46 @@ function DirectionIcon({ instruction, isCurrent }: { instruction: string; isCurr
   return <ArrowUp className={cls} />;
 }
 
-/** One of the two ways there. The chosen one is the second ember on the screen. */
+/** One way there, as a row. The chosen row is the teal mark on the sheet. */
 function RouteChoice({
   label,
-  minutes,
-  detail,
+  route,
   isSelected,
   onClick,
 }: {
   label: string;
-  minutes: string;
-  detail: string;
+  route: AppRoute;
   isSelected: boolean;
   onClick: () => void;
 }) {
   return (
     <button
+      role="radio"
+      aria-checked={isSelected}
       onClick={onClick}
-      className={`nv-frame flex-1 text-left px-4 py-3 rounded-2xl nv-hairline transition-all ${
-        isSelected ? 'nv-chosen-edge' : 'hover:bg-white/[0.03]'
-      }`}
+      className="nv-frame relative w-full flex items-end justify-between gap-4 pl-4 py-3 text-left nv-hairline-b last:border-b-0 transition-colors hover:bg-[var(--nv-wash)]"
     >
-      <div className="kicker">{label}</div>
-      <div className={`mast mast-3 mast-num mt-1.5 ${isSelected ? 'text-[#2BD9CE]' : 'text-[#E6EAF0]'}`}>
-        {minutes}
-      </div>
-      <div className="ui-sm text-[#5B6E7F] mt-1">{detail}</div>
+      <span
+        aria-hidden
+        className={`absolute left-0 top-3.5 bottom-3.5 w-[2px] rounded-full ${isSelected ? 'bg-[#2BD9CE]' : 'bg-transparent'}`}
+      />
+      <span className="min-w-0">
+        <span className="kicker block">{label}</span>
+        <span className="flex items-baseline gap-2.5 mt-1.5">
+          <span className={`mast mast-2 mast-num whitespace-nowrap ${isSelected ? 'text-[#2BD9CE]' : 'text-[#E6EAF0]'}`}>
+            {formatDuration(route.durationSeconds)}
+          </span>
+          <span className="ui-sm text-[#5B6E7F] whitespace-nowrap tabular-nums">
+            {formatDistance(route.distanceMeters)}
+          </span>
+        </span>
+      </span>
+      <span className="shrink-0 text-right">
+        <span className={`mast mast-2 mast-num block ${isSelected ? 'text-[#E6EAF0]' : 'text-[#B6BECB]'}`}>
+          {route.speedBumpCount}
+        </span>
+        <span className="kicker block mt-1">{route.speedBumpCount === 1 ? 'Bump' : 'Bumps'}</span>
+      </span>
     </button>
   );
 }

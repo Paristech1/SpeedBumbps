@@ -165,7 +165,7 @@
    the tiles however high its own z-index, and shows only through the seams
    between them, which draws a grid over the map.
 
-   Scoped to .nv-map, which the map carries on the Nocturne layer only —
+   Scoped to .nv-map, which the map's wrapper carries on the Nocturne layer only —
    Basic and Satellite stay themselves. */
 
 .leaflet-container {
@@ -174,6 +174,12 @@
 
 .nv-map .leaflet-tile-pane {
   filter: grayscale(1) brightness(0.92) contrast(1.15) sepia(0.55) hue-rotate(168deg) saturate(1.5);
+}
+
+/* The tile attribution is a licence term, not decoration: while the bottom
+   nav is up it sits just above it instead of underneath. */
+.nv-map-over-nav .leaflet-bottom {
+  bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + 3.9rem);
 }
 
 /* The switcher's thumbnails are imagery. Held back to match the map, but not

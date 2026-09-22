@@ -43,7 +43,7 @@ import type { PlanRouteRequest } from "./RoutePlanningPanel";
 import type { POICategory } from "@/types/poi";
 import type { LatLng, GeocodingResult } from "@/types/speedbumps";
 import type { SavedRoute, TabId } from "@/types/user-data";
-import { Navigation, X, Pencil, LocateFixed } from "lucide-react";
+import { X, Pencil, LocateFixed } from "lucide-react";
 import { toast } from "sonner";
 
 /**
@@ -154,6 +154,17 @@ function SpeedBumpsMap({
   });
 
   return null;
+}
+
+/** Origin dot over destination ring, joined — the map's own legend in miniature. */
+function RouteEnds() {
+  return (
+    <svg className="w-3 h-8 shrink-0" viewBox="0 0 12 32" aria-hidden>
+      <circle cx="6" cy="5" r="3.5" fill="#E6EAF0" />
+      <path d="M6 10v12" stroke="#5B6E7F" strokeWidth="1.25" strokeDasharray="2 2.5" />
+      <circle cx="6" cy="27" r="3.5" fill="none" stroke="#E6EAF0" strokeWidth="1.5" />
+    </svg>
+  );
 }
 
 /**
@@ -459,7 +470,7 @@ function MapMainInner() {
     if (typeof s === "number") return Math.round(s * viewportH);
     return 0;
   };
-  const controlsBottom = isImmersive ? 32 : routeSheetVisible ? snapToPx(routeSnap) + 16 : 128;
+  const controlsBottom = isImmersive ? 32 : routeSheetVisible ? snapToPx(routeSnap) + 16 : 96;
   const controlsHidden =
     (!isImmersive && routeSheetVisible && typeof routeSnap === "number" && routeSnap >= 0.8) ||
     activeTab !== "explore" ||
@@ -477,10 +488,17 @@ function MapMainInner() {
   }, []);
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-[#07090A]">
+    // Map-state classes live on this wrapper, never on the Leaflet container:
+    // React rewrites a className wholesale, which strips the classes Leaflet
+    // put on its own div (leaflet-container and friends) and blanks the tiles.
+    <div
+      className={`relative h-screen w-full overflow-hidden bg-[#07090A]${
+        currentProviderId === "nocturne" ? " nv-map" : ""
+      }${!routing.isNavigating && !isImmersive ? " nv-map-over-nav" : ""}`}
+    >
       {/* Map */}
       <LeafletMap
-        className={`w-full h-full${currentProviderId === "nocturne" ? " nv-map" : ""}`}
+        className="w-full h-full"
         onClick={handleMapClick}
         onMouseMove={handleMapMouseMove}
         cursorStyle={isSelectingPOILocation || isSelectingReportLocation || isPickingDestination ? "crosshair" : "grab"}
@@ -500,6 +518,15 @@ function MapMainInner() {
         />
       </LeafletMap>
 
+      {/* Void falling off into the map behind the top HUD — the caption and the
+          bar read over any block without a box around them. */}
+      {!routing.isNavigating && !isImmersive && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-[calc(env(safe-area-inset-top)+11rem)] z-[1001] bg-[linear-gradient(180deg,rgba(7,9,10,0.92)_0%,rgba(7,9,10,0.6)_45%,rgba(7,9,10,0)_100%)]"
+        />
+      )}
+
       {/* === TOP NAV BAR — startup splash only, fades once the app is in use === */}
       <AnimatePresence>
         {!routing.isNavigating && showBrand && !isImmersive && (
@@ -509,23 +536,11 @@ function MapMainInner() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="fixed top-0 w-full z-[1002] flex justify-between items-center px-6 py-4 bg-transparent pt-[env(safe-area-inset-top)]"
+            className="fixed top-0 w-full z-[1051] flex items-center px-6 pt-[calc(env(safe-area-inset-top)+1rem)]"
           >
-            <div className="leading-none">
-              <h1 className="mast mast-2 text-[#E6EAF0]">Speed</h1>
-              <h1 className="mast mast-2 text-[#5B6E7F] -mt-1">Bumps</h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => handleTabChange(activeTab === "profile" ? "explore" : "profile")}
-                className="w-10 h-10 rounded-full nv-hairline overflow-hidden active:scale-95 transition-transform"
-                aria-label="Open profile"
-              >
-                <div className="w-full h-full flex items-center justify-center mono-bar text-[#B6BECB]">
-                  {profile.displayName.charAt(0).toUpperCase() || "P"}
-                </div>
-              </button>
-            </div>
+            <p className="kicker text-[#B6BECB]">
+              Speed<span className="text-[#5B6E7F]">bumps</span> · Philadelphia
+            </p>
           </motion.nav>
         )}
       </AnimatePresence>
@@ -568,10 +583,10 @@ function MapMainInner() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="absolute left-0 right-0 sm:left-6 sm:right-auto top-[calc(5rem+env(safe-area-inset-top))] z-[1050] px-4 sm:px-0"
+            className="absolute left-0 right-0 sm:left-6 sm:right-auto top-[calc(3rem+env(safe-area-inset-top))] z-[1050] px-4 sm:px-0"
           >
             <div className="flex items-center gap-3">
-            <div className="flex items-center gap-3 nv-glass px-5 py-4 rounded-full w-full sm:w-[380px]">
+            <div className="flex items-center gap-3 nv-glass pl-5 pr-3 h-14 rounded-full w-full sm:w-[380px]">
               {hasRoute ? (
                 <>
                   <button
@@ -579,11 +594,10 @@ function MapMainInner() {
                     className="flex items-center gap-2 flex-1 text-left min-w-0"
                     aria-label="Edit route"
                   >
-                    <Navigation className="w-5 h-5 text-[#B6BECB] shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="ui-text text-[#E6EAF0] truncate">
-                        {routing.originLabel} → {routing.destinationLabel}
-                      </div>
+                    <RouteEnds />
+                    <div className="flex-1 min-w-0 leading-tight">
+                      <div className="kicker truncate">From {routing.originLabel}</div>
+                      <div className="ui-text text-[#E6EAF0] truncate mt-0.5">{routing.destinationLabel}</div>
                     </div>
                   </button>
                   <button
@@ -615,35 +629,19 @@ function MapMainInner() {
                   className="flex items-center gap-3 flex-1 text-left"
                   aria-label="Plan route"
                 >
-                  <svg className="w-5 h-5 text-[#5B6E7F] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.35-4.35" />
+                  <svg className="w-[18px] h-[18px] text-[#5B6E7F] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-4-4" />
                   </svg>
-                  <span className="mast mast-4 text-[#B6BECB] flex-1">
+                  <span className="mast text-[1.375rem] leading-none text-[#E6EAF0] flex-1">
                     Where to
                   </span>
-                  <svg className="w-5 h-5 text-[#5B6E7F] shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-                  </svg>
                 </button>
               )}
             </div>
-            {/* Inline avatar — takes over profile access after the brand splash retires */}
-            {!showBrand && (
-              <button
-                onClick={() => handleTabChange(activeTab === "profile" ? "explore" : "profile")}
-                className="w-11 h-11 shrink-0 rounded-full nv-glass overflow-hidden active:scale-95 transition-transform animate-in fade-in duration-500"
-                aria-label="Open profile"
-              >
-                <div className="w-full h-full flex items-center justify-center mono-bar text-[#B6BECB]">
-                  {profile.displayName.charAt(0).toUpperCase() || "P"}
-                </div>
-              </button>
-            )}
             </div>
             {!hasRoute && nearbyBumps !== null && (
-              <p className="caption mt-3 pl-5 sm:pl-2">
+              <p className="caption mt-3 pl-6 sm:pl-2">
                 {nearbyBumps} bump{nearbyBumps === 1 ? '' : 's'} within 1 mi.
               </p>
             )}
@@ -741,22 +739,17 @@ function MapMainInner() {
         )}
       </AnimatePresence>
 
-      {/* Tile Switcher */}
-      {!routing.isNavigating && !isImmersive && (
-        <MapTileSwitcher
-          selectedProviderId={currentProviderId}
-          onProviderChange={setProviderId}
-          bottomOffset={controlsBottom}
-        />
-      )}
-
-      {/* Map Controls */}
+      {/* Map Controls — the layer picker rides in the rail */}
       <MapControls
         bottomOffset={controlsBottom}
         hidden={controlsHidden}
         isImmersive={isImmersive}
         onImmersiveChange={setImmersive}
-      />
+      >
+        {!routing.isNavigating && !isImmersive && (
+          <MapTileSwitcher selectedProviderId={currentProviderId} onProviderChange={setProviderId} />
+        )}
+      </MapControls>
 
       {/* Measurement Panel */}
       <MapMeasurementPanel isOpen={isMeasurementOpen} onClose={() => setIsMeasurementOpen(false)} />
@@ -870,7 +863,6 @@ function MapMainInner() {
         <BottomNavBar
           activeTab={activeTab}
           onTabChange={handleTabChange}
-          onFabClick={() => setIsRoutePlanningOpen((p) => !p)}
         />
       )}
     </div>

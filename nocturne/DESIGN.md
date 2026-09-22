@@ -60,9 +60,32 @@ would collapse the box.
 | 02 | Map home | next-bump marker (flare) | `14 bumps within 1 mi.` |
 | 03 | Search | first address dot (teal) | `exact first. places after.` |
 |  | — the sheet becomes the search screen while typing: ADDRESSES then PLACES, `DROP A PIN` at the foot ||
-| 04 | Route preview | chosen route + chosen minutes (teal) | `3 bumps on this one.` |
+| 04 | Route preview | chosen route + chosen row's edge and minutes (teal) | `smoothest skips 3 for no extra time.` |
+|  | — one row per way there (time, distance, bumps); the caption names the trade, not the count ||
 | 05 | Navigating | route (teal), next bump + its digits (flare) | `speed table in 250 ft.` |
 | 06 | Report a bump | selected harshness digit (flare) | `one tap. we verify later.` |
+
+## Chrome
+
+- **Bottom nav** — four tabs set as type (icon over a kicker), flush on the
+  void with a hairline top. The active tab is a short chrome streak on that
+  hairline, never a filled pill. There is no floating action button: the
+  search bar plans routes.
+- **Map controls** — one glass rail, bottom right: locate · layers · full
+  screen. Zoom and reset join it only on wide screens with a pointer. Layers
+  open on tap, to the rail's left.
+- **Top HUD** — the search bar and the screen's caption sit on a void
+  gradient falling off into the map, so the caption reads without a box.
+- **Route ends** — wherever origin and destination are drawn together (the
+  planner's fields, the route bar) they are the map's own markers: a chrome
+  dot joined to a hollow chrome ring.
+- **Choices** — a picked option in a list is marked by a 2 px teal edge and
+  teal type (routing mode, route rows). A picked hazard value is a flare digit
+  with a flare underline (harshness).
+- **Navigating** — the card carries only the turn: glyph, distance, the
+  maneuver as mast, the street as UI text. The trip bar below reads ARRIVE ·
+  LEFT · BUMPS with `REPORT A BUMP` and `END` as mono type.
+- The tile attribution always stays visible above whatever sits at the floor.
 
 ## Map
 

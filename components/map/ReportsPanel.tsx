@@ -28,7 +28,8 @@ interface ReportsPanelProps {
 }
 
 // Lowest snap leaves the map visible while picking a location
-const snapPoints = ['150px', 0.6, 0.92];
+// The tall snap stops short of the search bar rather than cutting through it.
+const snapPoints = ['150px', 0.6, 0.86];
 
 // Kept short so each one fits its tile on a 360 px phone.
 const SEVERITY_LABELS = ['Gentle', 'Mild', 'Medium', 'Harsh', 'Brutal'];
@@ -79,6 +80,12 @@ export function ReportsPanel({
     setSeverity(3);
     setNote('');
     onClearPickedLocation();
+  };
+
+  // The form needs the height: at the middle snap the bottom nav sits over it.
+  const openForm = () => {
+    setView('add');
+    setSnap(snapPoints[2]);
   };
 
   const handleSubmit = () => {
@@ -135,11 +142,11 @@ export function ReportsPanel({
             <>
               <div className="px-6 mb-4 shrink-0">
                 <button
-                  onClick={() => setView('add')}
+                  onClick={openForm}
                   className="w-full flex items-center justify-between gap-2 py-3 nv-hairline-t nv-hairline-b transition-opacity active:opacity-60"
                 >
                   <span className="mast mast-3 text-[#E6EAF0]">Report a bump</span>
-                  <TriangleAlert className="w-4 h-4 text-[#FF3D8E]" />
+                  <span aria-hidden className="mono-bar text-[#B6BECB]">+</span>
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto hide-scrollbar px-4 pb-32 space-y-2">
@@ -148,7 +155,7 @@ export function ReportsPanel({
                     icon={<TriangleAlert className="w-8 h-8" />}
                     title="No reports yet"
                     hint="Spot a bump the map doesn't know about? Report it and it will show on the map and count in route planning."
-                    action={{ label: 'Report a bump', onClick: () => setView('add') }}
+                    action={{ label: 'Report a bump', onClick: openForm }}
                   />
                 ) : (
                   reports.map((report) => (
@@ -218,20 +225,33 @@ export function ReportsPanel({
                 )}
               </div>
 
-              {/* Severity */}
+              {/* Severity — five digits on one line; the chosen one in flare,
+                  named underneath. No boxes. */}
               <div>
-                <div className="kicker mb-3">How harsh</div>
-                <div className="flex gap-2">
+                <div className="flex items-baseline justify-between mb-2">
+                  <span className="kicker">How harsh</span>
+                  <span className="kicker text-[#E6EAF0]">{SEVERITY_LABELS[severity - 1]}</span>
+                </div>
+                <div role="radiogroup" aria-label="How harsh" className="flex items-end justify-between nv-hairline-b">
                   {[1, 2, 3, 4, 5].map((s) => (
                     <button
                       key={s}
+                      role="radio"
+                      aria-checked={severity === s}
+                      aria-label={`${s} — ${SEVERITY_LABELS[s - 1]}`}
                       onClick={() => setSeverity(s)}
-                      className={`nv-frame nv-hairline flex-1 flex flex-col items-center py-3 rounded-2xl transition-all active:scale-95 ${
-                        severity === s ? 'nv-flare-edge' : 'hover:bg-white/[0.03]'
-                      }`}
+                      className="relative flex-1 flex justify-center pt-1 pb-3 transition-colors active:opacity-60"
                     >
-                      <span className={`mast mast-3 mast-num ${severity === s ? 'text-[#FF3D8E]' : 'text-[#B6BECB]'}`}>{s}</span>
-                      <span className="kicker mt-1.5 text-[8px] tracking-[0.02em] w-full text-center truncate">{SEVERITY_LABELS[s - 1]}</span>
+                      <span
+                        className={`mast mast-num text-[2.75rem] leading-none transition-colors ${
+                          severity === s ? 'text-[#FF3D8E]' : 'text-[#5B6E7F] hover:text-[#B6BECB]'
+                        }`}
+                      >
+                        {s}
+                      </span>
+                      {severity === s && (
+                        <span aria-hidden className="absolute -bottom-px left-1/2 -translate-x-1/2 h-[2px] w-8 rounded-full bg-[#FF3D8E]" />
+                      )}
                     </button>
                   ))}
                 </div>

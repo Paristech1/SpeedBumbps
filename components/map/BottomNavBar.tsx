@@ -1,13 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MapPin } from "lucide-react";
 import type { TabId } from "@/types/user-data";
 
 interface BottomNavBarProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
-  onFabClick: () => void;
 }
 
 interface NavItemProps {
@@ -22,92 +20,80 @@ function NavItem({ active, label, icon, onClick }: NavItemProps) {
     <button
       onClick={onClick}
       aria-label={label}
-      className="relative flex flex-col items-center justify-center px-2.5 py-2 text-[#5B6E7F] hover:text-[#E6EAF0] active:scale-95 transition-colors"
+      aria-current={active ? "page" : undefined}
+      className={`relative flex-1 flex flex-col items-center justify-center gap-1.5 pt-3 pb-1 transition-colors active:opacity-60 ${
+        active ? "text-[#E6EAF0]" : "text-[#5B6E7F] hover:text-[#B6BECB]"
+      }`}
     >
+      {/* The active tab is marked by a streak of light on the bar's top edge,
+          not a filled pill — surfaces separate by hairline. */}
       {active && (
-        <motion.div
-          layoutId="bottom-nav-active-pill"
-          className="absolute inset-0 rounded-[20px] bg-white/[0.06] nv-hairline"
-          transition={{ type: "spring", stiffness: 400, damping: 35 }}
+        <motion.span
+          layoutId="bottom-nav-streak"
+          className="absolute -top-px left-1/2 -translate-x-1/2 h-[2px] w-12 bg-[linear-gradient(90deg,transparent,#E6EAF0_30%,#E6EAF0_70%,transparent)]"
+          transition={{ type: "spring", stiffness: 420, damping: 38 }}
+          aria-hidden
         />
       )}
-      <div className={`relative z-10 transition-colors ${active ? "text-[#E6EAF0]" : "text-[#5B6E7F]"}`}>
-        {icon}
-      </div>
-      <span className={`relative z-10 kicker text-[9px] tracking-[0.1em] mt-1 transition-colors ${
-        active ? "text-[#E6EAF0]" : "text-[#5B6E7F]"
-      }`}>
-        {label}
-      </span>
+      {icon}
+      <span className="kicker text-[10px] tracking-[0.18em] text-current">{label}</span>
     </button>
   );
 }
 
 /**
- * Bottom navigation — Nocturne shared component.
+ * Bottom navigation — four tabs set as type, flush to the void.
+ * Planning a route lives in the search bar at the top; there is no filled
+ * action button here, because Nocturne's primary actions are type.
  * Sits above tab drawers (z-1060) so tabs stay tappable while one is open.
- * Includes layoutId sliding pill for active tab and safe-area padding.
  */
-export function BottomNavBar({ activeTab, onTabChange, onFabClick }: BottomNavBarProps) {
+export function BottomNavBar({ activeTab, onTabChange }: BottomNavBarProps) {
   // Re-tapping the active tab returns to the map
   const handleTab = (tab: TabId) => onTabChange(activeTab === tab ? "explore" : tab);
+  const iconCls = "w-[18px] h-[18px]";
 
   return (
-    <nav className="nv-glass fixed bottom-0 left-0 w-full z-[1060] flex justify-around items-center px-4 pt-3 pb-[max(1.75rem,env(safe-area-inset-bottom))] rounded-t-[28px] border-x-0 border-b-0">
+    <nav className="fixed bottom-0 left-0 w-full z-[1060] flex items-stretch px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-[#07090A]/92 backdrop-blur-xl nv-hairline-t">
       <NavItem
         active={activeTab === "explore"}
         label="Explore"
         onClick={() => onTabChange("explore")}
         icon={
-          <svg className="w-5 h-5 mb-0.5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z" />
+          <svg className={iconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round">
+            <path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" />
+            <path d="M9 4v14M15 6v14" />
           </svg>
         }
       />
-
       <NavItem
         active={activeTab === "saved"}
         label="Saved"
         onClick={() => handleTab("saved")}
         icon={
-          <svg className="w-5 h-5 mb-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+          <svg className={iconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round">
+            <path d="M18 21l-6-4.5L6 21V4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5z" />
           </svg>
         }
       />
-
-      {/* SpeedBumps Signature FAB */}
-      <div className="relative -top-6">
-        <button
-          onClick={onFabClick}
-          className="w-14 h-14 rounded-full bg-[#E6EAF0] flex items-center justify-center text-[#07090A] border-4 border-[#07090A] active:scale-90 transition-transform"
-          aria-label="Plan route"
-        >
-          <MapPin className="w-6 h-6" />
-        </button>
-      </div>
-
       <NavItem
         active={activeTab === "reports"}
         label="Reports"
         onClick={() => handleTab("reports")}
         icon={
-          <svg className="w-5 h-5 mb-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
+          // A bump in profile: the road, and the hump in it.
+          <svg className={iconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+            <path d="M2 17h5c1.5 0 2.2-6 5-6s3.5 6 5 6h5" />
           </svg>
         }
       />
-
       <NavItem
         active={activeTab === "profile"}
         label="Profile"
         onClick={() => handleTab("profile")}
         icon={
-          <svg className="w-5 h-5 mb-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
+          <svg className={iconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+            <circle cx="12" cy="8" r="3.5" />
+            <path d="M5 20c.8-3.5 3.6-5.5 7-5.5s6.2 2 7 5.5" strokeLinecap="round" />
           </svg>
         }
       />
